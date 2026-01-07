@@ -1,0 +1,11 @@
+﻿**/.git/
+**/.gitkeep
+node_modules/
+dist/
+build/
+.env
+npm-debug.log*
+.vscode/
+.DS_Store
+
+.next/

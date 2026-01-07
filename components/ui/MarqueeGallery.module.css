@@ -1,0 +1,101 @@
+.marqueeContainer {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    background: black;
+    border-top: 1px solid rgba(6, 182, 212, 0.2);
+    border-bottom: 1px solid rgba(6, 182, 212, 0.2);
+    padding: 3rem 0;
+}
+
+/* Gradient Masks for Fade-In/Out Effect */
+.marqueeContainer::before,
+.marqueeContainer::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 150px;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.marqueeContainer::before {
+    left: 0;
+    background: linear-gradient(to right, #000, transparent);
+}
+
+.marqueeContainer::after {
+    right: 0;
+    background: linear-gradient(to left, #000, transparent);
+}
+
+.track {
+    display: flex;
+    gap: 2rem;
+    width: max-content;
+    animation: scroll 60s linear infinite;
+}
+
+.track:hover {
+    animation-play-state: paused;
+}
+
+@keyframes scroll {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+/* Image Card Styling */
+.imageCard {
+    position: relative;
+    width: 400px;
+    /* Fixed width */
+    height: 250px;
+    /* Fixed height */
+    flex-shrink: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+
+    /* Tech Corner Clip */
+    clip-path: polygon(15px 0, 100% 0,
+            100% calc(100% - 15px), calc(100% - 15px) 100%,
+            0 100%, 0 15px);
+}
+
+.imageCard:hover {
+    border-color: #22d3ee;
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+    transform: scale(1.02);
+    z-index: 5;
+}
+
+/* Overlay Grid */
+.overlay {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(rgba(34, 211, 238, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34, 211, 238, 0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: all 0.4s ease;
+}
+
+.imageCard:hover .image {
+    transform: scale(1.05);
+}

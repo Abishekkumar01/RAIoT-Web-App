@@ -1,0 +1,71 @@
+.galleryWrapper {
+    /* User provided CSS logic */
+    --img-size: calc(100px - 0.5rem / 2);
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(6, var(--img-size));
+    grid-template-rows: repeat(4, var(--img-size));
+    width: fit-content;
+    margin: 0 auto;
+}
+
+.galleryItem {
+    max-width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    grid-column: span 2;
+    border-radius: 0.5rem;
+
+    /* User's provided clip-path path */
+    clip-path: path("M 80 20 C 100 0 100 0 120 20 C 140 40 160 60 180 80 C 200 100 200 100 180 120 C 160 140 140 160 120 180 C 100 200 100 200 80 180 C 60 160 40 140 20 120 C 0 100 0 100 20 80 Z");
+
+    transition: filter 500ms, clip-path 500ms, z-index 500ms, transform 500ms;
+    background-color: #000;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.galleryContent {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 
+   Logic for staggered layout:
+   In the user's snippet: img:nth-of-type(4), img:nth-of-type(9)
+   We apply this to .galleryItem:nth-child(...)
+*/
+.galleryItem:nth-child(4),
+.galleryItem:nth-child(9) {
+    grid-column: 2 / span 2;
+}
+
+/* Hover Effects from User Snippet */
+.galleryItem:hover {
+    z-index: 100;
+    /* Expanded clip path on hover */
+    clip-path: path("M 0 0 C 100 0 100 0 200 0 C 200 50 200 50 200 80 C 200 100 200 100 200 120 C 200 150 200 150 200 200 C 100 200 100 200 0 200 C 0 150 0 150 0 120 C 0 100 0 100 0 80 Z");
+}
+
+.galleryItem:not(:hover) {
+    animation: zIndexFix 500ms;
+}
+
+.galleryWrapper:hover .galleryItem {
+    filter: brightness(0.5) saturate(0.5);
+}
+
+.galleryWrapper .galleryItem:hover {
+    filter: brightness(1) saturate(1.5);
+}
+
+@keyframes zIndexFix {
+
+    0%,
+    100% {
+        z-index: 10;
+    }
+}

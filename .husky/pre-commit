@@ -1,0 +1,37 @@
+# Prevent committing nested .git folders
+if git diff --cached --name-only | grep -E '\.git/' > /dev/null; then
+  echo "? ERROR: Nested .git folders detected! Remove them before committing."
+  exit 1
+fi
+
+# Block large files (> 50MB)
+max_size=50000000
+git diff --cached --name-only | while read file; do
+  if [ -f "$file" ]; then
+    size=$(wc -c < "$file")
+    if [ $size -gt $max_size ]; then
+      echo "? ERROR: File '$file' is larger than 50MB. GitHub will reject this commit."
+      exit 1
+    fi
+  fi
+done
+
+# Block build folders from being committed
+if git diff --cached --name-only | grep -E '^(dist/|build/|\.next/)' > /dev/null; then
+  echo "? ERROR: Build directories are blocked from commit."
+  exit 1
+fi
+
+# Prevent committing node_modules
+if git diff --cached --name-only | grep -E '^node_modules/' > /dev/null; then
+  echo "? ERROR: node_modules should not be committed."
+  exit 1
+fi
+
+# Prevent committing .env files
+if git diff --cached --name-only | grep -E '\.env$' > /dev/null; then
+  echo "? ERROR: .env files are private and must not be committed."
+  exit 1
+fi
+
+echo "?? Pre-commit checks passed."

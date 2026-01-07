@@ -1,0 +1,155 @@
+.container {
+    overflow: hidden;
+    width: 100%;
+    padding: 4rem 0;
+    /* Added padding to accommodate rotation without clipping */
+}
+
+/* The wrapper that holds both marquees and applies the rotation */
+.marqueeWrapper {
+    position: relative;
+    width: 100%;
+    height: 55vh;
+    /* Balanced height */
+    min-height: 500px;
+    overflow: visible;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Individual track for each marquee strip */
+.track {
+    display: flex;
+    overflow: hidden;
+    gap: 4rem;
+    width: 120%;
+    /* Wider to prevent edges clipping */
+    padding: 0.5rem 0;
+    position: absolute;
+    left: -10%;
+    /* Center the wider track */
+}
+
+.trackTop {
+    top: 0;
+    /* Push to very top */
+    transform: rotate(1.5deg);
+    /* Shallower slope (1.5deg) */
+    transform-origin: center left;
+    z-index: 10;
+}
+
+.trackBottom {
+    bottom: 0;
+    /* Push to very bottom */
+    transform: rotate(-1.5deg);
+    /* Shallower slope (-1.5deg) */
+    transform-origin: center left;
+    z-index: 5;
+}
+
+.marqueeContent {
+    list-style: none;
+    flex-shrink: 0;
+    min-width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 4rem;
+    animation: marquee 60s linear infinite;
+}
+
+.marqueeContentReverse {
+    list-style: none;
+    flex-shrink: 0;
+    min-width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 4rem;
+    animation: marqueeReverse 45s linear infinite;
+    /* Slower than main */
+}
+
+.text {
+    background: linear-gradient(to right, #a2a2a2, #ffffff, #212121);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 400;
+    font-size: 15vw;
+    white-space: nowrap;
+    font-family: var(--font-orbitron), sans-serif;
+    line-height: 1.0;
+}
+
+.textSecondary {
+    background: linear-gradient(to right, #2d3748, #9ca3af, #d1d5db);
+    /* Dark graphite -> Steel -> Soft Silver */
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 300;
+    font-size: 5vw;
+    /* ~35-40% of 15vw */
+    white-space: nowrap;
+    font-family: var(--font-orbitron), sans-serif;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    line-height: 1.0;
+}
+
+@keyframes marquee {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(calc(-100% - 4rem));
+    }
+}
+
+@keyframes marqueeReverse {
+    from {
+        transform: translateX(calc(-100% - 4rem));
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+/* Professional Minimalist Styles */
+.proButton {
+    position: relative;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    /* Soft shadow for depth */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.proButton:hover {
+    background: #ffffff;
+    border-color: #ffffff;
+    transform: translateY(-8px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Icon Color Transition */
+.proButton svg {
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.proButton:hover svg {
+    color: #000000 !important;
+    transform: scale(1.1);
+    filter: none;
+}

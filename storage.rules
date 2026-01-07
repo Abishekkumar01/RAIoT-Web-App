@@ -1,0 +1,44 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper function to check if user is admin or superadmin
+    function isAdmin() {
+      return request.auth != null && (
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'superadmin'
+      );
+    }
+    
+    // Event images: admins can upload, everyone can read
+    match /events/{imageId} {
+      allow read: if true; // Public read access for event images
+      allow write: if request.auth != null && isAdmin(); // Only admins can upload
+      allow delete: if request.auth != null && isAdmin(); // Only admins can delete
+    }
+    
+    // Allow authenticated users to read their own uploads (if needed in future)
+    match /users/{userId}/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Trainee Uploads: trainees/{userId}/{submissionId}/{fileName}
+    match /trainees/{userId}/{allPaths=**} {
+      // Allow user to write to their own folder
+      allow write: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow read if user owns the file OR is admin/coordinator
+      // The owner check (request.auth.uid == userId) runs first and short-circuits, avoiding the expensive/risky firestore.get() for the uploader.
+      allow read: if request.auth != null && (
+        request.auth.uid == userId || 
+        isAdmin() || 
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'student_coordinator'
+      );
+    }
+    
+    // Default: deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
