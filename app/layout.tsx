@@ -5,12 +5,14 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { LoaderProvider } from "@/lib/contexts/LoaderContext";
 import { ThemeProvider } from "@/components/theme-provider";
-import TargetCursor from "@/components/ui/TargetCursorWrapper"; // Custom Cursor (client-only)
+
 import WhatsAppButton from "@/components/ui/WhatsAppButton"; // WhatsApp Floating Button
 import { Toaster } from "@/components/ui/toaster";
 import TechScrollbar from "@/components/ui/TechScrollbar";
 import Footer from "@/components/layout/Footer";
 import { RoutePrefetcher } from "@/components/utils/RoutePrefetcher";
+
+import TechCursor from "@/components/ui/TechCursor";
 
 // Google font
 const inter = Inter({ subsets: ["latin"] });
@@ -42,11 +44,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {/* Global custom cursor — active across the site */}
-          <TargetCursor
-            spinDuration={2}
-            hideDefaultCursor={true}
-            targetSelector=".cursor-target"
-          />
+          <TechCursor />
 
           {/* AuthProvider wraps your app's routes */}
           <AuthProvider>
