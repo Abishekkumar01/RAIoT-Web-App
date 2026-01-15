@@ -10,11 +10,11 @@ export default function DashboardLayout({
 }) {
   return (
     <ProtectedRoute requiredRole="guest">
-      <div className="flex h-screen bg-background">
-        <div className="w-64 flex-shrink-0">
+      <div className="flex min-h-screen bg-background">
+        <div className="w-64 flex-shrink-0 sticky top-0 h-screen">
           <DashboardSidebar />
         </div>
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1">
           <div className="p-6">
             {children}
           </div>

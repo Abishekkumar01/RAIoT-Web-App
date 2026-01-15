@@ -13,11 +13,11 @@ export default function OperationsLayout({
         // Higher roles (like Admin) will also pass due to hierarchy if we used > comparison, 
         // but the sidebar links will adapt based on the user's actual role.
         <ProtectedRoute requiredRole="student_coordinator">
-            <div className="flex h-screen bg-background">
-                <div className="w-64 flex-shrink-0">
+            <div className="flex min-h-screen bg-background">
+                <div className="w-64 flex-shrink-0 sticky top-0 h-screen">
                     <DashboardSidebar />
                 </div>
-                <main className="flex-1 overflow-auto">
+                <main className="flex-1">
                     <div className="p-6">
                         {children}
                     </div>
