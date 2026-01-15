@@ -21,6 +21,7 @@ import {
   Archive,
   Mail,
   Rocket,
+  Box,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -41,6 +42,7 @@ export const DashboardSidebar = () => {
     { href: "/dashboard/profile", label: "Profile", icon: User },
     { href: "/dashboard/attendance", label: "Attendance", icon: ClipboardList },
     { href: "/dashboard/events", label: "Events", icon: Calendar },
+    { href: "/dashboard/inventory", label: "Resources", icon: Box },
   ];
 
   const adminLinks = [
@@ -57,6 +59,7 @@ export const DashboardSidebar = () => {
     { href: "/admin/trainees", label: "Manage Trainees", icon: Users },
     { href: "/admin/leaders", label: "Manage Leaders", icon: Shield },
     { href: "/admin/gallery", label: "Manage Gallery", icon: ImageIcon },
+    { href: "/admin/inventory", label: "Manage Inventory", icon: Box },
     { href: "/admin/projects", label: "Manage Projects", icon: Rocket },
     { href: "/admin/contact", label: "Manage Contact", icon: Mail },
   ];
@@ -74,6 +77,7 @@ export const DashboardSidebar = () => {
     { href: "/", label: "Home", icon: Home },
     { href: "/operations", label: "Operations Dashboard", icon: BarChart3 },
     { href: "/operations/my-events", label: "Events & Teams", icon: Calendar },
+    { href: "/dashboard/inventory", label: "Resources", icon: Box },
     { href: "/dashboard", label: "Club Dashboard", icon: Home },
     ...(user?.role === 'student_coordinator' || user?.role === 'admin' || user?.role === 'superadmin' ? [
       { href: "/operations/attendance", label: "Mark Attendance", icon: ClipboardList },

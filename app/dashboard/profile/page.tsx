@@ -19,6 +19,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 
 import ImageUpload from "@/components/ui/ImageUpload"
+import { InventorySection } from "./InventorySection"
 
 export default function ProfilePage() {
   const { user, updateUserProfile, refreshUserData } = useAuth()
@@ -803,30 +804,37 @@ export default function ProfilePage() {
                           setFormData(prev => ({ ...prev, projects: newProjects }));
                         }}
                       >
-                        <Trash className="h-4 w-4 mr-2" /> Remove Project
+                        <Trash className="h-4 w-4 mr-2" /> Remove
                       </Button>
                     </>
                   ) : (
                     <>
-                      <div className="flex items-center justify-between">
+                      <div className="flex justify-between items-start">
                         <h3 className="font-semibold text-lg">{project.title}</h3>
-                        {project.link && (
-                          <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline flex items-center text-sm">
-                            View <ExternalLink className="h-3 w-3 ml-1" />
-                          </a>
-                        )}
+                        <div className="flex space-x-2">
+                          {project.link && (
+                            <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-cyan-400">
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-muted-foreground text-sm">{project.description}</p>
+                      <p className="text-muted-foreground">{project.description}</p>
                     </>
                   )}
                 </div>
               </div>
             ))}
-            {formData.projects.length === 0 && !isEditing && (
-              <p className="text-center text-muted-foreground py-8">No projects added yet.</p>
+            {(!formData.projects || formData.projects.length === 0) && (
+              <p className="text-center text-muted-foreground py-8">
+                No projects added yet. Click "Edit Profile" to add your projects.
+              </p>
             )}
           </CardContent>
         </Card>
+
+        {/* Inventory Section - New Addition */}
+        <InventorySection />
 
         {/* Achievements & Contributions */}
         <div className="grid md:grid-cols-2 gap-6 md:col-span-2">
