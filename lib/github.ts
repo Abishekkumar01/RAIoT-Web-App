@@ -67,9 +67,11 @@ export const fetchGithubGallery = async (config: GithubRepoConfig): Promise<Gall
     };
     // Note: GITHUB_TOKEN caused issues with public repo access in this environment. 
     // Disabling it correctly fetches public data.
-    // if (process.env.GITHUB_TOKEN) {
-    //     headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
-    // }
+    // Note: GITHUB_TOKEN caused issues with public repo access in this environment. 
+    // Disabling it correctly fetches public data.
+    if (process.env.GITHUB_TOKEN) {
+        headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
+    }
 
     try {
         const rootRes = await fetch(treeUrl, { headers, next: { revalidate: 30 } });
