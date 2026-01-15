@@ -3,11 +3,13 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Users collection
+    // - PUBLIC READ: Allow unauthenticated users to read user profiles (for public member pages)
     // - Users can read/write their own document
     // - Admins can read/write any user document (needed for Invite Member)
-    // - Authenticated users can read users (needed for counts/queries in app)
     match /users/{userId} {
-      allow read: if request.auth != null;
+      // Allow public read access for member profiles (required for /members/[rollNumber] pages)
+      allow read: if true;
+      
       allow create: if request.auth != null && (request.auth.uid == userId || isAdmin());
       // Update rules:
       // 1. Admins can update anything.

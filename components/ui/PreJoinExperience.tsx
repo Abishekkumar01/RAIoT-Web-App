@@ -22,6 +22,7 @@ export default function PreJoinExperience() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
     const [showGalaxyInput, setShowGalaxyInput] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
 
     // ... refs ...
 
@@ -71,6 +72,13 @@ export default function PreJoinExperience() {
 
     // Initialize Galaxy
     useEffect(() => {
+        // Detect mobile
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
         // We initialize Three.js always but control opacity via CSS for smooth transitions
         if (!canvasContainerRef.current) return;
 
@@ -84,7 +92,8 @@ export default function PreJoinExperience() {
         const height = canvasContainerRef.current.clientHeight;
 
         const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-        camera.position.z = 25;
+        // Adjust camera distance based on screen size
+        camera.position.z = window.innerWidth < 768 ? 18 : 25;
         cameraRef.current = camera;
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -99,13 +108,16 @@ export default function PreJoinExperience() {
         const positions = new Float32Array(count * 3);
         const colors = new Float32Array(count * 3);
 
+        // Responsive sphere radius
+        const sphereRadius = window.innerWidth < 768 ? 8 : 14;
+
         const sphericalDistribution = (i: number) => {
             const phi = Math.acos(-1 + (2 * i) / count);
             const theta = Math.sqrt(count * Math.PI) * phi;
             return {
-                x: 14 * Math.cos(theta) * Math.sin(phi),
-                y: 14 * Math.sin(theta) * Math.sin(phi),
-                z: 14 * Math.cos(phi)
+                x: sphereRadius * Math.cos(theta) * Math.sin(phi),
+                y: sphereRadius * Math.sin(theta) * Math.sin(phi),
+                z: sphereRadius * Math.cos(phi)
             };
         };
 
@@ -116,7 +128,7 @@ export default function PreJoinExperience() {
             positions[i * 3 + 2] = point.z + (Math.random() - 0.5) * 0.5;
 
             // Color Logic: HSL based on depth
-            const depth = Math.sqrt(point.x * point.x + point.y * point.y + point.z * point.z) / 14;
+            const depth = Math.sqrt(point.x * point.x + point.y * point.y + point.z * point.z) / sphereRadius;
             const color = new THREE.Color();
             color.setHSL(0.6 + depth * 0.2, 0.8, 0.5 + depth * 0.2); // Blueish/Cyan-Purple
 
@@ -170,6 +182,8 @@ export default function PreJoinExperience() {
         window.addEventListener('resize', handleResize);
 
         return () => {
+            window.removeEventListener('resize', checkMobile);
+
             window.removeEventListener('resize', handleResize);
             if (frameIdRef.current) cancelAnimationFrame(frameIdRef.current);
 
@@ -199,17 +213,48 @@ export default function PreJoinExperience() {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const fontSize = 100;
+        // Responsive font size and text wrapping
+        const isMobileView = window.innerWidth < 768;
+        const fontSize = isMobileView ? 40 : 100;
+        const maxWidth = isMobileView ? 300 : 800;
+
         ctx.font = `bold ${fontSize}px Arial`;
         const measures = ctx.measureText(text);
-        canvas.width = measures.width + 40;
-        canvas.height = fontSize + 40;
+
+        // Handle text wrapping for long names on mobile
+        let lines: string[] = [text];
+        if (isMobileView && measures.width > maxWidth) {
+            const words = text.split(' ');
+            lines = [];
+            let currentLine = '';
+
+            for (const word of words) {
+                const testLine = currentLine ? `${currentLine} ${word}` : word;
+                const testWidth = ctx.measureText(testLine).width;
+
+                if (testWidth > maxWidth && currentLine) {
+                    lines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    currentLine = testLine;
+                }
+            }
+            if (currentLine) lines.push(currentLine);
+        }
+
+        canvas.width = Math.min(measures.width + 40, maxWidth + 40);
+        canvas.height = (fontSize + 20) * lines.length + 40;
 
         ctx.font = `bold ${fontSize}px Arial`;
         ctx.fillStyle = 'white';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+        // Draw each line
+        lines.forEach((line, index) => {
+            const y = canvas.height / 2 + (index - (lines.length - 1) / 2) * (fontSize + 20);
+            ctx.fillText(line, canvas.width / 2, y);
+        });
 
         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imgData.data;
@@ -221,9 +266,10 @@ export default function PreJoinExperience() {
                 if (Math.random() < 0.25) {
                     const pX = (i / 4) % canvas.width;
                     const pY = Math.floor((i / 4) / canvas.width);
+                    const scaleFactor = isMobileView ? 0.03 : 0.05;
                     textPoints.push({
-                        x: (pX - canvas.width / 2) * 0.05,
-                        y: -(pY - canvas.height / 2) * 0.05
+                        x: (pX - canvas.width / 2) * scaleFactor,
+                        y: -(pY - canvas.height / 2) * scaleFactor
                     });
                 }
             }
@@ -283,13 +329,14 @@ export default function PreJoinExperience() {
 
         // Recalculate Sphere Distribution
         const targetPositions = new Float32Array(count * 3);
+        const sphereRadius = window.innerWidth < 768 ? 8 : 14;
         const sphericalDistribution = (i: number) => {
             const phi = Math.acos(-1 + (2 * i) / count);
             const theta = Math.sqrt(count * Math.PI) * phi;
             return {
-                x: 14 * Math.cos(theta) * Math.sin(phi),
-                y: 14 * Math.sin(theta) * Math.sin(phi),
-                z: 14 * Math.cos(phi)
+                x: sphereRadius * Math.cos(theta) * Math.sin(phi),
+                y: sphereRadius * Math.sin(theta) * Math.sin(phi),
+                z: sphereRadius * Math.cos(phi)
             };
         };
 
@@ -372,7 +419,7 @@ export default function PreJoinExperience() {
 
             {/* VIEW 1: INTRO */}
             {viewState === 'INTRO' && (
-                <div ref={introRef} className="z-20 text-center px-4 max-w-3xl">
+                <div ref={introRef} className="z-20 text-center px-4 max-w-3xl relative">
                     <h2 className="text-4xl md:text-6xl font-black font-orbitron text-white mb-8 tracking-tight drop-shadow-xl animate-fade-in-up">
                         Innovation knows no borders.
                     </h2>
@@ -383,6 +430,51 @@ export default function PreJoinExperience() {
                     >
                         Join the Network
                     </Button>
+
+                    {/* Do not Touch with Arrow */}
+                    <div className="absolute left-1/2 -translate-x-1/2 mt-8 animate-fade-in-up animation-delay-400">
+                        {/* Arrow SVG */}
+                        <svg
+                            width="100"
+                            height="100"
+                            viewBox="0 0 100 100"
+                            className="mx-auto mb-2"
+                            style={{ filter: 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.5))' }}
+                        >
+                            {/* Curved arrow shaft */}
+                            <path
+                                d="M 50 90 Q 30 60, 35 30 Q 38 15, 45 5"
+                                stroke="#22c55e"
+                                strokeWidth="4"
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="animate-pulse"
+                            />
+                            {/* Arrowhead */}
+                            <path
+                                d="M 45 5 L 35 15 M 45 5 L 52 12"
+                                stroke="#22c55e"
+                                strokeWidth="4"
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="animate-pulse"
+                            />
+                        </svg>
+
+                        {/* Text */}
+                        <p
+                            className="text-green-500 text-2xl md:text-3xl font-bold tracking-wide"
+                            style={{
+                                fontFamily: 'Comic Sans MS, cursive',
+                                transform: 'rotate(-8deg)',
+                                textShadow: '0 0 10px rgba(34, 197, 94, 0.5)'
+                            }}
+                        >
+                            Do not Touch
+                        </p>
+                    </div>
                 </div>
             )}
 
@@ -422,9 +514,9 @@ export default function PreJoinExperience() {
 
             {/* VIEW 3: CREATE ACCOUNT FORM */}
             {viewState === 'FORM' && (
-                <div ref={formRef} className="z-20 w-full max-w-lg px-4 animate-fade-in-up">
+                <div ref={formRef} className="z-20 w-full max-w-lg px-4 animate-fade-in-up scale-[0.85] md:scale-100 origin-center">
                     <div className="bg-black/95 backdrop-blur-xl border border-cyan-500/30 p-1 rounded-sm shadow-[0_0_40px_rgba(6,182,212,0.1)]">
-                        <div className="bg-black border border-white/5 p-8 relative overflow-hidden">
+                        <div className="bg-black border border-white/5 p-4 md:p-8 relative overflow-hidden">
                             {/* Decorative Corners */}
                             <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-cyan-500"></div>
                             <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-cyan-500"></div>
@@ -432,17 +524,17 @@ export default function PreJoinExperience() {
                             <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-cyan-500"></div>
 
                             {/* Header */}
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.5)]">
-                                        <Sparkles className="w-5 h-5 text-white" />
+                            <div className="flex items-center justify-between mb-4 md:mb-8">
+                                <div className="flex items-center gap-2 md:gap-3">
+                                    <div className="w-8 h-8 md:w-10 md:h-10 rounded bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.5)]">
+                                        <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-white" />
                                     </div>
                                     <div>
-                                        <h2 className="text-xl font-bold text-white font-orbitron tracking-widest leading-none">GUEST ACCESS PORTAL</h2>
-                                        <p className="text-cyan-500/60 text-[10px] font-mono mt-1 uppercase tracking-[0.2em]">Authorized Guest Entry</p>
+                                        <h2 className="text-sm md:text-xl font-bold text-white font-orbitron tracking-widest leading-none">GUEST ACCESS PORTAL</h2>
+                                        <p className="text-cyan-500/60 text-[8px] md:text-[10px] font-mono mt-0.5 md:mt-1 uppercase tracking-[0.2em]">Authorized Guest Entry</p>
                                     </div>
                                 </div>
-                                <div className="flex gap-1.5 opacity-50">
+                                <div className="flex gap-1 md:gap-1.5 opacity-50">
                                     <div className="w-1 h-1 rounded-full bg-cyan-400"></div>
                                     <div className="w-1 h-1 rounded-full bg-cyan-400"></div>
                                     <div className="w-1 h-1 rounded-full bg-cyan-400"></div>
@@ -452,69 +544,69 @@ export default function PreJoinExperience() {
 
 
                             {/* Form Fields */}
-                            <div className="space-y-6">
-                                <div className="space-y-2 group">
-                                    <Label className="text-cyan-500 text-[10px] font-bold font-orbitron uppercase tracking-widest pl-1 group-focus-within:text-cyan-300 transition-colors">Full Name</Label>
-                                    <div className="flex h-12 bg-black border border-white/10 focus-within:border-cyan-500 transition-all duration-300 hover:border-white/20">
-                                        <div className="w-12 flex items-center justify-center border-r border-white/10 group-focus-within:border-cyan-500/50 group-focus-within:bg-cyan-950/20 transition-colors">
-                                            <Hexagon className="w-5 h-5 text-gray-600 group-focus-within:text-cyan-400 transition-colors" />
+                            <div className="space-y-3 md:space-y-6">
+                                <div className="space-y-1 md:space-y-2 group">
+                                    <Label className="text-cyan-500 text-[8px] md:text-[10px] font-bold font-orbitron uppercase tracking-widest pl-1 group-focus-within:text-cyan-300 transition-colors">Full Name</Label>
+                                    <div className="flex h-9 md:h-12 bg-black border border-white/10 focus-within:border-cyan-500 transition-all duration-300 hover:border-white/20">
+                                        <div className="w-9 md:w-12 flex items-center justify-center border-r border-white/10 group-focus-within:border-cyan-500/50 group-focus-within:bg-cyan-950/20 transition-colors">
+                                            <Hexagon className="w-4 h-4 md:w-5 md:h-5 text-gray-600 group-focus-within:text-cyan-400 transition-colors" />
                                         </div>
                                         <input
                                             autoComplete="off"
                                             placeholder="John Doe"
-                                            className="flex-1 bg-transparent px-4 text-white text-sm outline-none placeholder:text-gray-800 font-mono tracking-wide"
+                                            className="flex-1 bg-transparent px-2 md:px-4 text-white text-xs md:text-sm outline-none placeholder:text-gray-800 font-mono tracking-wide"
                                             value={inputText}
                                             onChange={(e) => setInputText(e.target.value)}
                                         />
                                     </div>
                                 </div>
 
-                                <div className="space-y-2 group">
-                                    <Label className="text-cyan-500 text-[10px] font-bold font-orbitron uppercase tracking-widest pl-1 group-focus-within:text-cyan-300 transition-colors">Email Address</Label>
-                                    <div className="flex h-12 bg-black border border-white/10 focus-within:border-cyan-500 transition-all duration-300 hover:border-white/20">
-                                        <div className="w-12 flex items-center justify-center border-r border-white/10 group-focus-within:border-cyan-500/50 group-focus-within:bg-cyan-950/20 transition-colors">
-                                            <AtSign className="w-5 h-5 text-gray-600 group-focus-within:text-cyan-400 transition-colors" />
+                                <div className="space-y-1 md:space-y-2 group">
+                                    <Label className="text-cyan-500 text-[8px] md:text-[10px] font-bold font-orbitron uppercase tracking-widest pl-1 group-focus-within:text-cyan-300 transition-colors">Email Address</Label>
+                                    <div className="flex h-9 md:h-12 bg-black border border-white/10 focus-within:border-cyan-500 transition-all duration-300 hover:border-white/20">
+                                        <div className="w-9 md:w-12 flex items-center justify-center border-r border-white/10 group-focus-within:border-cyan-500/50 group-focus-within:bg-cyan-950/20 transition-colors">
+                                            <AtSign className="w-4 h-4 md:w-5 md:h-5 text-gray-600 group-focus-within:text-cyan-400 transition-colors" />
                                         </div>
                                         <input
                                             placeholder="your.email@example.com"
                                             type="email"
                                             autoComplete="off"
-                                            className="flex-1 bg-transparent px-4 text-white text-sm outline-none placeholder:text-gray-800 font-mono tracking-wide"
+                                            className="flex-1 bg-transparent px-2 md:px-4 text-white text-xs md:text-sm outline-none placeholder:text-gray-800 font-mono tracking-wide"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
                                         />
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2 group">
-                                        <Label className="text-cyan-500 text-[10px] font-bold font-orbitron uppercase tracking-widest pl-1 group-focus-within:text-cyan-300 transition-colors">Password</Label>
-                                        <div className="flex h-12 bg-black border border-white/10 focus-within:border-cyan-500 transition-all duration-300 hover:border-white/20">
-                                            <div className="w-12 flex items-center justify-center border-r border-white/10 group-focus-within:border-cyan-500/50 group-focus-within:bg-cyan-950/20 transition-colors">
-                                                <Hash className="w-5 h-5 text-gray-600 group-focus-within:text-cyan-400 transition-colors" />
+                                <div className="grid grid-cols-2 gap-2 md:gap-4">
+                                    <div className="space-y-1 md:space-y-2 group">
+                                        <Label className="text-cyan-500 text-[8px] md:text-[10px] font-bold font-orbitron uppercase tracking-widest pl-1 group-focus-within:text-cyan-300 transition-colors">Password</Label>
+                                        <div className="flex h-9 md:h-12 bg-black border border-white/10 focus-within:border-cyan-500 transition-all duration-300 hover:border-white/20">
+                                            <div className="w-9 md:w-12 flex items-center justify-center border-r border-white/10 group-focus-within:border-cyan-500/50 group-focus-within:bg-cyan-950/20 transition-colors">
+                                                <Hash className="w-4 h-4 md:w-5 md:h-5 text-gray-600 group-focus-within:text-cyan-400 transition-colors" />
                                             </div>
                                             <input
                                                 placeholder="••••••"
                                                 type="password"
                                                 autoComplete="new-password"
-                                                className="flex-1 bg-transparent px-4 text-white text-sm outline-none placeholder:text-gray-800 font-mono tracking-widest"
+                                                className="flex-1 bg-transparent px-2 md:px-4 text-white text-xs md:text-sm outline-none placeholder:text-gray-800 font-mono tracking-widest"
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2 group">
-                                        <Label className="text-cyan-500 text-[10px] font-bold font-orbitron uppercase tracking-widest pl-1 group-focus-within:text-cyan-300 transition-colors">Confirm</Label>
-                                        <div className="flex h-12 bg-black border border-white/10 focus-within:border-cyan-500 transition-all duration-300 hover:border-white/20">
-                                            <div className="w-12 flex items-center justify-center border-r border-white/10 group-focus-within:border-cyan-500/50 group-focus-within:bg-cyan-950/20 transition-colors">
-                                                <Hash className="w-5 h-5 text-gray-600 group-focus-within:text-cyan-400 transition-colors" />
+                                    <div className="space-y-1 md:space-y-2 group">
+                                        <Label className="text-cyan-500 text-[8px] md:text-[10px] font-bold font-orbitron uppercase tracking-widest pl-1 group-focus-within:text-cyan-300 transition-colors">Confirm</Label>
+                                        <div className="flex h-9 md:h-12 bg-black border border-white/10 focus-within:border-cyan-500 transition-all duration-300 hover:border-white/20">
+                                            <div className="w-9 md:w-12 flex items-center justify-center border-r border-white/10 group-focus-within:border-cyan-500/50 group-focus-within:bg-cyan-950/20 transition-colors">
+                                                <Hash className="w-4 h-4 md:w-5 md:h-5 text-gray-600 group-focus-within:text-cyan-400 transition-colors" />
                                             </div>
                                             <input
                                                 placeholder="••••••"
                                                 type="password"
                                                 autoComplete="new-password"
-                                                className="flex-1 bg-transparent px-4 text-white text-sm outline-none placeholder:text-gray-800 font-mono tracking-widest"
+                                                className="flex-1 bg-transparent px-2 md:px-4 text-white text-xs md:text-sm outline-none placeholder:text-gray-800 font-mono tracking-widest"
                                                 value={confirmPassword}
                                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                             />
@@ -526,19 +618,19 @@ export default function PreJoinExperience() {
                             <Button
                                 onClick={handleSignup}
                                 disabled={isProcessing}
-                                className="w-full h-14 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-lg mt-8 rounded-none border border-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] tracking-widest font-orbitron flex items-center justify-center gap-2 group transition-all duration-300">
+                                className="w-full h-10 md:h-14 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm md:text-lg mt-4 md:mt-8 rounded-none border border-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] tracking-widest font-orbitron flex items-center justify-center gap-2 group transition-all duration-300">
                                 {isProcessing ? (
-                                    <>CREATING ACCOUNT <Loader2 className="w-5 h-5 animate-spin" /></>
+                                    <>CREATING ACCOUNT <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" /></>
                                 ) : (
-                                    <>SIGN UP <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>
+                                    <>SIGN UP <ArrowRight className="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" /></>
                                 )}
                             </Button>
 
-                            <div className="border-t border-white/10 mt-8 pt-6 text-center">
+                            <div className="border-t border-white/10 mt-4 md:mt-8 pt-3 md:pt-6 text-center">
                                 <Link href="/auth/login?type=guest" className="inline-flex flex-col items-center group">
-                                    <span className="text-[10px] text-gray-600 font-mono uppercase tracking-widest mb-1 group-hover:text-cyan-500/70 transition-colors">Already have an account?</span>
-                                    <span className="text-cyan-400 group-hover:text-cyan-300 font-bold tracking-widest font-orbitron transition-all flex items-center gap-2">
-                                        <span className="text-xs opacity-50 group-hover:translate-x-1 transition-transform">{`>>`}</span> LOG IN
+                                    <span className="text-[8px] md:text-[10px] text-gray-600 font-mono uppercase tracking-widest mb-1 group-hover:text-cyan-500/70 transition-colors">Already have an account?</span>
+                                    <span className="text-cyan-400 group-hover:text-cyan-300 font-bold tracking-widest font-orbitron transition-all flex items-center gap-2 text-xs md:text-sm">
+                                        <span className="text-[10px] md:text-xs opacity-50 group-hover:translate-x-1 transition-transform">{`>>`}</span> LOG IN
                                     </span>
                                 </Link>
                             </div>

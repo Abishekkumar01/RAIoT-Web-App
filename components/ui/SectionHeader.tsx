@@ -19,9 +19,9 @@ export default function SectionHeader({ title, className = "" }: SectionHeaderPr
                 </div>
 
                 {/* Center Trapezoid Tab - Adjusted Size */}
-                <div className="relative mx-4">
+                <div className="relative mx-2 md:mx-4 w-[260px] min-w-[260px] xs:w-[320px] md:w-[450px] transition-all duration-300">
                     {/* The Shape - SVG for precise angles */}
-                    <svg width="450" height="80" viewBox="0 0 450 80" className="drop-shadow-[0_-5px_20px_rgba(6,182,212,0.2)]">
+                    <svg viewBox="0 0 450 80" className="w-full h-auto drop-shadow-[0_-5px_20px_rgba(6,182,212,0.2)]">
                         {/* Main Fill */}
                         <path
                             d="M0,80 L30,10 L420,10 L450,80 Z"
@@ -40,8 +40,8 @@ export default function SectionHeader({ title, className = "" }: SectionHeaderPr
                     </svg>
 
                     {/* Title Text - Scaled Down */}
-                    <div className="absolute inset-0 flex items-center justify-center pt-2">
-                        <h2 className="text-4xl font-black uppercase tracking-widest text-white drop-shadow-[0_0_15px_rgba(6,182,212,0.8)] font-orbitron">
+                    <div className="absolute inset-0 flex items-center justify-center pt-1 md:pt-2">
+                        <h2 className="text-xl xs:text-2xl md:text-4xl font-black uppercase tracking-widest text-white drop-shadow-[0_0_15px_rgba(6,182,212,0.8)] font-orbitron whitespace-nowrap">
                             {title}
                         </h2>
                     </div>

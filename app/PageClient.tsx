@@ -40,6 +40,16 @@ export default function PageClient({ galleryImages }: PageClientProps) {
     const { hasLoaded, setHasLoaded } = useLoader();
     const [isLoading, setIsLoading] = useState(!hasLoaded);
     const [textState, setTextState] = useState<'dull' | 'glitch' | 'active'>('dull');
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        handleResize(); // Initial check
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Handle Glitch -> Active transition
     useEffect(() => {
@@ -55,7 +65,7 @@ export default function PageClient({ galleryImages }: PageClientProps) {
     };
 
     return (
-        <div className="min-h-screen bg-black animate-fade-in relative">
+        <div className="min-h-screen bg-black animate-fade-in relative" style={{ overflowX: 'clip' }}>
             {isLoading && <Loader onLoadingComplete={handleLoadingComplete} />}
 
             {/* Fail-Safe Black Background to prevent transparency checkerboard */}
@@ -74,16 +84,16 @@ export default function PageClient({ galleryImages }: PageClientProps) {
             <PublicNavbar />
 
             {/* Hero Section with Light Rays - Sticky/Fixed Behavior */}
-            <section className="relative min-h-screen flex flex-col justify-center overflow-visible bg-black text-foreground pt-16 sticky top-0 z-0">
+            <section className="relative min-h-[50vh] md:min-h-screen flex flex-col justify-center overflow-visible bg-black text-foreground pt-16 sticky top-0 z-0">
                 {/* Light Rays Background Effect */}
                 <div className="absolute inset-0 w-full h-full pointer-events-none">
                     <LightRays
-                        raysOrigin="top-left"
+                        raysOrigin={isMobile ? "top-center" : "top-left"}
                         raysColor="#60a5fa"
                         raysSpeed={1.2}
                         lightSpread={0.4}
                         rayLength={2.0}
-                        followMouse={true}
+                        followMouse={!isMobile}
                         mouseInfluence={0.15}
                         noiseAmount={0.08}
                         distortion={0.05}
@@ -104,54 +114,56 @@ export default function PageClient({ galleryImages }: PageClientProps) {
                 {/* Background Layers - Fresh Start Layer 1 - Ditto Copy Cleaned */}
                 <div className="absolute inset-0 w-full h-full z-0 pointer-events-none">
                     {/* Layer 1: Foreground Rocks (Cleaned v7) */}
-                    <div className="absolute bottom-0 left-0 w-full z-20 translate-y-[28%]">
-                        <Image
-                            src="/layer_1_rocks_v8.png"
-                            alt="Foreground Rocks Layer 1"
-                            width={0}
-                            height={0}
-                            sizes="100vw"
-                            style={{ width: "100%", height: "auto" }}
-                            priority
-                        />
-                    </div>
+                    <HeroScrollAnimation className="absolute inset-0 w-full h-full" triggerY={0} yDistance={150}>
+                        <div className="absolute bottom-0 left-0 w-full z-20 translate-y-[-90%] md:translate-y-[28%]">
+                            <Image
+                                src="/layer_1_rocks_v8.png"
+                                alt="Foreground Rocks Layer 1"
+                                width={0}
+                                height={0}
+                                sizes="100vw"
+                                style={{ width: "100%", height: "auto" }}
+                                priority
+                            />
+                        </div>
+                    </HeroScrollAnimation>
                 </div>
 
 
-                <div className="w-full relative z-30 h-full flex flex-col justify-start pt-24 md:pt-40 min-h-screen pl-12 md:pl-48">
+                <div className="w-full relative z-30 h-full flex flex-col justify-start pt-20 md:pt-40 min-h-screen pl-12 md:pl-48">
 
                     {/* Hero Content Wrapper - Left Aligned */}
                     <div className="relative w-full max-w-none">
 
                         {/* Animated Scroll Group - Triggers Early (50px Scroll) - Moves Far Right */}
                         <HeroScrollAnimation triggerY={50} xDistance={600}>
-                            <div className="flex flex-col items-start text-left">
+                            <div className="flex flex-col items-center text-center md:items-start md:text-left">
                                 {/* Logo */}
-                                <div className="mb-6 animate-fade-in-up pl-1">
+                                <div className="mb-6 animate-fade-in-up md:pl-1 mx-auto md:mx-0">
                                     <Image
                                         src="/logo.png"
                                         alt="RAIoT Logo"
                                         width={90}
                                         height={90}
-                                        className="object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]"
+                                        className="w-20 h-20 md:w-[90px] md:h-[90px] object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]"
                                         priority
                                     />
                                 </div>
 
                                 {/* Headings */}
                                 <h1
-                                    className="text-6xl md:text-[6.5rem] font-black font-orbitron text-white drop-shadow-2xl z-5 relative flex flex-wrap justify-center gap-4 md:gap-6 leading-tight select-none mix-blend-screen"
+                                    className="text-6xl md:text-[6.5rem] font-black font-orbitron text-white drop-shadow-2xl z-5 relative flex flex-wrap justify-center md:justify-start gap-4 md:gap-6 leading-tight select-none mix-blend-screen"
                                     style={{ fontFamily: 'var(--font-orbitron)' }}
                                 >
                                     Welcome to <GlitchText text="RAIoT" state={textState} className="md:ml-2 drop-shadow-[0_0_30px_rgba(34,211,238,0.8)]" />
                                 </h1>
 
-                                <p className="text-2xl md:text-4xl text-cyan-100/80 font-light mb-12 animate-fade-in-up animation-delay-200 tracking-wide text-left pl-1">
+                                <p className="text-2xl md:text-4xl text-cyan-100/80 font-light mb-12 animate-fade-in-up animation-delay-200 tracking-wide text-center md:text-left md:pl-1">
                                     Robotics, Automation & IoT Club
                                 </p>
 
                                 {/* CTA Buttons - Inside Animation Group */}
-                                <div className="flex justify-start gap-6 animate-fade-in-up animation-delay-400 pl-1">
+                                <div className="flex justify-center md:justify-start gap-6 animate-fade-in-up animation-delay-400 w-full md:w-auto md:pl-1">
                                     <Link href="/auth/signup">
                                         <Button
                                             size="lg"
@@ -180,44 +192,48 @@ export default function PageClient({ galleryImages }: PageClientProps) {
 
             {/* Features Section - Slides Up Over Hero */}
             {/* Features Section - Slides Up Over Hero */}
-            <section className="relative z-10 bg-black min-h-screen flex flex-col pt-32 pb-20 px-4">
+            <section className="relative z-10 bg-black min-h-screen flex flex-col -mt-[50vh] md:mt-0 pt-16 md:pt-32 pb-20 px-4">
                 {/* Custom Divider - Absolute Top Border */}
                 <div className="absolute top-0 left-0 w-full -translate-y-[70px]">
                     <SectionHeader title="WHAT WE DO" className="w-full" />
                 </div>
 
-                <div className="w-full relative z-10 px-4 md:px-16 max-w-[95%] mx-auto">
+                <div className="w-full relative z-10 md:px-16 max-w-[95%] mx-auto">
 
                     {/* Header Section */}
                     <div className="text-center mb-16 space-y-6">
                         {/* Split Text with Individual Animations */}
                         <div className="flex flex-col items-center justify-center space-y-2 md:space-y-4">
-                            <ScrollReveal direction="right" xDistance={500}>
-                                <h2 className="text-5xl md:text-7xl font-black font-orbitron leading-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-cyan-400 drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]">
+                            <ScrollReveal direction="right" xDistance={isMobile ? 0 : 500} delay={isMobile ? 0.2 : 0} viewportAmount={0.1} forceAnimate={isMobile}>
+                                <h2 className="text-3xl md:text-7xl font-black font-orbitron leading-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-cyan-400 drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]">
                                     Built by makers.
                                 </h2>
                             </ScrollReveal>
-                            <ScrollReveal direction="left" xDistance={500}>
-                                <h2 className="text-5xl md:text-7xl font-black font-orbitron leading-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-cyan-400 drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]">
+                            <ScrollReveal direction="left" xDistance={isMobile ? 0 : 500} delay={isMobile ? 0.4 : 0} viewportAmount={0.1} forceAnimate={isMobile}>
+                                <h2 className="text-3xl md:text-7xl font-black font-orbitron leading-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-cyan-400 drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]">
                                     Driven by innovation.
                                 </h2>
                             </ScrollReveal>
-                            <ScrollReveal direction="right" xDistance={500}>
-                                <h2 className="text-5xl md:text-7xl font-black font-orbitron leading-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-cyan-400 drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]">
+                            <ScrollReveal direction="right" xDistance={isMobile ? 0 : 500} delay={isMobile ? 0.6 : 0} viewportAmount={0.1} forceAnimate={isMobile}>
+                                <h2 className="text-3xl md:text-7xl font-black font-orbitron leading-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-cyan-400 drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]">
                                     Proven in competition.
                                 </h2>
                             </ScrollReveal>
                         </div>
-                        <ScrollReveal direction="up" className="max-w-3xl mx-auto text-base md:text-lg text-cyan-100/80 font-mono tracking-wide">
-                            <span className="text-cyan-400 font-bold">RAIoT</span> is a hands-on robotics and automation community where innovation meets execution.
-                            We design, build, and compete with cutting-edge systems that solve real-world problems.
+                        <ScrollReveal direction="up" className="max-w-3xl mx-auto text-base md:text-lg text-cyan-100/80 font-mono tracking-wide" delay={isMobile ? 0.8 : 0} forceAnimate={isMobile}>
+                            <div className="inline-block">
+                                <span className="text-cyan-400 font-bold">RAIoT</span> is a hands-on robotics and automation community where innovation meets execution.
+                                We design, build, and compete with cutting-edge systems that solve real-world problems.
+                            </div>
                         </ScrollReveal>
                     </div>
 
                     <div className="grid lg:grid-cols-2 gap-12 items-center">
                         {/* Left Column: Honeycomb Gallery */}
-                        <div className="w-full flex items-center justify-center lg:justify-start scale-90 origin-center lg:origin-top-left">
-                            <HoneycombGallery />
+                        <div className="w-full flex items-center justify-center -my-24 md:my-0 lg:justify-start lg:items-start">
+                            <div className="scale-[0.45] md:scale-90 origin-center lg:origin-top-left ml-8 md:ml-0">
+                                <HoneycombGallery />
+                            </div>
                         </div>
 
                         {/* Right Column: Content */}

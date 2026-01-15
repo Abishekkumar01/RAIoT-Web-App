@@ -1,12 +1,20 @@
 .galleryWrapper {
     /* User provided CSS logic */
     --img-size: calc(100px - 0.5rem / 2);
-    display: grid;
+    display: none;
+    /* Hidden on mobile by default */
     gap: 0.5rem;
     grid-template-columns: repeat(6, var(--img-size));
     grid-template-rows: repeat(4, var(--img-size));
     width: fit-content;
     margin: 0 auto;
+}
+
+/* Show gallery on tablet and larger screens */
+@media (min-width: 768px) {
+    .galleryWrapper {
+        display: grid;
+    }
 }
 
 .galleryItem {

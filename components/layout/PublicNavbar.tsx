@@ -233,107 +233,81 @@ export const PublicNavbar = () => {
             </div>
           </div>
 
-          {/* Mobile Navigation */}
+          {/* Mobile Navigation - Tech Theme */}
           {isMenuOpen && (
-            <div className="md:hidden">
-              <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                {navLinks.map((link) => (
+            <div className="md:hidden fixed inset-0 top-24 z-40 bg-black/98 backdrop-blur-xl animate-in fade-in duration-300" role="dialog" aria-modal="true" aria-label="Mobile navigation menu">
+              {/* Tech Grid Background */}
+              <div
+                className="absolute inset-0 opacity-5"
+                style={{
+                  backgroundImage: `
+                    linear-gradient(rgba(34,211,238,0.3) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(34,211,238,0.3) 1px, transparent 1px)
+                  `,
+                  backgroundSize: '30px 30px'
+                }}
+              />
+
+              {/* Animated Scan Line */}
+              <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-400/80 to-transparent animate-pulse" />
+
+              {/* Navigation Links */}
+              <div className="relative h-full flex flex-col items-center justify-center space-y-4 px-6 py-8">
+                {navLinks.map((link, index) => (
                   <Link
                     key={link.href}
                     href={link.href}
                     prefetch={true}
-                    className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary cursor-target"
                     onClick={() => setIsMenuOpen(false)}
+                    className="group relative w-full"
+                    style={{
+                      animationDelay: `${index * 50}ms`
+                    }}
                   >
-                    {link.label}
+                    {/* Container with tech corners */}
+                    <div className="relative px-6 py-3 overflow-hidden">
+                      {/* Corner Brackets - Smaller and more subtle */}
+                      <div className="absolute top-0 left-0 w-3 h-3 border-l border-t border-cyan-400/50 transition-all duration-300 group-hover:w-4 group-hover:h-4 group-hover:border-cyan-400" />
+                      <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-cyan-400/50 transition-all duration-300 group-hover:w-4 group-hover:h-4 group-hover:border-cyan-400" />
+                      <div className="absolute bottom-0 left-0 w-3 h-3 border-l border-b border-cyan-400/50 transition-all duration-300 group-hover:w-4 group-hover:h-4 group-hover:border-cyan-400" />
+                      <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-cyan-400/50 transition-all duration-300 group-hover:w-4 group-hover:h-4 group-hover:border-cyan-400" />
+
+                      {/* Background Glow */}
+                      <div className="absolute inset-0 bg-cyan-400/0 group-hover:bg-cyan-400/5 transition-all duration-300" />
+
+                      {/* Scan Line Effect on Hover */}
+                      <div className="absolute inset-0 overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent -translate-y-full group-hover:translate-y-[200%] transition-transform duration-700 ease-out" />
+                      </div>
+
+                      {/* Link Text */}
+                      <div className="relative flex items-center justify-between">
+                        <span className="font-orbitron font-bold text-xl tracking-wider text-gray-400 group-hover:text-cyan-400 transition-all duration-300 group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]">
+                          {link.label.toUpperCase()}
+                        </span>
+
+                        {/* Arrow Indicator */}
+                        <div className="w-0 group-hover:w-6 overflow-hidden transition-all duration-300">
+                          <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      {/* Index Number */}
+                      <div className="absolute -left-1 top-1/2 -translate-y-1/2 font-mono text-[10px] text-cyan-400/30 group-hover:text-cyan-400/70 transition-colors">
+                        {String(index + 1).padStart(2, '0')}
+                      </div>
+                    </div>
                   </Link>
                 ))}
-                {loading ? (
-                  <div className="px-3 py-2 text-sm text-muted-foreground">
-                    Loading...
-                  </div>
-                ) : user ? (
-                  <div className="space-y-1">
-                    <Link
-                      href={
-                        user.role === "admin" || user.role === "superadmin"
-                          ? "/admin"
-                          : "/dashboard"
-                      }
-                      className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary cursor-target"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Dashboard
-                    </Link>
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        setIsMenuOpen(false);
-                      }}
-                      className="block w-full text-left px-3 py-2 text-base font-medium text-foreground hover:text-primary cursor-target"
-                    >
-                      Logout
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <div className="px-3 py-2 text-sm font-medium text-muted-foreground">
-                      Login Options
-                    </div>
-                    <Link
-                      href="/auth/login"
-                      className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary cursor-target flex items-center"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <User className="mr-2 h-4 w-4" />
-                      Member Login
-                    </Link>
-                    <Link
-                      href="/auth/login?type=admin"
-                      className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary cursor-target flex items-center"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Shield className="mr-2 h-4 w-4" />
-                      Admin Login
-                    </Link>
-                    <Link
-                      href="/auth/login?type=operations"
-                      className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary cursor-target flex items-center"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <ClipboardList className="mr-2 h-4 w-4" />
-                      Operations Login
-                    </Link>
-                    <Link
-                      href="/auth/login?type=guest"
-                      className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary cursor-target flex items-center"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Users className="mr-2 h-4 w-4" />
-                      Guest Access
-                    </Link>
 
-                    <div className="px-3 py-2 text-sm font-medium text-muted-foreground mt-4">
-                      Sign Up Options
-                    </div>
-                    <Link
-                      href="/auth/signup"
-                      className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary cursor-target flex items-center"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <User className="mr-2 h-4 w-4" />
-                      As a Member
-                    </Link>
-                    <Link
-                      href="/auth/guest-signup"
-                      className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary cursor-target flex items-center"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Users className="mr-2 h-4 w-4" />
-                      As a Guest
-                    </Link>
-                  </div>
-                )}
+                {/* Bottom Tech Accent */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center space-x-2 mt-6">
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                  <span className="font-mono text-[10px] text-cyan-400/50 tracking-widest">NAV ACTIVE</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                </div>
               </div>
             </div>
           )}

@@ -244,6 +244,24 @@ const DroneScene = ({ onActivate, shouldStart }: { onActivate?: () => void, shou
     const [landed, setLanded] = useState(false);
     const hasActivated = useRef(false);
 
+    // Responsive State
+    const targetRef = useRef(TARGET_POS);
+    const [scale, setScale] = useState(1.0);
+
+    useEffect(() => {
+        const handleResize = () => {
+            const isMobile = window.innerWidth < 768;
+            setScale(isMobile ? 0.6 : 1.0);
+            targetRef.current = isMobile ? new THREE.Vector3(0, 3.8, 0) : TARGET_POS;
+        };
+
+        // Initial check
+        handleResize();
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     useFrame((state) => {
         if (!group.current) return;
 
@@ -258,13 +276,16 @@ const DroneScene = ({ onActivate, shouldStart }: { onActivate?: () => void, shou
         const now = state.clock.elapsedTime;
         const elapsed = now - startTime.current;
 
+        // Use current target from ref
+        const currentTarget = targetRef.current;
+
         if (elapsed < FLIGHT_DURATION) {
             // --- FLIGHT PHASE ---
             const progress = elapsed / FLIGHT_DURATION;
             const ease = 1 - Math.pow(1 - progress, 3); // Ease out cubic
 
             // Position interpolation
-            const currentPos = new THREE.Vector3().lerpVectors(START_POS, TARGET_POS, ease);
+            const currentPos = new THREE.Vector3().lerpVectors(START_POS, currentTarget, ease);
             group.current.position.copy(currentPos);
 
             // PHYSICS: Tilt & Bank
@@ -286,20 +307,23 @@ const DroneScene = ({ onActivate, shouldStart }: { onActivate?: () => void, shou
 
             const hoverT = now;
             const bob = Math.sin(hoverT * HOVER_Y_SPEED) * HOVER_Y_AMP;
-            group.current.position.y = TARGET_POS.y + bob;
+            group.current.position.y = currentTarget.y + bob;
+
+            // Allow x to smoothly move if window resized during hover
+            group.current.position.x = damp(currentTarget.x, group.current.position.x, 5, 0.016);
 
             // Stabilize rotation - Force perfectly level
             group.current.rotation.x = damp(0, group.current.rotation.x, 10, 0.016);
             group.current.rotation.z = damp(0, group.current.rotation.z, 10, 0.016);
 
-            // Gentle Yaw
-            const sway = Math.sin(hoverT * 0.5) * HOVER_ROT_AMP;
+            // Gentle Yaw - Disable on mobile (scale < 0.8) for perfect ray alignment
+            const sway = scale < 0.8 ? 0 : Math.sin(hoverT * 0.5) * HOVER_ROT_AMP;
             group.current.rotation.y = sway;
         }
     });
 
     return (
-        <group ref={group} scale={1.0}>
+        <group ref={group} scale={scale}>
             <DroneBody />
             <DroneRays active={landed} />
         </group>

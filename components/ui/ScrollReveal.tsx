@@ -10,6 +10,8 @@ interface ScrollRevealProps {
     xDistance?: number;
     yDistance?: number;
     delay?: number;
+    viewportAmount?: number;
+    forceAnimate?: boolean;
 }
 
 export default function ScrollReveal({
@@ -19,6 +21,8 @@ export default function ScrollReveal({
     xDistance = 400,
     yDistance = 50,
     delay = 0,
+    viewportAmount = 0.2,
+    forceAnimate = false,
 }: ScrollRevealProps) {
 
     const getInitialVariant = () => {
@@ -31,12 +35,15 @@ export default function ScrollReveal({
         }
     };
 
+    const animationProps = forceAnimate
+        ? { animate: { opacity: 1, x: 0, y: 0 } }
+        : { whileInView: { opacity: 1, x: 0, y: 0 }, viewport: { once: false, amount: viewportAmount } };
+
     return (
         <motion.div
             className={className}
             initial={getInitialVariant()}
-            whileInView={{ opacity: 1, x: 0, y: 0 }}
-            viewport={{ once: false, amount: 0.3 }}
+            {...animationProps}
             transition={{
                 type: "spring",
                 stiffness: 70,

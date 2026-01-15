@@ -25,13 +25,16 @@ export default function MemberProfilePage() {
     const fetchMember = async () => {
       try {
         const usersRef = collection(db, 'users')
-        const q = query(usersRef, where('profileData.rollNumber', '==', rollNumber))
+        // Convert to lowercase for case-insensitive matching
+        const normalizedRollNumber = rollNumber.toLowerCase()
+        const q = query(usersRef, where('profileData.rollNumber', '==', normalizedRollNumber))
         const querySnapshot = await getDocs(q)
 
         if (!querySnapshot.empty) {
           const userDoc = querySnapshot.docs[0]
           setMember(userDoc.data() as User)
         } else {
+          console.error(`Member not found with roll number: ${rollNumber} (normalized: ${normalizedRollNumber})`)
           setNotFound(true)
         }
       } catch (error) {

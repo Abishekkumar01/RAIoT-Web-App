@@ -112,7 +112,7 @@ export default function LeadersPage() {
             <PublicNavbar />
 
             {/* Hero Section */}
-            <div className="relative py-20 text-center overflow-hidden">
+            <div className="relative py-12 md:py-20 text-center overflow-hidden">
                 {/* Abstract Background Elements */}
                 <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
                     <div className="absolute top-10 left-10 w-96 h-96 bg-cyan-500 rounded-full blur-[128px]" />
@@ -125,37 +125,37 @@ export default function LeadersPage() {
                     transition={{ duration: 0.8 }}
                     className="relative z-10 space-y-4 px-4"
                 >
-                    <div className="flex justify-center mb-6">
+                    <div className="flex justify-center mb-4 md:mb-6">
                         <Image
                             src="/logo.png"
                             alt="RAIoT Logo"
-                            width={80}
-                            height={80}
-                            className="object-contain"
+                            width={60}
+                            height={60}
+                            className="object-contain md:w-20 md:h-20"
                         />
                     </div>
 
                     {/* View Switcher - Cyber Style */}
-                    <div className="flex justify-center mb-8">
+                    <div className="flex justify-center mb-6 md:mb-8">
                         <div className="bg-slate-900/80 p-1 rounded-full border border-slate-700 backdrop-blur-md relative flex items-center shadow-[0_0_20px_rgba(0,0,0,0.5)]">
                             <button
                                 onClick={() => setViewMode('leader')}
                                 className={cn(
-                                    "relative px-6 py-2 rounded-full text-sm font-bold tracking-wider transition-all duration-300 z-10 flex items-center gap-2",
+                                    "relative px-4 md:px-6 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-bold tracking-wider transition-all duration-300 z-10 flex items-center gap-1.5 md:gap-2",
                                     viewMode === 'leader' ? "text-slate-950" : "text-slate-400 hover:text-slate-200"
                                 )}
                             >
-                                <Users className="w-4 h-4" />
+                                <Users className="w-3 h-3 md:w-4 md:h-4" />
                                 LEADERS
                             </button>
                             <button
                                 onClick={() => setViewMode('faculty')}
                                 className={cn(
-                                    "relative px-6 py-2 rounded-full text-sm font-bold tracking-wider transition-all duration-300 z-10 flex items-center gap-2",
+                                    "relative px-4 md:px-6 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-bold tracking-wider transition-all duration-300 z-10 flex items-center gap-1.5 md:gap-2",
                                     viewMode === 'faculty' ? "text-slate-950" : "text-slate-400 hover:text-slate-200"
                                 )}
                             >
-                                <GraduationCap className="w-4 h-4" />
+                                <GraduationCap className="w-3 h-3 md:w-4 md:h-4" />
                                 FACULTY
                             </button>
 
@@ -174,12 +174,12 @@ export default function LeadersPage() {
                     </div>
 
                     <h1
-                        className="text-5xl md:text-7xl font-black font-orbitron mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-cyan-400 drop-shadow-[0_0_15px_rgba(6,182,212,0.6)] tracking-wide uppercase"
+                        className="text-4xl md:text-7xl font-black font-orbitron mb-4 md:mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-cyan-400 drop-shadow-[0_0_15px_rgba(6,182,212,0.6)] tracking-wide uppercase"
                         style={{ fontFamily: 'var(--font-orbitron)' }}
                     >
                         {viewMode === 'leader' ? "Our Leaders" : "Our Faculty"}
                     </h1>
-                    <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+                    <p className="text-muted-foreground text-sm md:text-lg max-w-2xl mx-auto px-4">
                         {viewMode === 'leader'
                             ? "The visionaries who built the circuits, coded the future, and led our revolution."
                             : "The mentors who guided our path, shared their wisdom, and shaped our potential."}
@@ -188,7 +188,7 @@ export default function LeadersPage() {
             </div>
 
             {/* Timeline Section - Full Width */}
-            <div className="max-w-[1920px] mx-auto relative px-12 md:px-48 pb-32">
+            <div className="max-w-[1920px] mx-auto relative px-6 md:px-48 pb-16 md:pb-32">
                 {/* Scroll Progress Line (Animated) */}
 
 
@@ -221,20 +221,20 @@ export default function LeadersPage() {
                                 sortedBatches.map((batch, batchIdx) => (
                                     <div key={batch} className="mb-24 relative z-10">
                                         {/* Batch Year Marker */}
-                                        <div className="flex justify-start md:justify-center mb-12 sticky top-24 z-20 pl-12 md:pl-0">
+                                        <div className="flex justify-start md:justify-center mb-8 md:mb-12 sticky top-20 md:top-24 z-20 pl-8 md:pl-0">
                                             <motion.div
                                                 initial={{ scale: 0 }}
                                                 whileInView={{ scale: 1 }}
                                                 viewport={{ once: true }}
-                                                className="bg-slate-900 border border-cyan-500/50 px-6 py-2 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.3)] backdrop-blur-md"
+                                                className="bg-slate-900 border border-cyan-500/50 px-4 md:px-6 py-1.5 md:py-2 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.3)] backdrop-blur-md"
                                             >
-                                                <span className="text-2xl font-bold font-mono text-cyan-400">
+                                                <span className="text-lg md:text-2xl font-bold font-mono text-cyan-400">
                                                     {viewMode === 'faculty' ? 'Joined ' : 'Batch '}{batch}
                                                 </span>
                                             </motion.div>
                                         </div>
 
-                                        <div className="grid md:grid-cols-2 gap-8 md:gap-x-24">
+                                        <div className="grid md:grid-cols-2 gap-6 md:gap-8 md:gap-x-24">
                                             {groupedLeaders[batch].map((leader, idx) => {
                                                 // Calculate index for ZigZag pattern
                                                 let effectiveIndex = idx
@@ -262,8 +262,8 @@ export default function LeadersPage() {
                                                             <div className={`absolute top-[30px] ${isLeft ? '-right-[52px]' : '-left-[52px]'} w-3 h-3 rounded-full bg-cyan-400 hidden md:block shadow-[0_0_10px_rgba(34,211,238,1)] ring-4 ring-slate-950`} />
 
                                                             {/* Connecting Line (Mobile) */}
-                                                            <div className="absolute top-8 -left-[28px] w-8 h-[2px] bg-cyan-500/30 md:hidden" />
-                                                            <div className="absolute top-[30px] -left-[34px] w-3 h-3 rounded-full bg-cyan-400 md:hidden shadow-[0_0_10px_rgba(34,211,238,1)] ring-4 ring-slate-950" />
+                                                            <div className="absolute top-6 -left-[20px] w-6 h-[2px] bg-cyan-500/30 md:hidden" />
+                                                            <div className="absolute top-[22px] -left-[26px] w-2.5 h-2.5 rounded-full bg-cyan-400 md:hidden shadow-[0_0_10px_rgba(34,211,238,1)] ring-2 ring-slate-950" />
 
                                                             <Card className="bg-slate-900/40 border-slate-800 backdrop-blur-sm overflow-hidden hover:border-cyan-500/50 transition-all duration-300 group-hover:shadow-[0_0_30px_rgba(6,182,212,0.15)] h-full">
                                                                 <CardContent className="p-0 relative h-full">
@@ -272,27 +272,27 @@ export default function LeadersPage() {
                                                                         style={{ backgroundImage: `radial-gradient(circle, ${isLeft ? 'cyan' : '#a855f7'} 1px, transparent 1px)`, backgroundSize: '20px 20px' }}
                                                                     />
 
-                                                                    <div className={`flex ${isLeft ? 'flex-row-reverse' : 'flex-row'} items-stretch gap-6 h-full`}>
+                                                                    <div className={`flex ${isLeft ? 'flex-row-reverse' : 'flex-row'} items-stretch gap-4 md:gap-6 h-full`}>
                                                                         {/* Avatar Section */}
-                                                                        <div className={`relative p-6 shrink-0 flex flex-col items-center justify-center ${isLeft ? 'border-l' : 'border-r'} border-slate-800 bg-slate-900/50`}>
-                                                                            <div className={`relative h-24 w-24 rounded-full border-2 p-1 ${neonStyle.split(' ')[0]} ${neonStyle.split(' ')[1]} transition-transform duration-500 group-hover:scale-105 group-hover:rotate-6`}>
+                                                                        <div className={`relative p-4 md:p-6 shrink-0 flex flex-col items-center justify-center ${isLeft ? 'border-l' : 'border-r'} border-slate-800 bg-slate-900/50`}>
+                                                                            <div className={`relative h-20 w-20 md:h-24 md:w-24 rounded-full border-2 p-1 ${neonStyle.split(' ')[0]} ${neonStyle.split(' ')[1]} transition-transform duration-500 group-hover:scale-105 group-hover:rotate-6`}>
                                                                                 <div className="rounded-full overflow-hidden h-full w-full bg-slate-950 relative">
                                                                                     {leader.imageUrl ? (
                                                                                         <img src={leader.imageUrl} alt={leader.name} className="h-full w-full object-cover" />
                                                                                     ) : (
                                                                                         <div className="h-full w-full flex items-center justify-center bg-slate-800 text-slate-500">
-                                                                                            <Cpu className="h-8 w-8" />
+                                                                                            <Cpu className="h-6 w-6 md:h-8 md:w-8" />
                                                                                         </div>
                                                                                     )}
                                                                                 </div>
                                                                                 {leader.status === 'active' && (
-                                                                                    <div className="absolute -bottom-1 -right-1 bg-green-500 h-4 w-4 rounded-full border-2 border-slate-900 animate-pulse" />
+                                                                                    <div className="absolute -bottom-1 -right-1 bg-green-500 h-3 w-3 md:h-4 md:w-4 rounded-full border-2 border-slate-900 animate-pulse" />
                                                                                 )}
                                                                             </div>
-                                                                            <div className="mt-3 text-center">
+                                                                            <div className="mt-2 md:mt-3 text-center">
                                                                                 {leader.linkedin && (
-                                                                                    <Link href={leader.linkedin} target="_blank" className="inline-flex items-center text-xs text-muted-foreground hover:text-white transition-colors bg-slate-800/50 px-2 py-1 rounded-full border border-slate-700 hover:border-cyan-500">
-                                                                                        <Linkedin className="h-3 w-3 mr-1" />
+                                                                                    <Link href={leader.linkedin} target="_blank" className="inline-flex items-center text-[10px] md:text-xs text-muted-foreground hover:text-white transition-colors bg-slate-800/50 px-1.5 md:px-2 py-0.5 md:py-1 rounded-full border border-slate-700 hover:border-cyan-500">
+                                                                                        <Linkedin className="h-2.5 w-2.5 md:h-3 md:w-3 mr-0.5 md:mr-1" />
                                                                                         <span>Connect</span>
                                                                                     </Link>
                                                                                 )}
@@ -300,24 +300,24 @@ export default function LeadersPage() {
                                                                         </div>
 
                                                                         {/* Main Content (Middle) */}
-                                                                        <div className={`flex-1 py-6 flex flex-col justify-center ${isLeft ? 'text-right' : 'text-left'}`}>
-                                                                            <h3 className="text-xl md:text-2xl font-bold text-white group-hover:text-cyan-400 transition-colors">
+                                                                        <div className={`flex-1 py-4 md:py-6 flex flex-col justify-center ${isLeft ? 'text-right' : 'text-left'}`}>
+                                                                            <h3 className="text-lg md:text-2xl font-bold text-white group-hover:text-cyan-400 transition-colors">
                                                                                 {leader.name}
                                                                             </h3>
-                                                                            <div className={`flex items-center gap-2 mt-2 mb-3 ${isLeft ? 'justify-end' : 'justify-start'}`}>
-                                                                                <Badge variant="outline" className={`border-slate-700 ${neonStyle.split(' ')[2]} bg-slate-900/50`}>
+                                                                            <div className={`flex items-center gap-1.5 md:gap-2 mt-1.5 md:mt-2 mb-2 md:mb-3 ${isLeft ? 'justify-end' : 'justify-start'} flex-wrap`}>
+                                                                                <Badge variant="outline" className={`border-slate-700 ${neonStyle.split(' ')[2]} bg-slate-900/50 text-[10px] md:text-xs px-1.5 md:px-2 py-0.5`}>
                                                                                     {leader.role}
                                                                                 </Badge>
-                                                                                <Badge variant="secondary" className="text-[10px] bg-slate-800 text-slate-400 font-mono">
+                                                                                <Badge variant="secondary" className="text-[9px] md:text-[10px] bg-slate-800 text-slate-400 font-mono px-1.5 md:px-2 py-0.5">
                                                                                     ID: {leader.displayId || leader.id}
                                                                                 </Badge>
                                                                             </div>
                                                                             {leader.bio ? (
-                                                                                <p className="text-sm text-slate-400 leading-relaxed italic border-l-2 border-slate-800 pl-3">
+                                                                                <p className="text-xs md:text-sm text-slate-400 leading-relaxed italic border-l-2 border-slate-800 pl-2 md:pl-3">
                                                                                     "{leader.bio}"
                                                                                 </p>
                                                                             ) : (
-                                                                                <p className="text-sm text-slate-500 font-mono">
+                                                                                <p className="text-xs md:text-sm text-slate-500 font-mono">
                                                                                     System.User.Status = {leader.status.toUpperCase()}
                                                                                 </p>
                                                                             )}
