@@ -17,12 +17,12 @@ const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig)
 
 // Initialize Firebase services
 // Updated to use the new modular SDK 9+ persistence pattern
-import { persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore'
+import { persistentLocalCache, persistentMultipleTabManager, memoryLocalCache } from 'firebase/firestore'
 
 export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager()
-  })
+  localCache: typeof window !== 'undefined'
+    ? persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    : memoryLocalCache()
 })
 export const auth = getAuth(app)
 export const storage = getStorage(app)
