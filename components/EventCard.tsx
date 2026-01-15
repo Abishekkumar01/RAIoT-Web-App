@@ -65,7 +65,7 @@ export const EventCard: React.FC<EventCardProps> = ({
   }
 
   return (
-    <div className="flex justify-center items-center p-4">
+    <div className="flex justify-center items-center">
       <div
         className="relative w-80 h-96 perspective-1000 group/card"
         onMouseEnter={handleMouseEnter}

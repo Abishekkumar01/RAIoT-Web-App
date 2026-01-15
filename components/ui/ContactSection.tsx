@@ -27,46 +27,46 @@ export default function ContactSection() {
             {/* Marquee Section */}
             <div className={styles.container}>
                 <div className={styles.marqueeWrapper}>
-                    {/* Secondary Marquee (Counter-Motion) - Top Layer */}
+                    {/* Secondary Marquee (Counter-Motion) - Top Layer - NOW RAIoT TEXT */}
                     <div className={`${styles.track} ${styles.trackTop}`}>
-                        <ul className={styles.marqueeContent}>
+                        <ul className={styles.marqueeContentReverse}>
                             <li>
                                 <span className={styles.textSecondary} style={{ backgroundImage: 'none', WebkitTextFillColor: '#06b6d4' }}>RAIoT</span>
-                                <span className={styles.textSecondary}> — WHERE THEORY </span>
+                                <span className={styles.textSecondary}>— WHERE THEORY</span>
                                 <span className={styles.textSecondary} style={{ backgroundImage: 'none', WebkitTextFillColor: '#ef4444' }}>ENDS</span>
-                                <span className={styles.textSecondary}> AND REAL ENGINEERING BEGINS.</span>
+                                <span className={styles.textSecondary}>AND REAL ENGINEERING BEGINS.</span>
                             </li>
                             <li>
                                 <span className={styles.textSecondary} style={{ backgroundImage: 'none', WebkitTextFillColor: '#06b6d4' }}>RAIoT</span>
-                                <span className={styles.textSecondary}> — WHERE THEORY </span>
+                                <span className={styles.textSecondary}>— WHERE THEORY</span>
                                 <span className={styles.textSecondary} style={{ backgroundImage: 'none', WebkitTextFillColor: '#ef4444' }}>ENDS</span>
-                                <span className={styles.textSecondary}> AND REAL ENGINEERING BEGINS.</span>
+                                <span className={styles.textSecondary}>AND REAL ENGINEERING BEGINS.</span>
                             </li>
                         </ul>
-                        <ul className={styles.marqueeContent} aria-hidden="true">
+                        <ul className={styles.marqueeContentReverse} aria-hidden="true">
                             <li>
                                 <span className={styles.textSecondary} style={{ backgroundImage: 'none', WebkitTextFillColor: '#06b6d4' }}>RAIoT</span>
-                                <span className={styles.textSecondary}> — WHERE THEORY </span>
+                                <span className={styles.textSecondary}>— WHERE THEORY</span>
                                 <span className={styles.textSecondary} style={{ backgroundImage: 'none', WebkitTextFillColor: '#ef4444' }}>ENDS</span>
-                                <span className={styles.textSecondary}> AND REAL ENGINEERING BEGINS.</span>
+                                <span className={styles.textSecondary}>AND REAL ENGINEERING BEGINS.</span>
                             </li>
                             <li>
                                 <span className={styles.textSecondary} style={{ backgroundImage: 'none', WebkitTextFillColor: '#06b6d4' }}>RAIoT</span>
-                                <span className={styles.textSecondary}> — WHERE THEORY </span>
+                                <span className={styles.textSecondary}>— WHERE THEORY</span>
                                 <span className={styles.textSecondary} style={{ backgroundImage: 'none', WebkitTextFillColor: '#ef4444' }}>ENDS</span>
-                                <span className={styles.textSecondary}> AND REAL ENGINEERING BEGINS.</span>
+                                <span className={styles.textSecondary}>AND REAL ENGINEERING BEGINS.</span>
                             </li>
                         </ul>
                     </div>
 
-                    {/* Primary Marquee - Bottom Layer */}
+                    {/* Primary Marquee - Bottom Layer - NOW GET IN TOUCH */}
                     <div className={`${styles.track} ${styles.trackBottom}`}>
-                        <ul className={styles.marqueeContentReverse}>
+                        <ul className={styles.marqueeContent}>
                             <li><span className={styles.text}>Get in touch</span></li>
                             <li><span className={styles.text}>Get in touch</span></li>
                             <li><span className={styles.text}>Get in touch</span></li>
                         </ul>
-                        <ul className={styles.marqueeContentReverse} aria-hidden="true">
+                        <ul className={styles.marqueeContent} aria-hidden="true">
                             <li><span className={styles.text}>Get in touch</span></li>
                             <li><span className={styles.text}>Get in touch</span></li>
                             <li><span className={styles.text}>Get in touch</span></li>
@@ -83,7 +83,7 @@ export default function ContactSection() {
                         href={link.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`group relative w-32 h-32 md:w-48 md:h-48 xl:w-64 xl:h-64 rounded-[2.5rem] flex items-center justify-center transition-all duration-300 ${styles.proButton}`}
+                        className={`group relative w-28 h-28 md:w-40 md:h-40 xl:w-56 xl:h-56 rounded-[2.5rem] flex items-center justify-center transition-all duration-300 ${styles.proButton}`}
                     >
                         {/* Icon */}
                         <div className="relative z-10">

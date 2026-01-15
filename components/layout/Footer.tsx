@@ -18,98 +18,97 @@ export default function Footer() {
     }
 
     return (
-        <footer className="relative w-full bg-black text-white pt-20 pb-10 overflow-hidden border-t border-white/10">
+        <footer className="relative w-full bg-black text-white pt-20 pb-8 overflow-hidden border-t border-white/10">
             {/* Background Tech Elements */}
             <div className="absolute inset-0 pointer-events-none opacity-20">
                 <div className="absolute top-0 left-1/4 w-[1px] h-full bg-gradient-to-b from-transparent via-primary/50 to-transparent" />
                 <div className="absolute top-0 right-1/4 w-[1px] h-full bg-gradient-to-b from-transparent via-primary/50 to-transparent" />
-                <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
-                {/* Animated Grid Background */}
+                {/* Dotted Grid Background */}
                 <div
                     className="absolute inset-0"
                     style={{
-                        backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)',
-                        backgroundSize: '50px 50px',
+                        backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px)',
+                        backgroundSize: '40px 40px',
                         maskImage: 'linear-gradient(to bottom, transparent, black)'
                     }}
                 />
             </div>
 
             <div className="container mx-auto px-6 relative z-10">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-12 mb-16">
-                    {/* Brand Column */}
-                    <div className="md:col-span-5 space-y-6 relative">
-                        {/* Floating Logo - Absolute Positioned to Left */}
-                        <div className="hidden xl:block absolute -left-64 top-10 w-40 h-40 opacity-80 pointer-events-none">
-                            <Image
-                                src="/logo.png"
-                                alt="RAIoT Logo"
-                                fill
-                                className="object-contain drop-shadow-[0_0_25px_rgba(168,85,247,0.4)]"
-                            />
-                        </div>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-6 mb-16">
 
+                    {/* Brand Column (Left) */}
+                    <div className="lg:col-span-4 lg:col-start-2 space-y-6">
                         <motion.div
-                            initial={{ opacity: 0, x: -20 }}
-                            whileInView={{ opacity: 1, x: 0 }}
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
-                            className="flex items-center gap-3"
+                            className="flex items-start gap-5"
                         >
-                            <div className="relative w-12 h-12 flex items-center justify-center bg-white/5 border border-white/10 rounded-sm overflow-hidden group">
-                                <div className="absolute inset-0 bg-primary/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                                <Cpu className="w-6 h-6 text-primary relative z-10" />
+                            {/* Logo */}
+                            <div className="relative w-16 h-16 shrink-0">
+                                <Image
+                                    src="/logo.png"
+                                    alt="RAIoT Logo"
+                                    fill
+                                    className="object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]"
+                                />
                             </div>
-                            <div>
-                                <h2 className="font-orbitron text-2xl font-bold tracking-wider">RAIoT</h2>
-                                <p className="text-xs text-white/50 tracking-[0.2em] uppercase">Robotics & Automation</p>
+
+                            {/* Brand Text */}
+                            <div className="pt-1">
+                                <h2 className="font-orbitron text-3xl font-bold tracking-wider text-white">RAIoT</h2>
+                                <p className="text-sm text-white/50 tracking-[0.2em] uppercase mt-1">ROBOTICS & AUTOMATION</p>
                             </div>
                         </motion.div>
 
-                        <p className="text-white/60 leading-relaxed max-w-md font-light">
+                        <p className="text-white/60 text-base leading-relaxed max-w-md font-light">
                             Pioneering the future of autonomous systems and intelligent machines.
                             We are a community of makers, engineers, and innovators building the next generation of robotics.
                         </p>
 
-                        <div className="flex flex-col gap-2 pt-4">
-                            <div className="flex items-center gap-3 text-white/60 hover:text-primary transition-colors cursor-pointer">
-                                <MapPin className="w-4 h-4" />
-                                <span className="text-sm">Amity University Rajasthan, Jaipur</span>
+                        <div className="flex flex-col gap-3 pt-2">
+                            <div className="flex items-center gap-3 text-white/50 hover:text-primary transition-colors cursor-pointer group">
+                                <MapPin className="w-5 h-5 group-hover:text-primary transition-colors" />
+                                <span className="text-base font-mono">Amity University Rajasthan, Jaipur</span>
                             </div>
-                            <div className="flex items-center gap-3 text-white/60 hover:text-primary transition-colors cursor-pointer">
-                                <Mail className="w-4 h-4" />
-                                <span className="text-sm">theraiot.tech@gmail.com</span>
+                            <div className="flex items-center gap-3 text-white/50 hover:text-primary transition-colors cursor-pointer group">
+                                <Mail className="w-5 h-5 group-hover:text-primary transition-colors" />
+                                <span className="text-base font-mono">theraiot.tech@gmail.com</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Navigation Links */}
-                    <div className="md:col-span-3 md:col-start-7 space-y-6">
-                        <h3 className="font-orbitron text-lg font-semibold text-primary/90 flex items-center gap-2">
-                            <span className="w-1 h-4 bg-primary rounded-sm" />
-                            Navigation
-                        </h3>
-                        <ul className="space-y-3">
+                    {/* Navigation (Center - Offset to right slightly) */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="flex items-center gap-2 mb-6">
+                            <span className="w-1 h-6 bg-purple-600 rounded-sm" />
+                            <h3 className="font-orbitron text-2xl font-semibold text-white/90">Navigation</h3>
+                        </div>
+
+                        <ul className="space-y-4">
                             {['Home', 'Events', 'Projects', 'Team', 'Gallery'].map((item) => (
                                 <li key={item}>
                                     <Link
                                         href={`/${item.toLowerCase() === 'home' ? '' : item.toLowerCase()}`}
-                                        className="text-white/60 hover:text-white transition-all duration-300 flex items-center gap-2 group"
+                                        className="text-white/60 hover:text-white transition-all duration-300 flex items-center gap-3 group w-fit"
                                     >
-                                        <span className="w-1 h-1 bg-white/20 rounded-full group-hover:bg-primary transition-colors" />
-                                        <span className="group-hover:translate-x-1 transition-transform">{item}</span>
+                                        <span className="w-1.5 h-1.5 bg-white/20 rounded-full group-hover:bg-primary group-hover:scale-125 transition-all" />
+                                        <span className="text-base tracking-wide group-hover:translate-x-1 transition-transform">{item}</span>
                                     </Link>
                                 </li>
                             ))}
                         </ul>
                     </div>
 
-                    {/* Social / Connect */}
-                    <div className="md:col-span-3 space-y-6">
-                        <h3 className="font-orbitron text-lg font-semibold text-primary/90 flex items-center gap-2">
-                            <span className="w-1 h-4 bg-primary rounded-sm" />
-                            Connect
-                        </h3>
+                    {/* Connect (Right) */}
+                    <div className="lg:col-span-4 space-y-6">
+                        <div className="flex items-center gap-2 mb-6">
+                            <span className="w-1 h-6 bg-purple-600 rounded-sm" />
+                            <h3 className="font-orbitron text-2xl font-semibold text-white/90">Connect</h3>
+                        </div>
+
                         <div className="flex gap-4">
                             {[
                                 { icon: Github, href: "https://github.com/raiot-lab", target: "_blank" },
@@ -121,41 +120,51 @@ export default function Footer() {
                                     href={Social.href}
                                     target={Social.target || "_self"}
                                     rel={Social.target === "_blank" ? "noopener noreferrer" : undefined}
-                                    className="w-10 h-10 flex items-center justify-center border border-white/20 bg-white/5 rounded-sm hover:bg-primary hover:border-primary hover:text-black transition-all duration-300 group relative overflow-hidden"
+                                    className="w-12 h-12 flex items-center justify-center border border-white/10 bg-white/5 rounded-sm hover:bg-primary hover:border-primary hover:text-white text-white/70 transition-all duration-300"
                                 >
-                                    <Social.icon className="w-5 h-5 relative z-10" />
+                                    <Social.icon className="w-5 h-5" />
                                 </Link>
                             ))}
                         </div>
 
                         <div className="pt-4">
-                            <div className="relative group">
-                                <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-purple-600 rounded opacity-50 blur group-hover:opacity-75 transition duration-1000 group-hover:duration-200" />
-                                <Link href="/auth/signup" className="relative w-full bg-black border border-white/10 px-6 py-4 text-sm font-orbitron tracking-[0.2em] font-bold text-white hover:text-purple-400 transition-colors uppercase flex items-center justify-between group-hover:border-purple-500/30">
-                                    <span>JOIN GUEST COMMUNITY</span>
-                                    <span className="text-xl text-purple-500">→</span>
-                                </Link>
-                            </div>
+                            <Link
+                                href="/auth/signup"
+                                className="group relative w-full flex items-center justify-between px-6 py-5 bg-black border border-white/20 hover:border-purple-500/50 transition-all duration-300 overflow-hidden"
+                            >
+                                <div className="absolute inset-0 bg-purple-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                <div className="absolute left-0 top-0 h-full w-[2px] bg-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                                <span className="relative z-10 font-orbitron text-base font-bold tracking-[0.1em] text-white group-hover:translate-x-1 transition-transform">
+                                    JOIN GUEST<br />COMMUNITY
+                                </span>
+                                <span className="relative z-10 text-purple-500 text-xl group-hover:translate-x-1 transition-transform duration-300">
+                                    →
+                                </span>
+                            </Link>
                         </div>
                     </div>
                 </div>
 
-                {/* Footer Bottom */}
-                <div className="border-t border-white/10 pt-8 mt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/40 font-mono">
+                {/* Footer Bottom Bar */}
+                <div className="border-t border-white/10 pt-8 mt-12 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] md:text-xs text-white/30 font-mono tracking-wider">
                     <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
                         <span>SYSTEM STATUS: ONLINE</span>
                     </div>
-                    <div className="flex items-center gap-6">
+
+                    <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
                         <span>© {currentYear} RAIoT. All Systems Operational.</span>
-                        <Link href="#" className="hover:text-white transition-colors">Privacy Protocol</Link>
-                        <Link href="#" className="hover:text-white transition-colors">Terms of Service</Link>
+                        <div className="flex gap-6">
+                            <Link href="#" className="hover:text-white transition-colors">Privacy Protocol</Link>
+                            <Link href="#" className="hover:text-white transition-colors">Terms of Service</Link>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            {/* Decorative Bottom Bar */}
-            <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50" />
         </footer>
     );
 }

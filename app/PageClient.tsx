@@ -208,7 +208,7 @@ export default function PageClient({ galleryImages }: PageClientProps) {
                                 </h2>
                             </ScrollReveal>
                         </div>
-                        <ScrollReveal direction="up" className="max-w-3xl mx-auto text-lg md:text-xl text-cyan-100/80 font-mono tracking-wide">
+                        <ScrollReveal direction="up" className="max-w-3xl mx-auto text-base md:text-lg text-cyan-100/80 font-mono tracking-wide">
                             <span className="text-cyan-400 font-bold">RAIoT</span> is a hands-on robotics and automation community where innovation meets execution.
                             We design, build, and compete with cutting-edge systems that solve real-world problems.
                         </ScrollReveal>
@@ -216,39 +216,39 @@ export default function PageClient({ galleryImages }: PageClientProps) {
 
                     <div className="grid lg:grid-cols-2 gap-12 items-center">
                         {/* Left Column: Honeycomb Gallery */}
-                        <div className="w-full flex items-center justify-center lg:justify-start">
+                        <div className="w-full flex items-center justify-center lg:justify-start scale-90 origin-center lg:origin-top-left">
                             <HoneycombGallery />
                         </div>
 
                         {/* Right Column: Content */}
-                        <div className="relative group h-full">
+                        <div className="relative group h-fit self-center">
                             <div
                                 className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/30 to-purple-500/30 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-500"
                             />
-                            <div className="relative h-full bg-zinc-950/80 backdrop-blur-xl border border-white/10 p-8 md:p-10 rounded-2xl flex flex-col justify-center shadow-2xl">
+                            <div className="relative h-full bg-zinc-950/80 backdrop-blur-xl border border-white/10 p-10 md:p-14 rounded-2xl flex flex-col justify-center shadow-2xl">
 
                                 {/* Decorative Element */}
                                 <div className="absolute top-0 right-0 p-4 opacity-20 pointer-events-none">
                                     <Cpu className="w-32 h-32 text-cyan-500 rotate-12" />
                                 </div>
 
-                                <div className="space-y-8 relative z-10">
+                                <div className="space-y-10 relative z-10">
                                     <div>
                                         <h3 className="text-4xl md:text-5xl font-black font-orbitron text-white mb-2 tracking-tight">
                                             BEYOND <span className="text-cyan-400">THEORY.</span>
                                         </h3>
-                                        <p className="text-lg text-cyan-100/60 font-mono tracking-widest uppercase">
+                                        <p className="text-xl text-cyan-100/60 font-mono tracking-widest uppercase">
                                             Where Mechanics Meets Intelligence
                                         </p>
                                     </div>
 
-                                    <p className="text-gray-300 text-lg leading-relaxed font-light">
+                                    <p className="text-gray-300 text-xl leading-relaxed font-light">
                                         At <strong className="text-white font-bold">RAIoT</strong>, we don't just study robotics—we define its future. We operate at the bleeding edge where embedded systems, AI, and mechanical engineering converge.
                                     </p>
 
-                                    <div className="space-y-6 pt-2">
+                                    <div className="space-y-8 pt-2">
                                         {/* Feature 1 */}
-                                        <div className="flex items-start gap-4">
+                                        <div className="flex items-start gap-5">
                                             <div className="p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/30 shrink-0">
                                                 <BrainCircuit className="w-6 h-6 text-cyan-400" />
                                             </div>
@@ -259,7 +259,7 @@ export default function PageClient({ galleryImages }: PageClientProps) {
                                         </div>
 
                                         {/* Feature 2 */}
-                                        <div className="flex items-start gap-4">
+                                        <div className="flex items-start gap-5">
                                             <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30 shrink-0">
                                                 <Cpu className="w-6 h-6 text-purple-400" />
                                             </div>
@@ -270,7 +270,7 @@ export default function PageClient({ galleryImages }: PageClientProps) {
                                         </div>
 
                                         {/* Feature 3 */}
-                                        <div className="flex items-start gap-4">
+                                        <div className="flex items-start gap-5">
                                             <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 shrink-0">
                                                 <Crown className="w-6 h-6 text-amber-400" />
                                             </div>

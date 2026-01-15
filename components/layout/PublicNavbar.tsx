@@ -66,8 +66,8 @@ export const PublicNavbar = () => {
                   <Image
                     src="/logo.png" // Place your logo.png in the public folder
                     alt="RAIoT Logo"
-                    width={55}
-                    height={55}
+                    width={40}
+                    height={40}
                     className="object-contain group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] transition-all duration-300"
                   />
                 </div>

@@ -73,7 +73,7 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-black text-slate-200 selection:bg-cyan-500/30">
       <PublicNavbar />
-      <div className="max-w-[1920px] mx-auto px-4 py-12">
+      <div className="max-w-[1400px] mx-auto px-8 md:px-12 py-12">
         <div className="text-center mb-12">
           <h1
             className="text-5xl md:text-7xl font-black font-orbitron mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-cyan-400 drop-shadow-[0_0_15px_rgba(6,182,212,0.6)] tracking-wide uppercase"

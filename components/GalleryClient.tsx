@@ -19,7 +19,7 @@ export default function GalleryClient({ initialData }: { initialData: GalleryEve
     }
 
     return (
-        <div className="max-w-[1920px] mx-auto px-4">
+        <div className="max-w-[1400px] mx-auto px-8 md:px-12">
             <div className="space-y-12">
                 {initialData.map((event) => (
                     <div key={event.id} className="space-y-6 mb-24">
@@ -56,7 +56,7 @@ export default function GalleryClient({ initialData }: { initialData: GalleryEve
                                     id: img.id,
                                     img: img.url || '', // Fallback
                                     url: img.url || '',
-                                    height: [400, 300, 500, 350, 450][idx % 5]
+                                    height: [300, 220, 380, 260, 320][idx % 5]
                                 }))}
                                 ease="power3.out"
                                 duration={0.6}

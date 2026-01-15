@@ -35,7 +35,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} ${orbitron.variable} overflow-x-hidden`}>
+      <body className={`${inter.className} ${orbitron.variable} overflow-x-hidden`} suppressHydrationWarning>
         {/* Theme provider for light/dark mode */}
         <ThemeProvider
           attribute="class"
@@ -52,13 +52,14 @@ export default function RootLayout({
               {children}
               {/* WhatsApp Help Desk Floating Button */}
               <WhatsAppButton />
-              {/* Global Toaster for notifications */}
-              <Toaster />
               {/* Tech Themed Scrollbars */}
               <TechScrollbar orientation="vertical" />
               <TechScrollbar orientation="horizontal" />
               <RoutePrefetcher />
               <Footer />
+
+              {/* Elements that should stay 1:1 (Outside Zoom) */}
+              <Toaster />
             </LoaderProvider>
           </AuthProvider>
         </ThemeProvider>

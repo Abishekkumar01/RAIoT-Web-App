@@ -50,7 +50,10 @@
     }
 
     /* Hide scrollbar for IE, Edge and Firefox */
+    /* Hide scrollbar for IE, Edge and Firefox */
     html {
+        font-size: 67%;
+        /* Scales all rem-based Tailwind classes to 67% size */
         -ms-overflow-style: none;
         /* IE and Edge */
         scrollbar-width: none;

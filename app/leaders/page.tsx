@@ -188,7 +188,7 @@ export default function LeadersPage() {
             </div>
 
             {/* Timeline Section - Full Width */}
-            <div className="max-w-[1920px] mx-auto relative px-4 md:px-8 pb-32">
+            <div className="max-w-[1920px] mx-auto relative px-12 md:px-48 pb-32">
                 {/* Scroll Progress Line (Animated) */}
 
 

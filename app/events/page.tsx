@@ -301,7 +301,7 @@ export default function EventsPage() {
             <p className="text-muted-foreground">Check back later for upcoming events!</p>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 justify-items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-x-8 gap-y-20 max-w-fit mx-auto justify-items-center">
             {events.map((event) => {
               const isRegistered = user ? userRegistrations.has(event.id) : false
               const isFull = Boolean(event.maxParticipants && event.registered && event.registered >= event.maxParticipants);

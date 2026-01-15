@@ -16,22 +16,14 @@ const firebaseConfig = {
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig)
 
 // Initialize Firebase services
-// Removed experimentalForceLongPolling as it can cause offline errors if the network is unstable or if the server closes the connection.
-// Moving to standard initialization with persistence enabled.
-export const db = getFirestore(app)
+// Updated to use the new modular SDK 9+ persistence pattern
+import { persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore'
 
-// Enable offline persistence
-if (typeof window !== 'undefined') {
-  enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code == 'failed-precondition') {
-      // Multiple tabs open, persistence can only be enabled in one tab at a a time.
-      console.warn('Firebase persistence failed-precondition: Multiple tabs open')
-    } else if (err.code == 'unimplemented') {
-      // The current browser does not support all of the features required to enable persistence
-      console.warn('Firebase persistence unimplemented')
-    }
-  });
-}
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+})
 export const auth = getAuth(app)
 export const storage = getStorage(app)
 
