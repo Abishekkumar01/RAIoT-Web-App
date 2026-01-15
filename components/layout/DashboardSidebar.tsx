@@ -22,6 +22,7 @@ import {
   Mail,
   Rocket,
   Box,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -78,6 +79,9 @@ export const DashboardSidebar = () => {
     { href: "/operations", label: "Operations Dashboard", icon: BarChart3 },
     { href: "/operations/my-events", label: "Events & Teams", icon: Calendar },
     { href: "/dashboard/inventory", label: "Resources", icon: Box },
+    ...(user?.role === 'management_head' || user?.role === 'admin' || user?.role === 'superadmin' ? [
+      { href: "/operations/inventory", label: "Manage Inventory", icon: Box },
+    ] : []),
     { href: "/dashboard", label: "Club Dashboard", icon: Home },
     ...(user?.role === 'student_coordinator' || user?.role === 'admin' || user?.role === 'superadmin' ? [
       { href: "/operations/attendance", label: "Mark Attendance", icon: ClipboardList },
@@ -99,7 +103,7 @@ export const DashboardSidebar = () => {
       { href: "/dashboard", label: "Club Dashboard", icon: Home }, // Added for Admins too
       ...adminLinks.slice(1) // Keep rest of admin links
     ];
-  } else if (["student_coordinator", "public_relation_head", "operations_head"].includes(user?.role || "")) {
+  } else if (["student_coordinator", "public_relation_head", "operations_head", "management_head"].includes(user?.role || "")) {
     links = operationsLinks;
   }
 

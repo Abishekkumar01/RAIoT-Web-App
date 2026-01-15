@@ -43,3 +43,11 @@ export interface IDamagedLog {
     reportedBy: string; // User ID or Name
     date: string;
 }
+
+export interface IBill {
+    id: string;
+    fileName: string;
+    url: string;
+    date: string; // ISO date of upload
+    uploadedBy: string; // Admin User Name
+}

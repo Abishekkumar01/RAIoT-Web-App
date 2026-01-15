@@ -134,8 +134,7 @@ service cloud.firestore {
     // Attendance
     match /attendance/{recordId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && isCoordinator();
-      allow update, delete: if false; 
+      allow write: if request.auth != null && isCoordinator();
     }
 
     // Attendance Summaries (for History)
@@ -157,9 +156,9 @@ service cloud.firestore {
     // - Write/Create/Delete: Admins only
     match /inventory/{componentId} {
       allow read: if request.auth != null;
-      allow create, delete: if isAdmin();
+      allow create, delete: if isAdmin() || isManagementHead();
       // Allow authenticated users to update ONLY availableQuantity (for issuing components)
-      allow update: if isAdmin() || (request.auth != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['availableQuantity']));
+      allow update: if isAdmin() || isManagementHead() || (request.auth != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['availableQuantity']));
     }
 
     // Issuances (Requests):
@@ -172,17 +171,23 @@ service cloud.firestore {
     //    - Users can probably update status to 'cancelled' (not implemented yet, but safe to allow admin for now).
     match /issuances/{issuanceId} {
       allow read: if request.auth != null && (
-        resource.data.userId == request.auth.uid || isAdmin()
+        resource.data.userId == request.auth.uid || isAdmin() || isManagementHead()
       );
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if isAdmin(); // Only admins update status for now
+      allow update: if isAdmin() || isManagementHead(); // Only admins update status for now
     }
 
     // Damaged Logs:
     // - Read: Admins only
     // - Create: Admins only (for now)
     match /damaged_logs/{logId} {
-      allow read, write: if isAdmin();
+      allow read, write: if isAdmin() || isManagementHead();
+    }
+
+    // Bills:
+    // - Read/Write: Admins only
+    match /bills/{billId} {
+      allow read, write: if isAdmin() || isManagementHead();
     }
 
     // ------------------------------
@@ -204,6 +209,13 @@ service cloud.firestore {
     function isPublicRelation() {
       return request.auth != null && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'public_relation_head' ||
+        isAdmin()
+      );
+    }
+
+    function isManagementHead() {
+      return request.auth != null && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'management_head' ||
         isAdmin()
       );
     }

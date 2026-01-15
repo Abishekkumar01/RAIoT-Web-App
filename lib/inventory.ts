@@ -15,11 +15,12 @@ import {
     increment,
     setDoc
 } from "firebase/firestore";
-import { IComponent, IIssuance, IssuanceStatus } from "@/types/inventory";
+import { IComponent, IIssuance, IssuanceStatus, IBill, IDamagedLog } from "@/types/inventory";
 
 const INVENTORY_COLLECTION = "inventory";
 const ISSUANCE_COLLECTION = "issuances";
 const DAMAGED_COLLECTION = "damaged_logs";
+const BILLS_COLLECTION = "bills";
 
 // --- Inventory CRUD ---
 
@@ -271,3 +272,38 @@ export const getDamagedLogs = async (): Promise<IDamagedLog[]> => {
         throw error;
     }
 };
+
+// --- Bills ---
+
+export const getBills = async (): Promise<IBill[]> => {
+    try {
+        const q = query(collection(db, BILLS_COLLECTION), orderBy("date", "desc"));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as IBill));
+    } catch (error) {
+        console.error("Error fetching bills:", error);
+        throw error;
+    }
+}
+
+export const addBill = async (bill: Omit<IBill, "id" | "date">): Promise<string> => {
+    try {
+        const docRef = await addDoc(collection(db, BILLS_COLLECTION), {
+            ...bill,
+            date: new Date().toISOString()
+        });
+        return docRef.id;
+    } catch (error) {
+        console.error("Error adding bill:", error);
+        throw error;
+    }
+}
+
+export const deleteBill = async (id: string): Promise<void> => {
+    try {
+        await deleteDoc(doc(db, BILLS_COLLECTION, id));
+    } catch (error) {
+        console.error("Error deleting bill:", error);
+        throw error;
+    }
+}

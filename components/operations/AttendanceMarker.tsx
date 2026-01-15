@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Check, Loader2, Search, Upload, Download, FileSpreadsheet } from "lucide-react"
+import { Calendar as CalendarIcon, Check, Loader2, Search, AlertCircle, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -20,13 +20,13 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/contexts/AuthContext"
 import { db } from "@/lib/firebase"
 import { collection, getDocs, query, where, writeBatch, doc, Timestamp, getDoc } from "firebase/firestore"
 import { toast } from "sonner"
-import { parseCSV, expandCSV, downloadCSV } from "@/lib/excel-utils"
-import * as XLSX from "xlsx"
+
 
 interface Student {
     id: string
@@ -43,33 +43,39 @@ export function AttendanceMarker() {
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
-    const [importing, setImporting] = useState(false)
 
-    // Map of studentId -> isPresent
-    const [attendanceState, setAttendanceState] = useState<Record<string, boolean>>({})
+    // Map of studentId -> status
+    const [attendanceState, setAttendanceState] = useState<Record<string, 'present' | 'absent' | 'late'>>({})
     const [existingAttendance, setExistingAttendance] = useState<boolean>(false)
-    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const fetchStudents = async () => {
         try {
             setLoading(true)
-            const q = query(collection(db, "students"))
+            // Fetch users with role 'member'
+            const q = query(collection(db, "users"), where("role", "==", "member"))
             const snapshot = await getDocs(q)
             const fetched: Student[] = []
+
             snapshot.forEach((doc) => {
-                fetched.push({ id: doc.id, ...doc.data() } as Student)
+                const data = doc.data()
+                fetched.push({
+                    id: doc.id, // User UID
+                    uniqueId: data.uniqueId || data.profileData?.rollNumber || 'N/A',
+                    name: data.displayName || 'Unknown',
+                    batch: data.profileData?.year ? `${data.profileData.year} - ${data.profileData.branch || ''}` : 'General'
+                })
             })
             setStudents(fetched)
 
-            // Initialize all as absent (false) by default if not loading existing
+            // Initialize all as absent by default if not loading existing
             if (!existingAttendance) {
-                const initial: Record<string, boolean> = {}
-                fetched.forEach(s => initial[s.id] = false)
+                const initial: Record<string, 'present' | 'absent' | 'late'> = {}
+                fetched.forEach(s => initial[s.id] = 'absent')
                 setAttendanceState(prev => ({ ...initial, ...prev })) // Keep prev if any was manually set
             }
         } catch (error) {
             console.error("Error fetching students:", error)
-            toast.error("Failed to load student list")
+            toast.error("Failed to load student list from users")
         } finally {
             setLoading(false)
         }
@@ -95,11 +101,18 @@ export function AttendanceMarker() {
                 if (!snapshot.empty) {
                     setExistingAttendance(true)
                     // Load existing state
-                    const existing: Record<string, boolean> = {}
+                    const existing: Record<string, 'present' | 'absent' | 'late'> = {}
                     snapshot.forEach(doc => {
                         const data = doc.data()
                         if (data.studentId) {
-                            existing[data.studentId] = data.status === 'present'
+                            // Handle legacy boolean or string status
+                            if (data.status === 'present' || data.status === true) {
+                                existing[data.studentId] = 'present'
+                            } else if (data.status === 'late') {
+                                existing[data.studentId] = 'late'
+                            } else {
+                                existing[data.studentId] = 'absent'
+                            }
                         }
                     })
                     setAttendanceState(prev => ({ ...prev, ...existing }))
@@ -107,8 +120,8 @@ export function AttendanceMarker() {
                     setExistingAttendance(false)
                     // If switching to a new date without records, reset state
                     if (students.length > 0) {
-                        const reset: Record<string, boolean> = {}
-                        students.forEach(s => reset[s.id] = false)
+                        const reset: Record<string, 'present' | 'absent' | 'late'> = {}
+                        students.forEach(s => reset[s.id] = 'absent')
                         setAttendanceState(reset)
                     }
                 }
@@ -119,20 +132,20 @@ export function AttendanceMarker() {
         checkExisting()
     }, [date, students.length]) // check when date changes or students loaded
 
-    const handleToggle = (studentId: string) => {
-        if (existingAttendance) return // Read-only if already submitted
+    const handleStatusChange = (studentId: string, status: 'present' | 'absent' | 'late') => {
+        // if (existingAttendance) return // Removed restriction to allow editing
         setAttendanceState(prev => ({
             ...prev,
-            [studentId]: !prev[studentId]
+            [studentId]: status
         }))
     }
 
     const handleSubmit = async () => {
         if (!date || !user) return
-        if (existingAttendance) {
-            toast.error("Attendance for this date has already been submitted.")
-            return
-        }
+        // if (existingAttendance) {
+        //     toast.error("Attendance for this date has already been submitted.")
+        //     return
+        // }
 
         try {
             setSubmitting(true)
@@ -141,7 +154,7 @@ export function AttendanceMarker() {
             const timestamp = Timestamp.now()
 
             students.forEach(student => {
-                const isPresent = attendanceState[student.id]
+                const status = attendanceState[student.id] || 'absent'
                 const recordId = `${dateStr}_${student.id}`
                 const ref = doc(db, "attendance", recordId)
 
@@ -151,7 +164,7 @@ export function AttendanceMarker() {
                     studentId: student.id,
                     studentName: student.name,
                     studentUniqueId: student.uniqueId || '',
-                    status: isPresent ? 'present' : 'absent',
+                    status: status,
                     markedBy: user.uid,
                     timestamp
                 })
@@ -159,14 +172,19 @@ export function AttendanceMarker() {
 
             // Create summary document
             const summaryRef = doc(db, "attendance_summaries", dateStr)
+            const presentCount = Object.values(attendanceState).filter(s => s === 'present').length
+            const lateCount = Object.values(attendanceState).filter(s => s === 'late').length
+            const absentCount = students.length - presentCount - lateCount
+
             batch.set(summaryRef, {
                 dateStr,
                 date: Timestamp.fromDate(date),
                 markedBy: user.uid,
                 updatedAt: timestamp,
                 totalStudents: students.length,
-                totalPresent: Object.values(attendanceState).filter(v => v).length,
-                totalAbsent: students.length - Object.values(attendanceState).filter(v => v).length
+                totalPresent: presentCount,
+                totalLate: lateCount,
+                totalAbsent: absentCount
             })
 
             await batch.commit()
@@ -180,84 +198,7 @@ export function AttendanceMarker() {
         }
     }
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
 
-        try {
-            setImporting(true)
-            let parsedData: any[] = []
-
-            if (file.name.endsWith('.csv')) {
-                const text = await file.text()
-                parsedData = parseCSV(text)
-            } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-                const data = await file.arrayBuffer();
-                const workbook = XLSX.read(data);
-                const worksheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[worksheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); // Array of arrays
-
-                // Transform array of arrays to object
-                if (jsonData.length > 0) {
-                    // Assume first row is header if contains "Name" or "ID"
-                    const headers = (jsonData[0] as string[]).map(h => h.toString().toLowerCase());
-                    const hasHeader = headers.some(h => h.includes('name') || h.includes('id'));
-                    const startIndex = hasHeader ? 1 : 0;
-
-                    for (let i = startIndex; i < jsonData.length; i++) {
-                        const row = jsonData[i] as any[];
-                        if (!row || row.length === 0) continue;
-
-                        // Map based on position: 0=ID, 1=Name, 2=Batch
-                        // Or try to map by header if available? For robustness, let's stick to positional for now
-                        // as per example: ID, Name, Batch
-                        if (row[0] && row[1]) {
-                            parsedData.push({
-                                uniqueId: row[0].toString(),
-                                name: row[1].toString(),
-                                batch: row[2] ? row[2].toString() : 'General'
-                            })
-                        }
-                    }
-                }
-            } else {
-                toast.error("Unsupported file type")
-                return
-            }
-
-            if (parsedData.length === 0) {
-                toast.error("No valid data found in file")
-                return
-            }
-
-            const batch = writeBatch(db)
-            parsedData.forEach((student: any) => {
-                // Determine ID: use uniqueId if available, else auto-gen
-                const ref = student.uniqueId
-                    ? doc(db, "students", student.uniqueId)
-                    : doc(collection(db, "students"))
-
-                batch.set(ref, {
-                    uniqueId: student.uniqueId || ref.id,
-                    name: student.name,
-                    batch: student.batch || 'General',
-                    active: true,
-                    updatedAt: Timestamp.now()
-                })
-            })
-
-            await batch.commit()
-            toast.success(`Successfully imported ${parsedData.length} students`)
-            await fetchStudents() // Refresh list
-        } catch (error) {
-            console.error("Import error:", error)
-            toast.error("Failed to import students")
-        } finally {
-            setImporting(false)
-            if (fileInputRef.current) fileInputRef.current.value = ''
-        }
-    }
 
     const handleDownloadReport = () => {
         if (!date) return
@@ -267,13 +208,26 @@ export function AttendanceMarker() {
             "Student ID": student.uniqueId,
             "Name": student.name,
             "Batch": student.batch,
-            "Status": attendanceState[student.id] ? "Present" : "Absent",
+            "Status": attendanceState[student.id] || "absent",
             "Date": format(date, 'yyyy-MM-dd')
         }))
 
         const dateStr = format(date, 'yyyy-MM-dd')
-        const csvContent = expandCSV(reportData)
-        downloadCSV(csvContent, `attendance_report_${dateStr}.csv`)
+        const rows = [
+            ["Student ID", "Name", "Batch", "Status", "Date"],
+            ...reportData.map(r => [r["Student ID"], r["Name"], r["Batch"], r["Status"], r["Date"]])
+        ]
+
+        let csvContent = "data:text/csv;charset=utf-8,"
+            + rows.map(e => e.join(",")).join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `attendance_report_${dateStr}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         toast.success("Report downloaded")
     }
 
@@ -310,8 +264,8 @@ export function AttendanceMarker() {
                         </PopoverContent>
                     </Popover>
                     {existingAttendance && (
-                        <span className="text-sm text-amber-600 font-medium bg-amber-50 px-3 py-1 rounded-md border border-amber-200">
-                            View Only (Submitted)
+                        <span className="text-sm text-green-600 font-medium bg-green-50 px-3 py-1 rounded-md border border-green-200">
+                            Submitted (Editable)
                         </span>
                     )}
                 </div>
@@ -330,43 +284,22 @@ export function AttendanceMarker() {
                     <Button variant="outline" size="icon" onClick={handleDownloadReport} title="Download Daily Report">
                         <Download className="h-4 w-4" />
                     </Button>
+
+
                 </div>
             </div>
 
-            {/* Empty State / Import Action */}
+            {/* Empty State */}
             {!loading && students.length === 0 && (
                 <div className="border border-dashed border-gray-300 rounded-lg p-8 text-center space-y-4">
                     <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                        <FileSpreadsheet className="h-6 w-6 text-gray-400" />
+                        <AlertCircle className="h-6 w-6 text-gray-400" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-medium">No Students Found</h3>
+                        <h3 className="text-lg font-medium">No Members Found</h3>
                         <p className="text-sm text-muted-foreground mt-1">
-                            Upload a CSV file to populate the student list.
+                            No users with role &apos;Member&apos; found. Please add members in the Manage Users section.
                         </p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                            Format: csv/xlsx/xls. Header: ID, Name, Batch
-                        </p>
-                    </div>
-                    <div>
-                        <input
-                            type="file"
-                            accept=".csv, .xlsx, .xls"
-                            className="hidden"
-                            ref={fileInputRef}
-                            onChange={handleFileUpload}
-                        />
-                        <Button
-                            variant="outline"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={importing}
-                        >
-                            {importing ? (
-                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Importing...</>
-                            ) : (
-                                <><Upload className="mr-2 h-4 w-4" /> Upload List (CSV/Excel)</>
-                            )}
-                        </Button>
                     </div>
                 </div>
             )}
@@ -401,12 +334,26 @@ export function AttendanceMarker() {
                                 filteredStudents.map((student, index) => (
                                     <TableRow key={student.id} className="hover:bg-muted/50 transition-colors">
                                         <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
-                                        <TableCell>
-                                            <Checkbox
-                                                checked={attendanceState[student.id] || false}
-                                                onCheckedChange={() => handleToggle(student.id)}
-                                                disabled={existingAttendance}
-                                            />
+                                        <TableCell className="min-w-[200px]">
+                                            <RadioGroup
+                                                value={attendanceState[student.id] || 'absent'}
+                                                onValueChange={(val) => handleStatusChange(student.id, val as any)}
+                                                className="flex items-center space-x-4"
+                                            // disabled={existingAttendance} // Enable editing
+                                            >
+                                                <div className="flex items-center space-x-1">
+                                                    <RadioGroupItem value="present" id={`p-${student.id}`} className="text-green-600 border-green-600 data-[state=checked]:bg-green-600 data-[state=checked]:text-white" />
+                                                    <Label htmlFor={`p-${student.id}`} className="text-xs text-green-700 font-medium cursor-pointer">Present</Label>
+                                                </div>
+                                                <div className="flex items-center space-x-1">
+                                                    <RadioGroupItem value="late" id={`l-${student.id}`} className="text-orange-500 border-orange-500 data-[state=checked]:bg-orange-500 data-[state=checked]:text-white" />
+                                                    <Label htmlFor={`l-${student.id}`} className="text-xs text-orange-600 font-medium cursor-pointer">Late</Label>
+                                                </div>
+                                                <div className="flex items-center space-x-1">
+                                                    <RadioGroupItem value="absent" id={`a-${student.id}`} className="text-red-500 border-red-500 data-[state=checked]:bg-red-500 data-[state=checked]:text-white" />
+                                                    <Label htmlFor={`a-${student.id}`} className="text-xs text-red-600 font-medium cursor-pointer">Absent</Label>
+                                                </div>
+                                            </RadioGroup>
                                         </TableCell>
                                         <TableCell className="font-medium">{student.uniqueId}</TableCell>
                                         <TableCell>{student.name}</TableCell>
@@ -420,33 +367,11 @@ export function AttendanceMarker() {
             )}
 
             <div className="flex justify-between items-center">
-                {/* Secondary Import Button (Mini) if list is populated */}
-                {students.length > 0 && (
-                    <div>
-                        <input
-                            type="file"
-                            accept=".csv, .xlsx, .xls, text/csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-                            className="hidden"
-                            ref={fileInputRef}
-                            onChange={handleFileUpload}
-                        />
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs text-muted-foreground"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={importing}
-                        >
-                            <Upload className="mr-2 h-3 w-3" />
-                            {importing ? "Importing..." : "Update List (CSV)"}
-                        </Button>
-                    </div>
-                )}
 
                 <Button
                     size="lg"
                     onClick={handleSubmit}
-                    disabled={existingAttendance || loading || submitting || students.length === 0}
+                    disabled={loading || submitting || students.length === 0}
                 >
                     {submitting ? (
                         <>
@@ -456,7 +381,7 @@ export function AttendanceMarker() {
                     ) : existingAttendance ? (
                         <>
                             <Check className="mr-2 h-4 w-4" />
-                            Already Submitted
+                            Update Attendance
                         </>
                     ) : (
                         "Submit Attendance"
