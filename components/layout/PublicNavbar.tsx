@@ -217,6 +217,82 @@ export const PublicNavbar = () => {
 
             {/* Mobile menu button */}
             <div className="md:hidden flex items-center">
+              {/* Mobile Auth Trigger */}
+              {loading ? (
+                <div className="w-8 h-8 rounded-full bg-cyan-950/30 animate-pulse mr-2" />
+              ) : user ? (
+                <Link href={user.role === "guest" ? "/guest/profile" : (user.role === "admin" || user.role === "superadmin" ? "/admin" : "/dashboard")}>
+                  <Avatar className="h-8 w-8 ring-1 ring-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.4)] mr-2">
+                    <AvatarImage src="" />
+                    <AvatarFallback className="bg-cyan-950 text-cyan-400 text-xs border border-cyan-500/30">
+                      {user.displayName?.charAt(0).toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="icon"
+                      className="relative group bg-black/40 hover:bg-cyan-950/30 border border-cyan-500/50 text-cyan-400 hover:text-cyan-300 transition-all duration-300 backdrop-blur-md overflow-hidden mr-2 w-9 h-9"
+                    >
+                      {/* Animated background scanline */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent -translate-x-[200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out" />
+
+                      {/* 'Afly' Animation - Pulse Ring */}
+                      <div className="absolute inset-0 rounded-md ring-1 ring-cyan-400/30 group-hover:ring-cyan-400/60 transition-all duration-500 animate-[pulse_3s_ease-in-out_infinite]" />
+
+                      <User className="h-5 w-5 z-10 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]" />
+                    </Button>
+                  </DropdownMenuTrigger>
+
+                  <DropdownMenuContent align="end" className="w-56 mt-2 bg-black/95 border-cyan-500/30 backdrop-blur-xl animate-in slide-in-from-top-2">
+                    <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground/70 tracking-wider font-mono">
+                      LOGIN ACCESS
+                    </div>
+
+                    <DropdownMenuSeparator className="bg-cyan-500/20" />
+
+                    <DropdownMenuItem asChild>
+                      <Link href="/auth/login?type=member" className="flex items-center cursor-pointer text-cyan-100 focus:text-cyan-400 focus:bg-cyan-950/30 py-2">
+                        <User className="h-4 w-4 mr-2 text-cyan-500" />
+                        Member Login
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/auth/login?type=admin" className="flex items-center cursor-pointer text-cyan-100 focus:text-cyan-400 focus:bg-cyan-950/30 py-2">
+                        <Shield className="h-4 w-4 mr-2 text-cyan-500" />
+                        Admin Login
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/auth/login?type=operations" className="flex items-center cursor-pointer text-cyan-100 focus:text-cyan-400 focus:bg-cyan-950/30 py-2">
+                        <ClipboardList className="h-4 w-4 mr-2 text-cyan-500" />
+                        Operations Login
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/auth/login?type=guest" className="flex items-center cursor-pointer text-cyan-100 focus:text-cyan-400 focus:bg-cyan-950/30 py-2">
+                        <Users className="h-4 w-4 mr-2 text-cyan-500" />
+                        Guest Access
+                      </Link>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator className="bg-cyan-500/20" />
+
+                    <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground/70 tracking-wider font-mono">
+                      NEW ACCOUNT
+                    </div>
+                    <DropdownMenuItem asChild>
+                      <Link href="/auth/guest-signup" className="flex items-center cursor-pointer text-cyan-100 focus:text-cyan-400 focus:bg-cyan-950/30 py-2">
+                        <Users className="h-4 w-4 mr-2 text-cyan-500" />
+                        Join as Guest
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
               {/* ModeToggle removed */}
               <Button
                 variant="ghost"

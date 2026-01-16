@@ -101,7 +101,8 @@ export const DashboardSidebar = () => {
     links = [
       { href: "/admin", label: "Admin Dashboard", icon: BarChart3 },
       { href: "/dashboard", label: "Club Dashboard", icon: Home }, // Added for Admins too
-      ...adminLinks.slice(1) // Keep rest of admin links
+      ...adminLinks.slice(1), // Keep rest of admin links
+      { href: "/dashboard/profile", label: "My Profile", icon: User }
     ];
   } else if (["student_coordinator", "public_relation_head", "operations_head", "management_head"].includes(user?.role || "")) {
     links = operationsLinks;
