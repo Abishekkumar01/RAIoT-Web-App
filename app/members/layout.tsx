@@ -1,11 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { DashboardSidebar } from '@/components/layout/DashboardSidebar'
 
-export default function OperationsLayout({
+export default function MembersLayout({
     children,
 }: {
     children: React.ReactNode
@@ -13,10 +12,7 @@ export default function OperationsLayout({
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     return (
-        // We use 'student_coordinator' as the base requirement. 
-        // Higher roles (like Admin) will also pass due to hierarchy if we used > comparison, 
-        // but the sidebar links will adapt based on the user's actual role.
-        <ProtectedRoute requiredRole="student_coordinator">
+        <ProtectedRoute requiredRole="guest">
             <div className="flex min-h-screen bg-background relative overflow-hidden">
                 {/* Mobile Toggle Button */}
                 <button
@@ -40,10 +36,10 @@ export default function OperationsLayout({
 
                 {/* Sidebar Container */}
                 <div className={`
-                  fixed inset-y-0 left-0 z-40 w-64 md:w-64 flex-shrink-0 h-screen transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]
-                  ${isMobileMenuOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 md:translate-x-0 md:opacity-100"}
-                  md:sticky md:top-0
-                `}>
+          fixed inset-y-0 left-0 z-40 w-64 md:w-64 flex-shrink-0 h-screen transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]
+          ${isMobileMenuOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 md:translate-x-0 md:opacity-100"}
+          md:sticky md:top-0
+        `}>
                     <DashboardSidebar onClose={() => setIsMobileMenuOpen(false)} />
                 </div>
 

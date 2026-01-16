@@ -53,6 +53,7 @@ export default function ProfilePage() {
     linkedinLink: user?.profileData?.linkedinLink || "",
     websiteLink: user?.profileData?.websiteLink || "",
     photoUrl: user?.profileData?.photoUrl || "",
+    bannerUrl: user?.profileData?.bannerUrl || "",
     projects: user?.profileData?.projects || [],
     achievements: user?.profileData?.achievements || [],
     contributions: user?.profileData?.contributions || [],
@@ -60,6 +61,8 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
+
+  const defaultBanner = "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2670&auto=format&fit=crop"
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData((prev) => ({
@@ -117,6 +120,7 @@ export default function ProfilePage() {
           bio: formData.bio,
           tagline: formData.tagline,
           photoUrl: formData.photoUrl,
+          bannerUrl: formData.bannerUrl,
           githubLink: formData.githubLink,
           linkedinLink: formData.linkedinLink,
           websiteLink: formData.websiteLink,
@@ -146,8 +150,9 @@ export default function ProfilePage() {
       })
 
       setSaved(true)
+      setIsEditing(false)
       setTimeout(() => {
-        router.push('/dashboard')
+        //    router.push('/dashboard') 
       }, 3000)
 
     } catch (error) {
@@ -176,12 +181,15 @@ export default function ProfilePage() {
       linkedinLink: user?.profileData?.linkedinLink || "",
       websiteLink: user?.profileData?.websiteLink || "",
       photoUrl: user?.profileData?.photoUrl || "",
+      bannerUrl: user?.profileData?.bannerUrl || "",
       projects: user?.profileData?.projects || [],
       achievements: user?.profileData?.achievements || [],
       contributions: user?.profileData?.contributions || [],
     })
     setIsEditing(false)
   }
+
+  // ... (password logic kept same)
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPasswordData(prev => ({
@@ -279,7 +287,6 @@ export default function ProfilePage() {
                 Change Password
               </Button>
               <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
-              {/* Removed Generate Unique ID Button */}
               {validation.isComplete && validation.uniqueId && (
                 <Button
                   variant="outline"
@@ -314,194 +321,106 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Password Change Section */}
-      {showPasswordSection && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Lock className="h-5 w-5 mr-2" />
-              Change Password
-            </CardTitle>
-            <CardDescription>Update your account password for security</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePasswordUpdate} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Current Password</Label>
-                <div className="relative">
-                  <Input
-                    id="currentPassword"
-                    name="currentPassword"
-                    type={showPasswords.current ? "text" : "password"}
-                    value={passwordData.currentPassword}
-                    onChange={handlePasswordChange}
-                    required
-                    placeholder="Enter your current password"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => togglePasswordVisibility('current')}
-                  >
-                    {showPasswords.current ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">New Password</Label>
-                <div className="relative">
-                  <Input
-                    id="newPassword"
-                    name="newPassword"
-                    type={showPasswords.new ? "text" : "password"}
-                    value={passwordData.newPassword}
-                    onChange={handlePasswordChange}
-                    required
-                    placeholder="Enter your new password (min 6 characters)"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => togglePasswordVisibility('new')}
-                  >
-                    {showPasswords.new ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <div className="relative">
-                  <Input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type={showPasswords.confirm ? "text" : "password"}
-                    value={passwordData.confirmPassword}
-                    onChange={handlePasswordChange}
-                    required
-                    placeholder="Confirm your new password"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => togglePasswordVisibility('confirm')}
-                  >
-                    {showPasswords.confirm ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              {passwordError && (
-                <Alert variant="destructive">
-                  <AlertDescription>{passwordError}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="flex justify-end space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowPasswordSection(false)
-                    setPasswordData({
-                      currentPassword: '',
-                      newPassword: '',
-                      confirmPassword: ''
-                    })
-                    setPasswordError('')
-                  }}
-                  disabled={passwordLoading}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={passwordLoading}>
-                  {passwordLoading ? (
-                    <>
-                      <CheckCircle className="w-4 h-4 mr-2 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="w-4 h-4 mr-2" />
-                      Update Password
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Profile Card */}
-        <Card className="md:col-span-2">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row items-center gap-6">
+        {/* Profile Card with Banner Background */}
+        <Card className="md:col-span-2 relative overflow-hidden group min-h-[250px] border-zinc-800 bg-zinc-900">
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-all duration-500"
+            style={{ backgroundImage: `url(${formData.bannerUrl || defaultBanner})` }}
+          />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
+
+          {isEditing && (
+            <div className="absolute top-4 right-4 z-20">
+              <ImageUpload
+                value={formData.bannerUrl}
+                onChange={(url) => setFormData(prev => ({ ...prev, bannerUrl: url }))}
+                onRemove={() => setFormData(prev => ({ ...prev, bannerUrl: '' }))}
+                disabled={!isEditing}
+                variant="banner"
+                uploadPreset="Members Profile and projects pics"
+                className="bg-black/50 backdrop-blur-sm rounded-lg p-1"
+              />
+            </div>
+          )}
+
+          <CardContent className="relative z-10 pt-10 pb-10">
+            <div className="flex flex-col md:flex-row items-center gap-8">
               <div className="flex-shrink-0">
                 <ImageUpload
                   value={formData.photoUrl}
                   onChange={(url) => setFormData(prev => ({ ...prev, photoUrl: url }))}
                   onRemove={() => setFormData(prev => ({ ...prev, photoUrl: '' }))}
                   disabled={!isEditing}
+                  className="ring-4 ring-black/50 rounded-full"
                 />
               </div>
-              <div className="flex-1 text-center md:text-left space-y-2">
+              <div className="flex-1 text-center md:text-left space-y-3">
                 {isEditing ? (
-                  <div className="space-y-4 max-w-md">
+                  <div className="space-y-4 max-w-md bg-black/40 p-4 rounded-xl backdrop-blur-md border border-white/10">
                     <div className="space-y-2">
-                      <Label>Display Name</Label>
+                      <Label className="text-white">Display Name</Label>
                       <Input
                         name="displayName"
                         value={formData.displayName}
                         onChange={handleChange}
                         placeholder="Your Name"
+                        className="bg-black/50 border-white/20 text-white placeholder:text-white/50"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Role / Tagline</Label>
+                      <Label className="text-white">Role / Tagline</Label>
                       <Input
                         name="tagline"
                         value={formData.tagline}
                         onChange={handleChange}
                         placeholder="e.g. Full Stack Developer | Robotics Enthusiast"
+                        className="bg-black/50 border-white/20 text-white placeholder:text-white/50"
                       />
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <h2 className="text-2xl font-bold">{formData.displayName}</h2>
-                    <p className="text-cyan-400 font-medium">{formData.tagline || user?.role}</p>
-                    <div className="flex flex-wrap justify-center md:justify-start gap-4 text-muted-foreground text-sm">
-                      {formData.branch && <span>{formData.branch}</span>}
-                      {formData.year && <span>• {formData.year}</span>}
-                      {formData.rollNumber && <span>• {formData.rollNumber}</span>}
+                  <div className="space-y-2">
+                    <h2 className="text-4xl font-bold text-white tracking-tight drop-shadow-lg">{formData.displayName}</h2>
+                    <p className="text-cyan-400 font-medium text-lg tracking-wide uppercase drop-shadow-md flex items-center justify-center md:justify-start gap-2">
+                      <span className="w-8 h-[1px] bg-cyan-500/50 inline-block"></span>
+                      {formData.tagline || user?.role}
+                    </p>
+                    <div className="flex flex-wrap justify-center md:justify-start gap-3 text-zinc-300 text-sm font-medium mt-4">
+                      {formData.branch && (
+                        <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm">
+                          {formData.branch}
+                        </span>
+                      )}
+                      {formData.year && (
+                        <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm">
+                          {formData.year}
+                        </span>
+                      )}
+                      {formData.rollNumber && (
+                        <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm">
+                          ID: {formData.rollNumber}
+                        </span>
+                      )}
+                      <div className="flex gap-2 ml-2">
+                        {formData.githubLink && (
+                          <a href={formData.githubLink} target="_blank" className="p-1.5 rounded-md bg-black/50 hover:bg-white/20 text-white transition-colors"><Github className="w-4 h-4" /></a>
+                        )}
+                        {formData.linkedinLink && (
+                          <a href={formData.linkedinLink} target="_blank" className="p-1.5 rounded-md bg-black/50 hover:bg-white/20 text-blue-400 transition-colors"><Linkedin className="w-4 h-4" /></a>
+                        )}
+                        {formData.websiteLink && (
+                          <a href={formData.websiteLink} target="_blank" className="p-1.5 rounded-md bg-black/50 hover:bg-white/20 text-green-400 transition-colors"><Globe className="w-4 h-4" /></a>
+                        )}
+                      </div>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
+
 
         {/* Basic Information */}
         <Card>

@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export const DashboardSidebar = () => {
+export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
   const { user, logout } = useAuth();
   const pathname = usePathname();
 
@@ -100,8 +100,8 @@ export const DashboardSidebar = () => {
   if (user?.role === "admin" || user?.role === "superadmin" || user?.role === "president" || user?.role === "vice_president") {
     links = [
       { href: "/admin", label: "Admin Dashboard", icon: BarChart3 },
-      { href: "/dashboard", label: "Club Dashboard", icon: Home }, // Added for Admins too
-      ...adminLinks.slice(1), // Keep rest of admin links
+      { href: "/dashboard", label: "Club Dashboard", icon: Home },
+      ...adminLinks.slice(1),
       { href: "/dashboard/profile", label: "My Profile", icon: User }
     ];
   } else if (["student_coordinator", "public_relation_head", "operations_head", "management_head"].includes(user?.role || "")) {
@@ -109,21 +109,22 @@ export const DashboardSidebar = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-card border-r">
-      <div className="p-6">
+    <div className="flex flex-col h-full bg-card border-r w-full">
+      {/* Header - Compressed */}
+      <div className="p-3 md:p-6 flex justify-center md:justify-start">
         <Link href="/" className="flex items-center space-x-2">
-          {/* <Bot className="h-8 w-8 text-primary" /> */}
-          <span className="font-bold text-xl">IoT</span>
+          <span className="font-bold text-sm md:text-xl">IoT</span>
         </Link>
       </div>
 
-      <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
+      <nav className="flex-1 px-2 md:px-4 space-y-1 md:space-y-2 overflow-y-auto overflow-x-hidden">
         {links.map((link) => {
           const Icon = link.icon;
           return (
             <Link
               key={link.href}
               href={link.href}
+              onClick={onClose}
               prefetch={true}
               className={cn(
                 "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
@@ -132,19 +133,18 @@ export const DashboardSidebar = () => {
                   : "text-muted-foreground hover:text-foreground hover:bg-accent"
               )}
             >
-              <Icon className="h-5 w-5" />
-              <span>{link.label}</span>
+              <Icon className="h-5 w-5 shrink-0" />
+              <span className="truncate leading-tight">{link.label}</span>
             </Link>
           );
         })}
 
-        {/* View Public Site Section - Only for Admins */}
         {(user?.role === "admin" || user?.role === "superadmin") && (
           <>
-            <div className="pt-4 mt-4 border-t">
-              <div className="px-3 py-2 mb-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  View Public Site
+            <div className="pt-2 mt-2 md:pt-4 md:mt-4 border-t">
+              <div className="px-2 md:px-3 py-1 md:py-2 mb-1 md:mb-2">
+                <span className="text-[9px] md:text-xs font-semibold text-muted-foreground uppercase tracking-wider block truncate">
+                  Public Site
                 </span>
               </div>
               {publicSiteLinks.map((link) => {
@@ -156,13 +156,14 @@ export const DashboardSidebar = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={cn(
-                      "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      "flex items-center space-x-1.5 md:space-x-3 px-2 py-1.5 md:px-3 md:py-2 rounded-lg font-medium transition-colors",
+                      "text-[10px] md:text-sm",
                       "text-muted-foreground hover:text-foreground hover:bg-accent"
                     )}
                   >
-                    <Icon className="h-5 w-5" />
-                    <span>{link.label}</span>
-                    <ExternalLink className="h-3 w-3 ml-auto" />
+                    <Icon className="h-3.5 w-3.5 md:h-5 md:w-5 shrink-0" />
+                    <span className="truncate leading-tight">{link.label}</span>
+                    <ExternalLink className="h-2 w-2 md:h-3 md:w-3 ml-auto opacity-50" />
                   </a>
                 );
               })}
@@ -171,16 +172,16 @@ export const DashboardSidebar = () => {
         )}
       </nav>
 
-      <div className="p-4 border-t">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-            <span className="text-primary-foreground text-sm font-medium">
+      <div className="p-2 md:p-4 border-t mt-auto">
+        <div className="flex items-center space-x-2 md:space-x-3 mb-2 md:mb-4">
+          <div className="w-6 h-6 md:w-8 md:h-8 bg-primary rounded-full flex items-center justify-center shrink-0">
+            <span className="text-primary-foreground text-[10px] md:text-sm font-medium">
               {user?.displayName?.charAt(0) || "U"}
             </span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{user?.displayName}</p>
-            <p className="text-xs text-muted-foreground capitalize">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <p className="text-[10px] md:text-sm font-medium truncate">{user?.displayName}</p>
+            <p className="text-[8px] md:text-xs text-muted-foreground capitalize truncate">
               {user?.role}
             </p>
           </div>
@@ -189,9 +190,9 @@ export const DashboardSidebar = () => {
           onClick={handleLogout}
           variant="outline"
           size="sm"
-          className="w-full"
+          className="w-full h-7 md:h-9 text-[10px] md:text-sm px-2"
         >
-          <LogOut className="h-4 w-4 mr-2" />
+          <LogOut className="h-3 w-3 md:h-4 md:w-4 mr-1.5 md:mr-2" />
           Logout
         </Button>
       </div>

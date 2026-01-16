@@ -122,9 +122,13 @@ export default function AdminLeadersPage() {
                 toast({ title: "Created", description: `Leader added with ID: ${displayIdInput}` })
             }
             resetForm()
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error saving leader:", error)
-            toast({ title: "Error", description: "Failed to save leader.", variant: "destructive" })
+            toast({
+                title: "Error",
+                description: `Failed to save leader: ${error.message || "Unknown error"}`,
+                variant: "destructive"
+            })
         }
     }
 

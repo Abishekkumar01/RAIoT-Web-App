@@ -197,7 +197,9 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin'
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'president' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'vice_president'
       );
     }
 

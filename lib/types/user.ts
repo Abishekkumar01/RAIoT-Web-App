@@ -37,6 +37,7 @@ export interface User {
     city?: string
     idCardUrl?: string
     photoUrl?: string
+    bannerUrl?: string
     tagline?: string
     projects?: Array<{
       title: string;

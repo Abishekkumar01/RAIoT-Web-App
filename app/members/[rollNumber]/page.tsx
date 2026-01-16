@@ -69,6 +69,8 @@ export default function MemberProfilePage() {
     }
   }, [rollNumber])
 
+  const defaultBanner = "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2670&auto=format&fit=crop"
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -121,8 +123,15 @@ export default function MemberProfilePage() {
       />
 
       {/* Hero Section - Reduced Height */}
-      <div className="relative w-full h-auto pt-8 pb-6 md:pt-0 md:pb-0 md:h-[30vh] md:min-h-[300px] border-b border-zinc-800 bg-zinc-950 overflow-hidden flex flex-col justify-end">
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-zinc-900/50 to-transparent z-10" />
+      <div className="relative w-full h-auto pt-8 pb-6 md:pt-0 md:pb-0 md:h-[30vh] md:min-h-[300px] border-b border-zinc-800 bg-zinc-950 overflow-hidden flex flex-col justify-end group">
+
+        {/* Banner Background Image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center transition-all duration-500"
+          style={{ backgroundImage: `url(${member.profileData?.bannerUrl || defaultBanner})` }}
+        />
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-zinc-900/80 to-zinc-950/30 z-10" />
 
         {/* Animated Grid Overlay */}
         <div className="absolute inset-0 z-0 opacity-20 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] animate-pulse-slow"></div>
