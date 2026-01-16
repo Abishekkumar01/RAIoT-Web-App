@@ -183,7 +183,10 @@ export default function AdminUsersPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create user')
+        const errorMsg = data.details
+          ? `${data.error} - ${data.details}`
+          : (data.error || 'Failed to create user')
+        throw new Error(errorMsg)
       }
 
       console.log('Member user created successfully via API:', data.uid)

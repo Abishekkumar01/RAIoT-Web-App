@@ -165,17 +165,7 @@
     }
 }
 
-@keyframes cyberPulse {
 
-    0%,
-    100% {
-        filter: drop-shadow(0 0 5px rgba(6, 182, 212, 0.4));
-    }
-
-    50% {
-        filter: drop-shadow(0 0 15px rgba(34, 211, 238, 0.8)) brightness(1.1);
-    }
-}
 
 .galleryContent {
     width: 100%;

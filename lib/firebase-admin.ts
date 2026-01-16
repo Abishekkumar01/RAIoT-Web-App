@@ -2,13 +2,32 @@ import { initializeApp, getApps, App, getApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 
+// Store initialization error for debugging
+let initError: Error | null = null;
 let app: App;
 
 if (getApps().length === 0) {
     try {
         const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
         const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-        const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+        // Robust private key parsing using Regex to ignore any surrounding garbage
+        let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+        if (privateKey) {
+            // First, replace literal newlines with actual newlines
+            const keyWithNewlines = privateKey.replace(/\\n/g, '\n');
+
+            // Extract explicitly the content between BEGIN and END tags
+            // This ignores quotes, trailing spaces, or anything else outside the block
+            const match = keyWithNewlines.match(/-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----/);
+
+            if (match) {
+                privateKey = match[0];
+            } else {
+                // Fallback: just try to clean it up if regex fails (unlikely if key is valid)
+                privateKey = keyWithNewlines.trim().replace(/^["']|["']$/g, '');
+            }
+        }
 
         console.log("Create Agent: Initializing Firebase Admin...");
         console.log(`- Project ID available: ${!!projectId}`);
@@ -29,12 +48,15 @@ if (getApps().length === 0) {
             // Fallback to default credentials (GOOGLE_APPLICATION_CREDENTIALS)
             app = initializeApp();
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Firebase Admin initialization failed. Ensure FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY are set.", error);
+        initError = error;
     }
 } else {
     app = getApp();
 }
+
+export const getInitError = () => initError;
 
 // Export a function to get DB so we can handle potential startup failures
 export const getAdminDb = () => {

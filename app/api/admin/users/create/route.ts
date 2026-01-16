@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
+import { getAdminDb, getAdminAuth, getInitError } from '@/lib/firebase-admin';
 
 export async function POST(request: Request) {
     try {
@@ -25,8 +25,13 @@ export async function POST(request: Request) {
         const adminAuth = getAdminAuth();
 
         if (!adminDb || !adminAuth) {
+            const initError = getInitError();
             return NextResponse.json(
-                { error: 'Firebase Admin not initialized' },
+                {
+                    error: 'Firebase Admin not initialized',
+                    details: initError ? initError.message : 'Unknown initialization error',
+                    stack: initError ? initError.stack : undefined
+                },
                 { status: 500 }
             );
         }
