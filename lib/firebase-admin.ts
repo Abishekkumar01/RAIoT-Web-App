@@ -11,21 +11,27 @@ if (getApps().length === 0) {
         const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
         const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 
-        // Robust private key parsing using Regex to ignore any surrounding garbage
         let privateKey = process.env.FIREBASE_PRIVATE_KEY;
         if (privateKey) {
-            // First, replace literal newlines with actual newlines
+            // Remove wrapping quotes if they exist (common Vercel issue)
+            if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+                privateKey = privateKey.slice(1, -1);
+            }
+            if (privateKey.startsWith("'") && privateKey.endsWith("'")) {
+                privateKey = privateKey.slice(1, -1);
+            }
+
+            // Replace literal newlines with actual newlines
             const keyWithNewlines = privateKey.replace(/\\n/g, '\n');
 
             // Extract explicitly the content between BEGIN and END tags
-            // This ignores quotes, trailing spaces, or anything else outside the block
             const match = keyWithNewlines.match(/-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----/);
 
             if (match) {
                 privateKey = match[0];
             } else {
-                // Fallback: just try to clean it up if regex fails (unlikely if key is valid)
-                privateKey = keyWithNewlines.trim().replace(/^["']|["']$/g, '');
+                // Fallback: use the cleaned string, but trim it
+                privateKey = keyWithNewlines.trim();
             }
         }
 
