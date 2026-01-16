@@ -13,26 +13,23 @@ if (getApps().length === 0) {
 
         let privateKey = process.env.FIREBASE_PRIVATE_KEY;
         if (privateKey) {
-            // Remove wrapping quotes if they exist (common Vercel issue)
-            if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-                privateKey = privateKey.slice(1, -1);
-            }
-            if (privateKey.startsWith("'") && privateKey.endsWith("'")) {
-                privateKey = privateKey.slice(1, -1);
+            // Handle possibility of Base64 encoded key (to avoid newline issues entirely)
+            if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+                try {
+                    const decoded = Buffer.from(privateKey, 'base64').toString('utf8');
+                    if (decoded.includes('-----BEGIN PRIVATE KEY-----')) {
+                        console.log("Create Agent: Detected and decoded Base64 private key.");
+                        privateKey = decoded;
+                    }
+                } catch (e) {
+                    // Not base64 or failed to decode, continue to standard handling
+                }
             }
 
-            // Replace literal newlines with actual newlines
-            const keyWithNewlines = privateKey.replace(/\\n/g, '\n');
-
-            // Extract explicitly the content between BEGIN and END tags
-            const match = keyWithNewlines.match(/-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----/);
-
-            if (match) {
-                privateKey = match[0];
-            } else {
-                // Fallback: use the cleaned string, but trim it
-                privateKey = keyWithNewlines.trim();
-            }
+            // Standard cleanup:
+            // 1. Remove wrapping quotes (common in JSON/Env vars)
+            // 2. Unescape newlines
+            privateKey = privateKey.replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
         }
 
         console.log("Create Agent: Initializing Firebase Admin...");
