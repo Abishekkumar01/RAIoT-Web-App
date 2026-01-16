@@ -26,6 +26,11 @@ const orbitron = Orbitron({
 export const metadata: Metadata = {
   title: "RAIoT - Robotics, Automation & IoT Club",
   description: "University club for Robotics, Automation, and IoT enthusiasts",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

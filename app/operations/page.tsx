@@ -3,7 +3,7 @@
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ClipboardList, Archive, Users, FileBarChart, ArrowRight, Calendar, Image as ImageIcon, User, CheckCircle2, XCircle, Clock, FileText } from 'lucide-react'
+import { ClipboardList, Archive, Users, FileBarChart, ArrowRight, Calendar, Image as ImageIcon, User, CheckCircle2, XCircle, Clock, FileText, Box, Home } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useEffect } from 'react';
 import { collection, getCountFromServer, query, where } from 'firebase/firestore';
@@ -21,6 +21,7 @@ export default function OperationsDashboard() {
     })
     const [eventCount, setEventCount] = useState(0)
     const [galleryStats, setGalleryStats] = useState({ totalSections: 0, totalImages: 0 })
+    const [inventoryCount, setInventoryCount] = useState(0)
 
     useEffect(() => {
         const fetchCounts = async () => {
@@ -29,6 +30,11 @@ export default function OperationsDashboard() {
                 const studentsColl = collection(db, "students");
                 const studentsSnapshot = await getCountFromServer(studentsColl);
                 setStudentCount(studentsSnapshot.data().count);
+
+                // Fetch Inventory Count
+                const inventoryColl = collection(db, "inventory");
+                const inventorySnapshot = await getCountFromServer(inventoryColl);
+                setInventoryCount(inventorySnapshot.data().count);
 
                 // Fetch Trainee Stats
                 const traineesColl = collection(db, "trainees");
@@ -213,6 +219,27 @@ export default function OperationsDashboard() {
                 )
             }
 
+            {/* Dashboard Overview - Stat Cards (Management Head) */}
+            {
+                (user?.role === 'management_head' || user?.role === 'admin' || user?.role === 'superadmin') && (
+                    <div className={`grid gap-4 md:grid-cols-2 lg:grid-cols-1 mb-8 ${(user?.role === 'admin' || user?.role === 'superadmin') ? 'mt-8' : ''}`}>
+                        {/* Total Inventory */}
+                        <Card className="bg-gradient-to-br from-orange-500/10 to-transparent border-orange-500/20 shadow-md">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Total Items</CardTitle>
+                                <Box className="h-4 w-4 text-orange-500" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{inventoryCount}</div>
+                                <p className="text-xs text-muted-foreground">
+                                    Inventory items
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )
+            }
+
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {/* Attendance & Trainee Cards - STUDENT COORDINATOR ONLY */}
@@ -293,6 +320,71 @@ export default function OperationsDashboard() {
                                     <div className="text-2xl font-bold">Gallery</div>
                                     <p className="text-xs text-muted-foreground">
                                         Configure gallery sources
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </Link>
+                    </>
+                )}
+
+                {/* Management Head Cards */}
+                {(user?.role === 'management_head' || user?.role === 'admin' || user?.role === 'superadmin') && (
+                    <>
+                        <Link href="/operations/my-events">
+                            <Card className="h-full relative overflow-hidden border-muted-foreground/20 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 group bg-card/50 backdrop-blur-sm">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Events & Teams</CardTitle>
+                                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">Manage</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Coordinate events and teams
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </Link>
+
+                        <Link href="/dashboard/inventory">
+                            <Card className="h-full relative overflow-hidden border-muted-foreground/20 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 group bg-card/50 backdrop-blur-sm">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Resources</CardTitle>
+                                    <Box className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">View</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Check available resources
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </Link>
+
+                        <Link href="/operations/inventory">
+                            <Card className="h-full relative overflow-hidden border-muted-foreground/20 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 group bg-card/50 backdrop-blur-sm">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Manage Inventory</CardTitle>
+                                    <Box className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">Inventory</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Add or edit items
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </Link>
+
+                        <Link href="/dashboard">
+                            <Card className="h-full relative overflow-hidden border-muted-foreground/20 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 group bg-card/50 backdrop-blur-sm">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Club Dashboard</CardTitle>
+                                    <Home className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">Home</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Go to main dashboard
                                     </p>
                                 </CardContent>
                             </Card>
@@ -386,6 +478,36 @@ export default function OperationsDashboard() {
                         </div>
                     </div>
                 )
+            }
+
+            {/* Quick Access Section - MANAGEMENT HEAD ONLY */}
+            {(user?.role === 'management_head' || user?.role === 'admin' || user?.role === 'superadmin') && (
+                <div className="mt-8">
+                    <h2 className="text-lg font-semibold mb-4">Resource Management</h2>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <Link href="/operations/inventory">
+                            <Card className="hover:border-primary transition-all duration-300 hover:shadow-md cursor-pointer group bg-card hover:bg-muted/20">
+                                <CardContent className="flex flex-col items-center justify-center p-6 gap-3">
+                                    <div className="p-3 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                                        <Box className="h-6 w-6 text-primary" />
+                                    </div>
+                                    <span className="font-semibold group-hover:text-primary transition-colors">Manage Inventory</span>
+                                </CardContent>
+                            </Card>
+                        </Link>
+                        <Link href="/operations/my-events">
+                            <Card className="hover:border-primary transition-all duration-300 hover:shadow-md cursor-pointer group bg-card hover:bg-muted/20">
+                                <CardContent className="flex flex-col items-center justify-center p-6 gap-3">
+                                    <div className="p-3 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                                        <Calendar className="h-6 w-6 text-primary" />
+                                    </div>
+                                    <span className="font-semibold group-hover:text-primary transition-colors">Manage Teams</span>
+                                </CardContent>
+                            </Card>
+                        </Link>
+                    </div>
+                </div>
+            )
             }
         </div >
     )
