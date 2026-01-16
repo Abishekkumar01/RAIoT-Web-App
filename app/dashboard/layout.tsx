@@ -13,7 +13,7 @@ export default function DashboardLayout({
 
   return (
     <ProtectedRoute requiredRole="guest">
-      <div className="flex min-h-screen bg-background relative">
+      <div className="flex h-screen bg-background relative overflow-hidden">
         {/* Mobile Toggle Button */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -34,15 +34,16 @@ export default function DashboardLayout({
           />
         )}
 
-        {/* Sidebar Container */}
+        {/* Sidebar Container - STATIC */}
         <div className={`
-          fixed inset-y-0 left-0 z-40 w-64 flex-shrink-0 transition-all duration-300 ease-in-out
+          fixed inset-y-0 left-0 z-40 w-64 flex-shrink-0 h-screen transition-all duration-300 ease-in-out
           ${isMobileMenuOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 md:translate-x-0 md:opacity-100"}
         `}>
           <DashboardSidebar onClose={() => setIsMobileMenuOpen(false)} />
         </div>
 
-        <main className="flex-1 min-w-0 transition-all duration-300 md:ml-64">
+        {/* Main Content - DYNAMIC (scrolls independently) */}
+        <main className="flex-1 min-w-0 h-full overflow-y-auto transition-all duration-300 md:ml-64">
           <div className="p-4 pt-16 md:pt-6 md:p-6 pb-24 md:pb-6">
             {children}
           </div>

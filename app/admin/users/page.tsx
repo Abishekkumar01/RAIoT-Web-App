@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Search, UserPlus, Edit, Mail, Calendar, Loader2, X, Trash2, Check, Save } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 export default function AdminUsersPage() {
   // Log Firebase status on component mount
@@ -61,6 +62,8 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const { toast } = useToast()
+
   const [formData, setFormData] = useState({
     displayName: '',
     email: '',
@@ -280,12 +283,19 @@ export default function AdminUsersPage() {
         updatedAt: new Date()
       }, { merge: true })
 
-      setSuccess(`Role updated for ${userName}`)
-      setTimeout(() => setSuccess(''), 3000)
+      // Show toast notification in bottom corner
+      toast({
+        title: "✅ Role Updated",
+        description: `${userName}'s role has been changed to ${newRole.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`,
+      })
 
     } catch (error: any) {
       console.error('Save role error:', error)
-      setError(`Failed to save role: ${error.message}`)
+      toast({
+        title: "❌ Error",
+        description: `Failed to save role: ${error.message}`,
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -356,6 +366,20 @@ export default function AdminUsersPage() {
           Invite User
         </Button>
       </div>
+
+      {/* Global Success/Error Notifications */}
+      {success && (
+        <Alert className="border-green-500 bg-green-500/10">
+          <Check className="h-4 w-4 text-green-500" />
+          <AlertDescription className="text-green-500 font-medium">{success}</AlertDescription>
+        </Alert>
+      )}
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Filters */}
       <Card>

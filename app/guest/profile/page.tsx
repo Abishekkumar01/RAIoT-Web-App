@@ -249,9 +249,9 @@ export default function GuestProfilePage() {
 
       <div className="w-full max-w-[95vw] mx-auto px-6 py-8 pb-24">
         <div className="mb-6">
-          <Link href="/" className="inline-flex items-center px-4 py-2 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50 transition-all duration-300 group shadow-[0_0_10px_rgba(6,182,212,0.1)] hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-            <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-            <span className="font-medium tracking-wide">Back to Dashboard</span>
+          <Link href="/" className="inline-flex items-center text-sm font-medium text-zinc-500 hover:text-zinc-200 transition-colors">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
           </Link>
         </div>
 
