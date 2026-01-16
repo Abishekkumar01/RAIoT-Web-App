@@ -1,3 +1,8 @@
+/* Mobile background hidden by default (Desktop) */
+.mobileBackground {
+    display: none;
+}
+
 .galleryWrapper {
     /* User provided CSS logic */
     --img-size: calc(100px - 0.5rem / 2);
@@ -43,18 +48,132 @@
 
 /* Mobile specific overrides for better collage look */
 @media (max-width: 767px) {
+    .galleryWrapper {
+        /* Mobile Layout - Compact Bento Block (3x3) */
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        padding: 0;
+        width: 100%;
+        max-width: 320px;
+        /* Constrain width for a tight block */
+        margin: 0 auto;
+        position: relative;
+        /* Context for background */
+        z-index: 1;
+        /* Ensure on top of background */
+    }
+
+    /* Fluid/Scribbled Aesthetic Background (Refactored to explicit div) */
+    .mobileBackground {
+        display: block;
+        position: absolute;
+        inset: -40px -20px;
+        /* Bleed out slightly to frame the grid */
+        z-index: -1;
+        border-radius: 1.5rem;
+
+        /* Generated Tech Paint Background */
+        background-image: url('/mobile-gallery-bg.png');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+
+        /* Blend with page background (black) */
+        opacity: 0.7;
+        mix-blend-mode: screen;
+        /* Blend bright colors, drop blacks */
+        filter: blur(4px) brightness(1.1) contrast(1.1);
+        pointer-events: none;
+
+        /* Soften the edges to blend seamlessly */
+        mask-image: radial-gradient(circle at center, black 40%, transparent 95%);
+    }
+
     .galleryItem {
-        /* Scale down slightly to fit collage style */
-        transform: scale(0.95);
+        /* Reset all desktop/previous transforms */
+        transform: none !important;
+        margin: 0 !important;
+
+        /* Shape: Chamfered Tech Squares */
+        clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%) !important;
+        border-radius: 0 !important;
+
+        /* Square Aspect Ratio for uniform block */
+        aspect-ratio: 1/1;
+        width: 100%;
+
+        position: relative;
+
+        /* Cyber Pulse Animation */
+        animation: cyberPulse 4s infinite ease-in-out;
     }
 
-    /* Create a bit of irregularity for "collage" feel */
+    /* 
+       FILTER LOGIC for 3x3 Grid (9 items total)
+       Sequence: R(1), Img(2), A(4). Img(6), I(7), Img(8). O(10), Img(12), T(13).
+       Hidden (1-based indices): 3, 5, 9, 11
+       Total available was 13.
+    */
+    .galleryItem:nth-child(3),
+    .galleryItem:nth-child(5),
+    .galleryItem:nth-child(9),
+    .galleryItem:nth-child(11) {
+        display: none !important;
+    }
+
+    /* Reset staggered effect from previous attempt */
     .galleryItem:nth-child(even) {
-        transform: translateY(10px) scale(0.95);
+        transform: none !important;
     }
 
-    .galleryItem:nth-child(3n) {
-        transform: translateY(-5px) scale(0.95);
+    /* Staggered Animation Delays for "Living Grid" feel */
+    .galleryItem:nth-child(1) {
+        animation-delay: 0s;
+    }
+
+    .galleryItem:nth-child(2) {
+        animation-delay: 1.5s;
+    }
+
+    .galleryItem:nth-child(4) {
+        animation-delay: 0.8s;
+    }
+
+    .galleryItem:nth-child(6) {
+        animation-delay: 2.2s;
+    }
+
+    .galleryItem:nth-child(7) {
+        animation-delay: 1.2s;
+    }
+
+    .galleryItem:nth-child(8) {
+        animation-delay: 2.8s;
+    }
+
+    .galleryItem:nth-child(10) {
+        animation-delay: 0.5s;
+    }
+
+    .galleryItem:nth-child(12) {
+        animation-delay: 1.9s;
+    }
+
+    .galleryItem:nth-child(13) {
+        animation-delay: 2.5s;
+    }
+}
+
+@keyframes cyberPulse {
+
+    0%,
+    100% {
+        filter: drop-shadow(0 0 5px rgba(6, 182, 212, 0.4));
+    }
+
+    50% {
+        filter: drop-shadow(0 0 15px rgba(34, 211, 238, 0.8)) brightness(1.1);
     }
 }
 
@@ -105,5 +224,17 @@
     0%,
     100% {
         z-index: 10;
+    }
+}
+
+@keyframes cyberPulse {
+
+    0%,
+    100% {
+        filter: drop-shadow(0 0 5px rgba(6, 182, 212, 0.4));
+    }
+
+    50% {
+        filter: drop-shadow(0 0 15px rgba(34, 211, 238, 0.8)) brightness(1.1);
     }
 }

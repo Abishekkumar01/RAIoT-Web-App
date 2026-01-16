@@ -34,6 +34,9 @@ export default function HoneycombGallery() {
 
     return (
         <article className={styles.galleryWrapper}>
+            {/* Mobile Background Layer (Refactored from ::before for stability) */}
+            <div className={styles.mobileBackground} />
+
             {images.map((src, idx) => {
                 const letter = textOverlays[idx];
 
@@ -41,13 +44,13 @@ export default function HoneycombGallery() {
                     <div key={idx} className={styles.galleryItem}>
                         {letter ? (
                             <div
-                                className="w-full h-full flex items-center justify-center bg-gray-900/90 backdrop-blur-md relative overflow-hidden"
+                                className="w-full h-full flex items-center justify-center bg-gray-950 border-2 border-cyan-500/30 relative overflow-hidden group hover:border-cyan-400 transition-colors duration-300"
                             >
-                                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 opacity-100" />
-                                <span className="text-4xl md:text-5xl font-black font-orbitron text-white drop-shadow-[0_0_15px_rgba(34,211,238,0.8)] z-10 select-none">
+                                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-transparent to-purple-600/20 opacity-100" />
+                                <span className="text-5xl md:text-5xl font-black font-orbitron text-transparent bg-clip-text bg-gradient-to-b from-white to-cyan-200 drop-shadow-[0_0_25px_rgba(34,211,238,0.6)] z-10 select-none group-hover:scale-110 transition-transform duration-300 ease-out">
                                     {letter}
                                 </span>
-                                <div className="absolute inset-0 bg-cyan-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300" />
+                                <div className="absolute inset-0 bg-cyan-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 mixing-blend-overlay" />
                             </div>
                         ) : (
                             <img

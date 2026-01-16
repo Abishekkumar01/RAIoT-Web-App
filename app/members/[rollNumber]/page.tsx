@@ -121,14 +121,14 @@ export default function MemberProfilePage() {
       />
 
       {/* Hero Section - Reduced Height */}
-      <div className="relative w-full h-[30vh] min-h-[300px] border-b border-zinc-800 bg-zinc-950 overflow-hidden">
+      <div className="relative w-full h-auto pt-8 pb-6 md:pt-0 md:pb-0 md:h-[30vh] md:min-h-[300px] border-b border-zinc-800 bg-zinc-950 overflow-hidden flex flex-col justify-end">
         <div className="absolute inset-0 bg-gradient-to-t from-black via-zinc-900/50 to-transparent z-10" />
 
         {/* Animated Grid Overlay */}
         <div className="absolute inset-0 z-0 opacity-20 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] animate-pulse-slow"></div>
 
-        <div className="relative z-20 h-full max-w-[94%] mx-auto px-4 flex flex-col justify-end pb-6">
-          <div className="flex flex-row items-end gap-4 md:gap-6">
+        <div className="relative z-20 h-full max-w-[94%] mx-auto px-4 flex flex-col justify-end md:pb-6">
+          <div className="flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-6">
             {/* Profile Avatar with Tech Border */}
             <div className="relative group flex-shrink-0">
               {/* Rotating Ring */}
@@ -148,9 +148,9 @@ export default function MemberProfilePage() {
               </div>
             </div>
 
-            <div className="flex-1 space-y-2 md:space-y-3 mb-1 w-full overflow-hidden text-left">
+            <div className="flex-1 space-y-2 md:space-y-3 mb-1 w-full overflow-hidden text-center md:text-left">
               <div>
-                <div className="flex flex-col xl:flex-row items-start xl:items-end gap-2 md:gap-3 mb-1">
+                <div className="flex flex-col xl:flex-row items-center md:items-start xl:items-end gap-2 md:gap-3 mb-1">
                   <h1 className="text-2xl md:text-5xl font-black tracking-tighter text-white uppercase font-sans leading-none break-words line-clamp-2">
                     {member.displayName}
                   </h1>
@@ -163,15 +163,15 @@ export default function MemberProfilePage() {
                 </div>
 
                 {member.profileData?.tagline && (
-                  <p className="text-sm md:text-lg text-zinc-400 font-light tracking-wide flex items-center gap-2 truncate">
-                    <ChevronRight className="w-3 h-3 md:w-4 md:h-4 text-cyan-500 flex-shrink-0" />
-                    <span className="truncate">{member.profileData.tagline}</span>
+                  <p className="text-sm md:text-lg text-zinc-400 font-light tracking-wide flex items-start justify-center md:justify-start gap-2">
+                    <ChevronRight className="w-3 h-3 md:w-4 md:h-4 text-cyan-500 flex-shrink-0 mt-1 md:mt-1.5" />
+                    <span className="text-left">{member.profileData.tagline}</span>
                   </p>
                 )}
               </div>
 
               {/* Identity Chips & Social Row */}
-              <div className="flex flex-col xl:flex-row gap-4 pt-1 items-start xl:items-center justify-between">
+              <div className="flex flex-col xl:flex-row gap-4 pt-1 items-center md:items-start xl:items-center justify-between">
                 <div className="flex flex-wrap gap-2 md:gap-3">
                   <div className="flex items-center gap-2 bg-zinc-900/80 border border-zinc-700 px-3 py-1.5 rounded-sm">
                     <span className="text-[10px] text-zinc-500 uppercase font-mono">ID</span>
