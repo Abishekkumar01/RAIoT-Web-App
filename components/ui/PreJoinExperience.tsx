@@ -93,7 +93,7 @@ export default function PreJoinExperience() {
 
         const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
         // Adjust camera distance based on screen size
-        camera.position.z = window.innerWidth < 768 ? 18 : 25;
+        camera.position.z = window.innerWidth < 768 ? 24 : 25;
         cameraRef.current = camera;
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -109,7 +109,7 @@ export default function PreJoinExperience() {
         const colors = new Float32Array(count * 3);
 
         // Responsive sphere radius
-        const sphereRadius = window.innerWidth < 768 ? 8 : 14;
+        const sphereRadius = window.innerWidth < 768 ? 6.5 : 14;
 
         const sphericalDistribution = (i: number) => {
             const phi = Math.acos(-1 + (2 * i) / count);
@@ -141,7 +141,7 @@ export default function PreJoinExperience() {
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
         const material = new THREE.PointsMaterial({
-            size: 0.08,
+            size: 0.05,
             vertexColors: true,
             blending: THREE.AdditiveBlending,
             transparent: true,
@@ -215,7 +215,7 @@ export default function PreJoinExperience() {
 
         // Responsive font size and text wrapping
         const isMobileView = window.innerWidth < 768;
-        const fontSize = isMobileView ? 40 : 100;
+        const fontSize = isMobileView ? 45 : 100;
         const maxWidth = isMobileView ? 300 : 800;
 
         ctx.font = `bold ${fontSize}px Arial`;
@@ -263,7 +263,9 @@ export default function PreJoinExperience() {
         // Sampling
         for (let i = 0; i < data.length; i += 4) {
             if (data[i] > 128) {
-                if (Math.random() < 0.25) {
+                // Reduced sampling for mobile to avoid density
+                const samplingRate = isMobileView ? 0.40 : 0.25;
+                if (Math.random() < samplingRate) {
                     const pX = (i / 4) % canvas.width;
                     const pY = Math.floor((i / 4) / canvas.width);
                     const scaleFactor = isMobileView ? 0.03 : 0.05;
@@ -287,9 +289,13 @@ export default function PreJoinExperience() {
                 targetPositions[i * 3 + 1] = textPoints[i].y;
                 targetPositions[i * 3 + 2] = 0;
             } else {
-                // Scatter background
+                // Scatter background - constrained for mobile to stay in frame
                 const angle = Math.random() * Math.PI * 2;
-                const radius = 20 + Math.random() * 10;
+                // Reduce scatter radius for mobile
+                const minR = isMobileView ? 8 : 20;
+                const maxR = isMobileView ? 5 : 10;
+                const radius = minR + Math.random() * maxR;
+
                 targetPositions[i * 3] = Math.cos(angle) * radius;
                 targetPositions[i * 3 + 1] = Math.sin(angle) * radius;
                 targetPositions[i * 3 + 2] = (Math.random() - 0.5) * 10;
@@ -329,7 +335,7 @@ export default function PreJoinExperience() {
 
         // Recalculate Sphere Distribution
         const targetPositions = new Float32Array(count * 3);
-        const sphereRadius = window.innerWidth < 768 ? 8 : 14;
+        const sphereRadius = window.innerWidth < 768 ? 6.5 : 14;
         const sphericalDistribution = (i: number) => {
             const phi = Math.acos(-1 + (2 * i) / count);
             const theta = Math.sqrt(count * Math.PI) * phi;
