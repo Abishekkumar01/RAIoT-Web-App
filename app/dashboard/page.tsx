@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Calendar, Users, Trophy, Bot, Target, Image as ImageIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { collection, query, where, onSnapshot, doc, getDoc, getCountFromServer, orderBy, limit } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, doc, getDoc, getCountFromServer, orderBy, limit, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import Link from 'next/link'
 
@@ -21,20 +21,13 @@ export default function DashboardPage() {
   const { user } = useAuth()
   const [recentEvents, setRecentEvents] = useState<Event[]>([])
   const [globalStats, setGlobalStats] = useState({ events: 0, students: 0 })
-  const [galleryStats, setGalleryStats] = useState({ totalSections: 0, totalImages: 0 })
+  const [attendanceStats, setAttendanceStats] = useState({ present: 0, late: 0, absent: 0, total: 0 })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Fetch Gallery Stats
-        fetch('/api/gallery-stats')
-          .then(res => res.json())
-          .then(data => {
-            if (data && !data.error) setGalleryStats(data);
-          });
-
-        // Fetch Global Stats (Client Side with Auth)
+        // Fetch Global Stats
         const eventsColl = collection(db, "events");
         const studentsColl = collection(db, "students");
 
@@ -48,12 +41,34 @@ export default function DashboardPage() {
           students: studentsSnap.data().count
         });
 
+        // Fetch User Attendance
+        if (user?.uid) {
+          const attendanceColl = collection(db, "attendance")
+          const q = query(attendanceColl, where("studentId", "==", user.uid))
+          const snapshot = await getDocs(q)
+
+          let present = 0, late = 0, absent = 0
+          snapshot.forEach(doc => {
+            const data = doc.data()
+            const status = (data.status === true || data.status === 'present') ? 'present'
+              : (data.status === 'late') ? 'late'
+                : 'absent';
+            if (status === 'present') present++;
+            else if (status === 'late') late++;
+            else absent++;
+          })
+          setAttendanceStats({
+            present, late, absent,
+            total: snapshot.size
+          })
+        }
+
       } catch (e) {
         console.error("Dashboard stats fetch error:", e);
       }
     };
     fetchStats();
-  }, [])
+  }, [user])
 
   useEffect(() => {
     // Listen to global events
@@ -117,20 +132,32 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Replaced Gallery Updates with Attendance Chart - customized for compact view */}
+        <Card className="overflow-hidden relative">
+          <Link href="/dashboard/attendance" className="absolute inset-0 z-10" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Gallery Updates
+              My Attendance
             </CardTitle>
-            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+            <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{galleryStats.totalSections}</div>
-            <p className="text-xs text-muted-foreground">
-              Sections, {galleryStats.totalImages} Images
+            <div className="text-2xl font-bold">
+              {attendanceStats.present + attendanceStats.late}/{attendanceStats.total}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Events Attended
             </p>
+            <div className="flex gap-2 mt-3 text-[10px] text-muted-foreground">
+              <span className="text-green-500">{attendanceStats.present} Present</span>
+              <span>•</span>
+              <span className="text-orange-500">{attendanceStats.late} Late</span>
+              <span>•</span>
+              <span className="text-red-500">{attendanceStats.absent} Absent</span>
+            </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">

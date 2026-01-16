@@ -39,11 +39,11 @@ export function AttendanceChart({ present, late, absent, total }: AttendanceChar
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
-                                    data={total === 0 ? [{ value: 1 }] : data}
+                                    data={total === 0 ? [{ value: 1 }] : activeData}
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={80}
-                                    outerRadius={100}
+                                    innerRadius={70}
+                                    outerRadius={85}
                                     paddingAngle={2}
                                     dataKey="value"
                                     stroke="none"
@@ -54,7 +54,7 @@ export function AttendanceChart({ present, late, absent, total }: AttendanceChar
                                     {total === 0 ? (
                                         <Cell key="empty" fill="#e5e7eb" />
                                     ) : (
-                                        data.map((entry, index) => (
+                                        activeData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={entry.color} />
                                         ))
                                     )}
@@ -67,7 +67,7 @@ export function AttendanceChart({ present, late, absent, total }: AttendanceChar
                             <span className="text-4xl font-bold text-slate-700 dark:text-slate-200">
                                 {attendedCount}<span className="text-slate-400 font-normal">/{total}</span>
                             </span>
-                            <span className="text-sm text-muted-foreground font-medium mt-1">Classes</span>
+                            <span className="text-sm text-muted-foreground font-medium mt-1">Attended</span>
                         </div>
                     </div>
 
