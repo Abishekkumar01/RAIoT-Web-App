@@ -1,12 +1,18 @@
 "use client";
 
 import { FaWhatsapp } from "react-icons/fa";
+import { motion } from "framer-motion";
+import { useRef } from "react";
 
 export default function WhatsAppButton() {
   const phoneNumber = "918690595763"; // Replace with your WhatsApp number (no +)
   const message = "Hello! I Need Help"; // Default message
+  const constraintsRef = useRef(null);
+  const isDragging = useRef(false);
 
   const handleClick = () => {
+    if (isDragging.current) return;
+
     window.open(
       `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`,
       "_blank"
@@ -14,15 +20,24 @@ export default function WhatsAppButton() {
   };
 
   return (
-    <div className="fixed bottom-8 right-8 z-50 w-0 h-0 flex items-center justify-center pointer-events-none overflow-visible">
-      <button
+    <>
+      <div className="fixed inset-0 pointer-events-none z-50" ref={constraintsRef} />
+      <motion.button
+        drag
+        dragConstraints={constraintsRef} // Keep within screen bounds
+        dragMomentum={false} // Stops immediately on release
+        onDragStart={() => { isDragging.current = true; }}
+        onDragEnd={() => { setTimeout(() => { isDragging.current = false; }, 200); }}
         onClick={handleClick}
-        className="absolute bottom-0 right-0 group flex items-center justify-center p-5
+        initial={{ x: 0, y: 0 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className="fixed bottom-8 right-8 z-[60] group flex items-center justify-center p-5
                  rounded-full bg-black/60 backdrop-blur-md border border-green-500/50
                  shadow-[0_0_30px_rgba(34,197,94,0.6)] 
                  hover:shadow-[0_0_50px_rgba(34,197,94,0.9)] hover:border-green-400
-                 hover:bg-green-950/50 hover:scale-110
-                 transition-all duration-500 pointer-events-auto"
+                 hover:bg-green-950/50
+                 transition-colors duration-500 pointer-events-auto cursor-grab active:cursor-grabbing"
         aria-label="WhatsApp Help Desk"
       >
         {/* Tech Ring Animation */}
@@ -30,7 +45,7 @@ export default function WhatsAppButton() {
 
         {/* Icon with Constant Neon Glow */}
         <FaWhatsapp size={40} className="text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,1)] transition-transform duration-300 group-hover:rotate-12" />
-      </button>
-    </div>
+      </motion.button>
+    </>
   );
 }
