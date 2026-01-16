@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [recentEvents, setRecentEvents] = useState<Event[]>([])
   const [globalStats, setGlobalStats] = useState({ events: 0, students: 0 })
   const [attendanceStats, setAttendanceStats] = useState({ present: 0, late: 0, absent: 0, total: 0 })
+  const [uniqueClassDates, setUniqueClassDates] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -41,9 +42,30 @@ export default function DashboardPage() {
           students: studentsSnap.data().count
         });
 
-        // Fetch User Attendance
+        // Fetch unique class dates from attendance collection
+        const attendanceColl = collection(db, "attendance")
+        const allAttendanceSnap = await getDocs(attendanceColl)
+        const uniqueDates = new Set<string>()
+        allAttendanceSnap.forEach(doc => {
+          const data = doc.data()
+          // Get date from timestamp or date field
+          if (data.date) {
+            // Handle Firestore timestamp
+            const dateValue = data.date.seconds
+              ? new Date(data.date.seconds * 1000).toDateString()
+              : new Date(data.date).toDateString()
+            uniqueDates.add(dateValue)
+          } else if (data.createdAt) {
+            const dateValue = data.createdAt.seconds
+              ? new Date(data.createdAt.seconds * 1000).toDateString()
+              : new Date(data.createdAt).toDateString()
+            uniqueDates.add(dateValue)
+          }
+        })
+        setUniqueClassDates(uniqueDates.size)
+
+        // Fetch User Attendance (for developers)
         if (user?.uid) {
-          const attendanceColl = collection(db, "attendance")
           const q = query(attendanceColl, where("studentId", "==", user.uid))
           const snapshot = await getDocs(q)
 
@@ -132,29 +154,50 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Replaced Gallery Updates with Attendance Chart - customized for compact view */}
+        {/* Attendance/Classes Card - changes based on user role */}
         <Card className="overflow-hidden relative">
           <Link href="/dashboard/attendance" className="absolute inset-0 z-10" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              My Attendance
+              {/* Show "My Attendance" for junior/senior developers, "Total Classes" for operations roles */}
+              {user?.role === 'junior_developer' || user?.role === 'senior_developer'
+                ? 'My Attendance'
+                : 'Total Classes'}
             </CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {attendanceStats.present + attendanceStats.late}/{attendanceStats.total}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Events Attended
-            </p>
-            <div className="flex gap-2 mt-3 text-[10px] text-muted-foreground">
-              <span className="text-green-500">{attendanceStats.present} Present</span>
-              <span>•</span>
-              <span className="text-orange-500">{attendanceStats.late} Late</span>
-              <span>•</span>
-              <span className="text-red-500">{attendanceStats.absent} Absent</span>
-            </div>
+            {user?.role === 'junior_developer' || user?.role === 'senior_developer' ? (
+              // Developers see their attendance stats
+              <>
+                <div className="text-2xl font-bold">
+                  {attendanceStats.present + attendanceStats.late}/{attendanceStats.total}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Events Attended
+                </p>
+                <div className="flex gap-2 mt-3 text-[10px] text-muted-foreground">
+                  <span className="text-green-500">{attendanceStats.present} Present</span>
+                  <span>•</span>
+                  <span className="text-orange-500">{attendanceStats.late} Late</span>
+                  <span>•</span>
+                  <span className="text-red-500">{attendanceStats.absent} Absent</span>
+                </div>
+              </>
+            ) : (
+              // Operations/Leadership see total class count
+              <>
+                <div className="text-2xl font-bold">
+                  {uniqueClassDates}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Classes Conducted
+                </p>
+                <div className="flex gap-2 mt-3 text-[10px] text-muted-foreground">
+                  <span className="text-primary">View attendance records →</span>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 

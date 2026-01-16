@@ -129,6 +129,43 @@ export default function AttendancePage() {
     )
   }
 
+  // Operations/Leadership roles don't have attendance tracked - show different content
+  const isOperationsRole = user?.role && ![
+    'junior_developer',
+    'senior_developer',
+    'guest'
+  ].includes(user.role)
+
+  if (isOperationsRole) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Attendance Overview</h1>
+          <p className="text-muted-foreground">View club attendance and class records</p>
+        </div>
+
+        <Card>
+          <CardContent className="py-16 text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <TrendingUp className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Leadership Dashboard</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              As a {user?.role?.replace(/_/g, ' ')}, your attendance is not tracked.
+              You can manage and mark attendance for club members from the Operations portal.
+            </p>
+            <a
+              href="/operations/attendance"
+              className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+            >
+              Go to Attendance Management →
+            </a>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>

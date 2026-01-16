@@ -49,6 +49,31 @@ export default function AdminDashboard() {
 
   // Notifications state
   const [notifications, setNotifications] = useState<{ id: string, title: string, time: string, type: 'alert' | 'info' }[]>([])
+  const [hasUnread, setHasUnread] = useState(false)
+
+  // Check if notifications have been read (per-user using user.uid)
+  useEffect(() => {
+    if (!user?.uid) return
+
+    const notificationIds = notifications.map(n => n.id).sort().join(',')
+    const storedIds = localStorage.getItem(`readNotificationIds_${user.uid}`)
+
+    if (notifications.length > 0 && notificationIds !== storedIds) {
+      setHasUnread(true)
+    } else {
+      setHasUnread(false)
+    }
+  }, [notifications, user?.uid])
+
+  // Mark notifications as read when popover opens (per-user)
+  const markNotificationsAsRead = () => {
+    if (!user?.uid) return
+
+    const notificationIds = notifications.map(n => n.id).sort().join(',')
+    localStorage.setItem(`readNotificationIds_${user.uid}`, notificationIds)
+    localStorage.setItem(`notificationsLastRead_${user.uid}`, new Date().toISOString())
+    setHasUnread(false)
+  }
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -148,12 +173,12 @@ export default function AdminDashboard() {
         </div>
         <div className="flex items-center space-x-2">
 
-          <Popover>
+          <Popover onOpenChange={(open) => { if (open) markNotificationsAsRead() }}>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="relative">
                 <Bell className="h-4 w-4 mr-2" />
                 Notifications
-                {notifications.length > 0 && (
+                {hasUnread && notifications.length > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-3 w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
@@ -165,7 +190,7 @@ export default function AdminDashboard() {
               <div className="p-4 border-b">
                 <h4 className="font-semibold leading-none">Notifications</h4>
                 <p className="text-sm text-muted-foreground mt-1">
-                  You have {notifications.length} unread messages.
+                  {hasUnread ? `You have ${notifications.length} unread messages.` : 'All caught up!'}
                 </p>
               </div>
               <div className="max-h-[300px] overflow-y-auto p-4 space-y-4">

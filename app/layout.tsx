@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 
 import WhatsAppButton from "@/components/ui/WhatsAppButton"; // WhatsApp Floating Button
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "sonner";
 import TechScrollbar from "@/components/ui/TechScrollbar";
 import Footer from "@/components/layout/Footer";
 import { RoutePrefetcher } from "@/components/utils/RoutePrefetcher";
@@ -65,6 +66,7 @@ export default function RootLayout({
 
               {/* Elements that should stay 1:1 (Outside Zoom) */}
               <Toaster />
+              <SonnerToaster position="bottom-right" richColors />
             </LoaderProvider>
           </AuthProvider>
         </ThemeProvider>

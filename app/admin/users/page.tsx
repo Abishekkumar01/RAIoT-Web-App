@@ -39,6 +39,8 @@ export default function AdminUsersPage() {
           joinDate: data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleDateString() : new Date().toLocaleDateString(),
           lastActive: data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toLocaleDateString() : new Date().toLocaleDateString(),
           attendanceRate: data.attendance ? data.attendance.length * 10 : 0,
+          passwordChangedAt: data.passwordChangedAt ? new Date(data.passwordChangedAt.seconds * 1000) : null,
+          passwordChangedBy: data.passwordChangedBy || null,
           profileData: {
             year: data.profileData?.year || 'N/A',
             branch: data.profileData?.branch || 'N/A',
@@ -63,6 +65,8 @@ export default function AdminUsersPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const { toast } = useToast()
+  const [newPassword, setNewPassword] = useState('')
+  const [passwordLoading, setPasswordLoading] = useState(false)
 
   const [formData, setFormData] = useState({
     displayName: '',
@@ -782,6 +786,67 @@ export default function AdminUsersPage() {
                     <SelectItem value="technical_head">Technical Head</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Password Change Info */}
+              {editingUser.passwordChangedAt && (
+                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                  <p className="text-sm text-blue-400">
+                    🔐 Password last changed: {editingUser.passwordChangedAt.toLocaleDateString()} at {editingUser.passwordChangedAt.toLocaleTimeString()}
+                    <span className="text-xs ml-2 text-blue-300">({editingUser.passwordChangedBy === 'self' ? 'by user' : 'by admin'})</span>
+                  </p>
+                </div>
+              )}
+
+              {/* Admin Password Reset */}
+              <div className="space-y-2 p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                <Label htmlFor="newPassword" className="flex items-center text-sm font-medium">
+                  🔒 Reset Password (Admin)
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password (min 6 chars)"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={passwordLoading || newPassword.length < 6}
+                    onClick={async () => {
+                      setPasswordLoading(true)
+                      try {
+                        const response = await fetch('/api/admin/users/update-password', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ userId: editingUser.id, newPassword })
+                        })
+                        const data = await response.json()
+                        if (!response.ok) throw new Error(data.error)
+                        toast({
+                          title: "✅ Password Reset",
+                          description: `Password has been reset for ${editingUser.displayName}`,
+                        })
+                        setNewPassword('')
+                      } catch (error: any) {
+                        toast({
+                          title: "❌ Error",
+                          description: error.message,
+                          variant: "destructive"
+                        })
+                      } finally {
+                        setPasswordLoading(false)
+                      }
+                    }}
+                  >
+                    {passwordLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reset'}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Leave empty to keep current password</p>
               </div>
 
               {error && (

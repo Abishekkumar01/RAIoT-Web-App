@@ -238,6 +238,17 @@ export default function ProfilePage() {
       // Update password
       await updatePassword(auth.currentUser, passwordData.newPassword)
 
+      // Track password change in Firestore for admin visibility
+      if (user?.uid) {
+        const { doc, setDoc } = await import('firebase/firestore')
+        const { db } = await import('@/lib/firebase')
+        await setDoc(doc(db, 'users', user.uid), {
+          passwordChangedAt: new Date(),
+          passwordChangedBy: 'self',
+          updatedAt: new Date()
+        }, { merge: true })
+      }
+
       setPasswordSuccess(true)
       setPasswordData({
         currentPassword: '',
