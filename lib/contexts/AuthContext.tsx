@@ -51,16 +51,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           let merged: User
           if (snap.exists()) {
-            merged = { ...base, ...(snap.data() as any) }
+            const data = snap.data()
+            // Normalize role
+            const rawRole = data.role as string || 'guest'
+            const normalizedRole = rawRole.toLowerCase().trim() as UserRole
+            merged = { ...base, ...data, role: normalizedRole }
           } else {
-            // If user exists in Auth but not Firestore, they are deleted/banned.
-            // Do NOT auto-create profile.
+            // ... (deletion logic) ...
             console.warn('User authenticated but no Firestore profile found. Logging out.')
             await signOut(auth)
             setUser(null)
             localStorage.removeItem("raiot_user")
             return // Exit early
           }
+
+          // CRITICAL FIX: Race Condition Protection
+          // If the user signed out while we were waiting for getDoc (e.g., due to role restriction check),
+          // do NOT restore the user state.
+          if (!auth.currentUser) {
+            console.log('Race condition detected: User logged out during profile fetch. Aborting state update.')
+            return
+          }
+
           setUser(merged)
           localStorage.setItem("raiot_user", JSON.stringify(merged))
         } else {
@@ -86,7 +98,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: new Date(),
       updatedAt: new Date(),
     }
-    const result: User = userDoc.exists() ? { ...base, ...(userDoc.data() as any) } : base
+
+    let result: User
+    if (userDoc.exists()) {
+      const data = userDoc.data()
+      // Normalize role
+      const rawRole = data.role as string || 'guest'
+      const normalizedRole = rawRole.toLowerCase().trim() as UserRole
+      result = { ...base, ...data, role: normalizedRole }
+    } else {
+      result = base
+    }
+
     setUser(result)
     localStorage.setItem("raiot_user", JSON.stringify(result))
     return result
@@ -97,12 +120,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (displayName) {
       try { await updateProfile(cred.user, { displayName }) } catch { }
     }
+    // Normalize input role
+    const normalizedRole = role.toLowerCase().trim() as UserRole
+
     const userDocRef = doc(db, 'users', cred.user.uid)
     const payload = {
       uid: cred.user.uid,
       email: cred.user.email,
       displayName: displayName || cred.user.email,
-      role,
+      role: normalizedRole,
       profileData: {},
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -142,6 +168,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updatedAt: new Date()
       }
 
+      // Ensure role is preserved/normalized if updated
+      if (data.role) {
+        updatedUser.role = data.role.toLowerCase().trim() as UserRole
+      }
+
       console.log('🔍 Updated user object:', updatedUser)
 
       // Persist the update to Firestore with proper merging
@@ -165,7 +196,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedUserDoc = await getDoc(doc(db, 'users', user.uid))
       if (updatedUserDoc.exists()) {
         const freshUserData = updatedUserDoc.data()
-        const mergedUser = { ...user, ...freshUserData }
+
+        // Normalize role
+        const rawRole = freshUserData.role as string || 'guest'
+        const normalizedRole = rawRole.toLowerCase().trim() as UserRole
+        const finalData = { ...freshUserData, role: normalizedRole }
+
+        const mergedUser = { ...user, ...finalData }
         console.log('🔍 Refreshed user data from Firestore:', mergedUser)
 
         // Update local state with fresh data
@@ -191,7 +228,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userDoc = await getDoc(doc(db, 'users', user.uid))
       if (userDoc.exists()) {
         const freshUserData = userDoc.data()
-        const mergedUser = { ...user, ...freshUserData }
+
+        // Normalize role
+        const rawRole = freshUserData.role as string || 'guest'
+        const normalizedRole = rawRole.toLowerCase().trim() as UserRole
+        const finalData = { ...freshUserData, role: normalizedRole }
+
+        const mergedUser = { ...user, ...finalData }
         console.log('🔍 Fresh user data from Firestore:', mergedUser)
 
         // Update local state with fresh data
@@ -208,7 +251,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const resetPassword = async (email: string): Promise<void> => {
-    await sendPasswordResetEmail(auth, email)
+    try {
+      const actionCodeSettings = {
+        url: `${window.location.origin}/auth/login`,
+        handleCodeInApp: true,
+      }
+      await sendPasswordResetEmail(auth, email, actionCodeSettings)
+      console.log("Password reset email sent to:", email)
+    } catch (error) {
+      console.error("Error sending password reset email:", error)
+      throw error
+    }
   }
 
   const value = {

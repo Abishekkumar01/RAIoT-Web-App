@@ -9,7 +9,7 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute requiredRole="vice_president">
       <div className="flex min-h-screen bg-background">
         <div className="w-64 flex-shrink-0 sticky top-0 h-screen">
           <DashboardSidebar />

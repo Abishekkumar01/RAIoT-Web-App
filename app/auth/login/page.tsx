@@ -81,8 +81,6 @@ function LoginContent() {
               'content_creation_head',
               'management_head',
               'technical_head',
-              'vice_president',
-              'president',
               'admin',
               'superadmin'
             ]
@@ -109,15 +107,28 @@ function LoginContent() {
             else if (loginType === 'operations') {
               // ONLY allow ops roles
               if (!allowedOpsRoles.includes(userRole)) {
+                // Check specifically for VP/President to give the custom message requested
+                if (userRole === 'vice_president' || userRole === 'president') {
+                  console.warn('Blocking Leadership from Ops Login:', userRole)
+                  await logout()
+                  await new Promise(resolve => setTimeout(resolve, 100))
+                  throw new Error(`Access Denied: Your role [${userRole}] is not authorized for the operation login Portal.`)
+                }
+
                 console.warn('Blocking Non-Ops from Ops Login:', userRole)
+                // FORCE LOGOUT to ensure they are not considered "logged in" by the app
                 await logout()
+                // Small delay to ensure state clears
+                await new Promise(resolve => setTimeout(resolve, 100))
                 throw new Error(`Access Denied: This area is strictly for Operations & Leadership staff.`)
               }
             }
             else if (loginType === 'admin') {
               // ONLY allow admin/superadmin AND executives
               if (!allowedAdminRoles.includes(userRole)) {
+                console.warn('Blocking Non-Admin from Admin Login:', userRole)
                 await logout()
+                await new Promise(resolve => setTimeout(resolve, 100))
                 throw new Error("Access Denied: Administrative Clearance Required.")
               }
             }
@@ -349,46 +360,16 @@ function LoginContent() {
                     <Label htmlFor="password" className="text-sm text-cyan-400 font-semibold font-orbitron block uppercase tracking-wider group-focus-within:text-cyan-300 transition-colors">
                       Password
                     </Label>
-                    <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
-                      <DialogTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setResetEmail(email)
-                            setResetDialogOpen(true)
-                          }}
-                          className="text-xs text-cyan-500/70 hover:text-cyan-400 hover:underline font-mono uppercase tracking-wide flex items-center gap-1 transition-all"
-                        >
-                          <Key className="h-3 w-3" /> RECOVERY_PROTOCOL?
-                        </button>
-                      </DialogTrigger>
-                      <DialogContent className="bg-black border border-cyan-500/50 text-white font-mono sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle className="text-cyan-400 font-orbitron tracking-wider text-xl">RESET_ACCESS_KEY</DialogTitle>
-                          <DialogDescription className="text-gray-400">
-                            Enter your authorized email to receive a password reset uplink.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={handleResetPassword} className="space-y-4 mt-4">
-                          {resetError && <p className="text-red-500 text-sm">ERROR: {resetError}</p>}
-                          {resetSuccess && <p className="text-green-500 text-sm">UPLINK SUCCESSFUL: Check inbox.</p>}
-
-                          <div className="space-y-2">
-                            <Label htmlFor="resetEmail" className="text-cyan-500 text-xs uppercase">Target Email</Label>
-                            <Input
-                              id="resetEmail"
-                              value={resetEmail}
-                              onChange={(e) => setResetEmail(e.target.value)}
-                              className="bg-black/50 border-cyan-500/30 text-white focus:border-cyan-500"
-                              placeholder="user@system.net"
-                            />
-                          </div>
-                          <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-orbitron tracking-widest border border-cyan-400">
-                            {resetLoading ? "SENDING..." : "INITIATE_RESET"}
-                          </Button>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetEmail(email)
+                        setResetDialogOpen(true)
+                      }}
+                      className="text-xs text-cyan-500/70 hover:text-cyan-400 hover:underline font-mono uppercase tracking-wide flex items-center gap-1 transition-all"
+                    >
+                      <Key className="h-3 w-3" /> RECOVERY_PROTOCOL?
+                    </button>
                   </div>
                   <div className="relative">
                     <Input
@@ -451,6 +432,36 @@ function LoginContent() {
           <div className="h-1 w-full bg-gradient-to-r from-cyan-900 via-cyan-500 to-cyan-900" />
         </div>
       </motion.div>
+
+      {/* Password Reset Dialog - Outside main form */}
+      <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <DialogContent className="bg-black border border-cyan-500/50 text-white font-mono sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-cyan-400 font-orbitron tracking-wider text-xl">RESET_ACCESS_KEY</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Enter your authorized email to receive a password reset uplink.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleResetPassword} className="space-y-4 mt-4">
+            {resetError && <p className="text-red-500 text-sm">ERROR: {resetError}</p>}
+            {resetSuccess && <p className="text-green-500 text-sm">UPLINK SUCCESSFUL: Check inbox.</p>}
+
+            <div className="space-y-2">
+              <Label htmlFor="resetEmail" className="text-cyan-500 text-xs uppercase">Target Email</Label>
+              <Input
+                id="resetEmail"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                className="bg-black/50 border-cyan-500/30 text-white focus:border-cyan-500"
+                placeholder="user@system.net"
+              />
+            </div>
+            <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-orbitron tracking-widest border border-cyan-400">
+              {resetLoading ? "SENDING..." : "INITIATE_RESET"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
