@@ -1,19 +1,24 @@
 .galleryWrapper {
     /* User provided CSS logic */
     --img-size: calc(100px - 0.5rem / 2);
-    display: none;
-    /* Hidden on mobile by default */
+    display: grid;
     gap: 0.5rem;
-    grid-template-columns: repeat(6, var(--img-size));
-    grid-template-rows: repeat(4, var(--img-size));
-    width: fit-content;
+    width: 100%;
     margin: 0 auto;
+    justify-content: center;
+
+    /* Mobile Layout - Collage Style */
+    grid-template-columns: repeat(3, 1fr);
+    padding: 1rem;
 }
 
-/* Show gallery on tablet and larger screens */
+/* Desktop Grid Configuration */
 @media (min-width: 768px) {
     .galleryWrapper {
-        display: grid;
+        grid-template-columns: repeat(6, var(--img-size));
+        grid-template-rows: repeat(4, var(--img-size));
+        width: fit-content;
+        padding: 0;
     }
 }
 
@@ -21,7 +26,8 @@
     max-width: 100%;
     aspect-ratio: 1;
     object-fit: cover;
-    grid-column: span 2;
+    /* Default span for mobile items unless overridden */
+    grid-column: span 1;
     border-radius: 0.5rem;
 
     /* User's provided clip-path path */
@@ -35,6 +41,23 @@
     align-items: center;
 }
 
+/* Mobile specific overrides for better collage look */
+@media (max-width: 767px) {
+    .galleryItem {
+        /* Scale down slightly to fit collage style */
+        transform: scale(0.95);
+    }
+
+    /* Create a bit of irregularity for "collage" feel */
+    .galleryItem:nth-child(even) {
+        transform: translateY(10px) scale(0.95);
+    }
+
+    .galleryItem:nth-child(3n) {
+        transform: translateY(-5px) scale(0.95);
+    }
+}
+
 .galleryContent {
     width: 100%;
     height: 100%;
@@ -45,10 +68,17 @@
    Logic for staggered layout:
    In the user's snippet: img:nth-of-type(4), img:nth-of-type(9)
    We apply this to .galleryItem:nth-child(...)
+   ONLY ON DESKTOP
 */
-.galleryItem:nth-child(4),
-.galleryItem:nth-child(9) {
-    grid-column: 2 / span 2;
+@media (min-width: 768px) {
+    .galleryItem {
+        grid-column: span 2;
+    }
+
+    .galleryItem:nth-child(4),
+    .galleryItem:nth-child(9) {
+        grid-column: 2 / span 2;
+    }
 }
 
 /* Hover Effects from User Snippet */

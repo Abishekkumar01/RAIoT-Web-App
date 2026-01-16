@@ -57,6 +57,7 @@ export default function TechScrollbar({ orientation = "vertical" }: TechScrollba
                     : "bottom-2 left-0 right-0 h-12 flex-row"
                 }`}
             aria-hidden="true"
+            data-nosnippet
         >
             {/* Track Container */}
             <div

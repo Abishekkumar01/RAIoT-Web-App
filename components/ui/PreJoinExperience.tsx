@@ -472,7 +472,7 @@ export default function PreJoinExperience() {
                                 textShadow: '0 0 10px rgba(34, 197, 94, 0.5)'
                             }}
                         >
-                            Do not Touch
+                            Dare to touch!
                         </p>
                     </div>
                 </div>

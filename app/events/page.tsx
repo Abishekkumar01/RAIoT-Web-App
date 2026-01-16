@@ -281,7 +281,7 @@ export default function EventsPage() {
     <div className="min-h-screen bg-background">
       <PublicNavbar />
 
-      <div className="max-w-[1920px] mx-auto px-4 py-12">
+      <div className="max-w-[1920px] mx-auto px-4 pt-12 pb-4 md:pb-8">
         <div className="text-center mb-12">
           <h1
             className="text-5xl md:text-7xl font-black font-orbitron mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-cyan-400 drop-shadow-[0_0_15px_rgba(6,182,212,0.6)] tracking-wide uppercase"
@@ -301,7 +301,7 @@ export default function EventsPage() {
             <p className="text-muted-foreground">Check back later for upcoming events!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-x-32 md:gap-x-8 gap-y-20 md:gap-y-20 max-w-fit mx-auto justify-items-center justify-center scale-75 md:scale-100 origin-top px-6 md:px-0">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-x-32 md:gap-x-8 gap-y-20 md:gap-y-20 max-w-fit mx-auto justify-items-center justify-center [zoom:0.75] md:[zoom:1] origin-top px-6 md:px-0 mb-0">
             {events.map((event) => {
               const isRegistered = user ? userRegistrations.has(event.id) : false
               const isFull = Boolean(event.maxParticipants && event.registered && event.registered >= event.maxParticipants);

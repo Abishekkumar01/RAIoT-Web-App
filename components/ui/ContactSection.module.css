@@ -21,8 +21,8 @@
 /* Mobile: Reduce gap between marquees */
 @media (max-width: 768px) {
     .marqueeWrapper {
-        height: 25vh;
-        min-height: 200px;
+        height: 18vh;
+        min-height: 150px;
     }
 }
 

@@ -112,7 +112,7 @@ export default function Footer() {
                         <div className="flex gap-4">
                             {[
                                 { icon: Github, href: "https://github.com/raiot-lab", target: "_blank" },
-                                { icon: Linkedin, href: "#" },
+                                { icon: Linkedin, href: "https://www.linkedin.com/company/raiot-labs-amity-university-rajasthan/", target: "_blank" },
                                 { icon: Globe, href: "#" },
                             ].map((Social, index) => (
                                 <Link

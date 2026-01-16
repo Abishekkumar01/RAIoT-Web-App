@@ -228,7 +228,7 @@ export default function LeadersPage() {
                                                 viewport={{ once: true }}
                                                 className="bg-slate-900 border border-cyan-500/50 px-4 md:px-6 py-1.5 md:py-2 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.3)] backdrop-blur-md"
                                             >
-                                                <span className="text-lg md:text-2xl font-bold font-mono text-cyan-400">
+                                                <span className="text-sm md:text-2xl font-bold font-mono text-cyan-400">
                                                     {viewMode === 'faculty' ? 'Joined ' : 'Batch '}{batch}
                                                 </span>
                                             </motion.div>
@@ -301,7 +301,7 @@ export default function LeadersPage() {
 
                                                                         {/* Main Content (Middle) */}
                                                                         <div className={`flex-1 py-4 md:py-6 flex flex-col justify-center ${isLeft ? 'text-right' : 'text-left'}`}>
-                                                                            <h3 className="text-lg md:text-2xl font-bold text-white group-hover:text-cyan-400 transition-colors">
+                                                                            <h3 className="text-base md:text-2xl font-bold text-white group-hover:text-cyan-400 transition-colors">
                                                                                 {leader.name}
                                                                             </h3>
                                                                             <div className={`flex items-center gap-1.5 md:gap-2 mt-1.5 md:mt-2 mb-2 md:mb-3 ${isLeft ? 'justify-end' : 'justify-start'} flex-wrap`}>

@@ -31,8 +31,27 @@ export default function MemberProfilePage() {
         const querySnapshot = await getDocs(q)
 
         if (!querySnapshot.empty) {
-          const userDoc = querySnapshot.docs[0]
-          setMember(userDoc.data() as User)
+          // Find the best match: prioritize profile with photoUrl or projects
+          let bestMatch = querySnapshot.docs[0].data() as User;
+
+          if (querySnapshot.docs.length > 1) {
+            console.log(`Found ${querySnapshot.docs.length} matches for ${rollNumber}. Selecting best candidate.`);
+            const candidates = querySnapshot.docs.map(d => d.data() as User);
+
+            // Prefer candidate with photoUrl
+            const withPhoto = candidates.find(u => u.profileData?.photoUrl && u.profileData.photoUrl.length > 0);
+            if (withPhoto) {
+              bestMatch = withPhoto;
+            } else {
+              // Prefer candidate with projects
+              const withProjects = candidates.find(u => u.profileData?.projects && u.profileData.projects.length > 0);
+              if (withProjects) {
+                bestMatch = withProjects;
+              }
+            }
+          }
+
+          setMember(bestMatch)
         } else {
           console.error(`Member not found with roll number: ${rollNumber} (normalized: ${normalizedRollNumber})`)
           setNotFound(true)
@@ -109,30 +128,30 @@ export default function MemberProfilePage() {
         <div className="absolute inset-0 z-0 opacity-20 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] animate-pulse-slow"></div>
 
         <div className="relative z-20 h-full max-w-[94%] mx-auto px-4 flex flex-col justify-end pb-6">
-          <div className="flex flex-col md:flex-row items-end gap-6">
+          <div className="flex flex-row items-end gap-4 md:gap-6">
             {/* Profile Avatar with Tech Border */}
             <div className="relative group flex-shrink-0">
               {/* Rotating Ring */}
               <div className="absolute -inset-2 rounded-full border border-dashed border-cyan-500/30 animate-[spin_10s_linear_infinite]"></div>
               <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 blur-sm"></div>
 
-              <Avatar className="w-32 h-32 md:w-36 md:h-36 border-4 border-zinc-900 bg-zinc-950 shadow-2xl relative z-10">
+              <Avatar className="w-24 h-24 md:w-36 md:h-36 border-4 border-zinc-900 bg-zinc-950 shadow-2xl relative z-10">
                 <AvatarImage src={member.profileData?.photoUrl} alt={member.displayName} className="object-cover" />
-                <AvatarFallback className="text-3xl font-bold bg-zinc-900 text-zinc-500">
+                <AvatarFallback className="text-xl md:text-3xl font-bold bg-zinc-900 text-zinc-500">
                   {member.displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                 </AvatarFallback>
               </Avatar>
 
               {/* Status Indicator */}
-              <div className="absolute bottom-3 right-3 z-20 bg-black border border-green-500 rounded-full p-1.5 shadow-[0_0_10px_rgba(34,197,94,0.5)]">
-                <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
+              <div className="absolute bottom-2 right-2 md:bottom-3 md:right-3 z-20 bg-black border border-green-500 rounded-full p-1 md:p-1.5 shadow-[0_0_10px_rgba(34,197,94,0.5)]">
+                <div className="w-2 h-2 md:w-2.5 md:h-2.5 bg-green-500 rounded-full animate-pulse" />
               </div>
             </div>
 
-            <div className="flex-1 space-y-3 mb-1 w-full overflow-hidden">
+            <div className="flex-1 space-y-2 md:space-y-3 mb-1 w-full overflow-hidden text-left">
               <div>
-                <div className="flex flex-col xl:flex-row xl:items-center gap-3 mb-1">
-                  <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-white uppercase font-sans truncate">
+                <div className="flex flex-col xl:flex-row items-start xl:items-end gap-2 md:gap-3 mb-1">
+                  <h1 className="text-2xl md:text-5xl font-black tracking-tighter text-white uppercase font-sans leading-none break-words line-clamp-2">
                     {member.displayName}
                   </h1>
                   <div className="flex items-center gap-2 mt-1 xl:mt-0">
@@ -144,8 +163,8 @@ export default function MemberProfilePage() {
                 </div>
 
                 {member.profileData?.tagline && (
-                  <p className="text-lg text-zinc-400 font-light tracking-wide flex items-center gap-2 truncate">
-                    <ChevronRight className="w-4 h-4 text-cyan-500 flex-shrink-0" />
+                  <p className="text-sm md:text-lg text-zinc-400 font-light tracking-wide flex items-center gap-2 truncate">
+                    <ChevronRight className="w-3 h-3 md:w-4 md:h-4 text-cyan-500 flex-shrink-0" />
                     <span className="truncate">{member.profileData.tagline}</span>
                   </p>
                 )}
@@ -153,14 +172,14 @@ export default function MemberProfilePage() {
 
               {/* Identity Chips & Social Row */}
               <div className="flex flex-col xl:flex-row gap-4 pt-1 items-start xl:items-center justify-between">
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2 md:gap-3">
                   <div className="flex items-center gap-2 bg-zinc-900/80 border border-zinc-700 px-3 py-1.5 rounded-sm">
                     <span className="text-[10px] text-zinc-500 uppercase font-mono">ID</span>
-                    <span className="text-sm font-mono text-white">{member.profileData?.rollNumber || "N/A"}</span>
+                    <span className="text-xs md:text-sm font-mono text-white">{member.profileData?.rollNumber || "N/A"}</span>
                   </div>
                   <div className="flex items-center gap-2 bg-zinc-900/80 border border-zinc-700 px-3 py-1.5 rounded-sm">
                     <span className="text-[10px] text-zinc-500 uppercase font-mono">DEPT</span>
-                    <span className="text-sm font-mono text-white">{member.profileData?.branch || "N/A"}</span>
+                    <span className="text-xs md:text-sm font-mono text-white">{member.profileData?.branch || "N/A"}</span>
                   </div>
                 </div>
 

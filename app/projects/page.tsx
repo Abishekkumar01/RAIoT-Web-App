@@ -132,14 +132,14 @@ function ProjectBatchGroup({ batch, projects }: { batch: string, projects: Proje
       <div className="relative flex flex-col items-center justify-center pt-8">
         <div className="absolute left-0 top-1/2 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-900/50 to-transparent"></div>
         <div className="z-10 bg-[#0a0a0a] px-4 flex flex-col items-center gap-2">
-          <div className="border border-cyan-500/30 bg-black/80 backdrop-blur-xl rounded-full px-12 py-3 text-cyan-400 font-orbitron tracking-[0.15em] uppercase text-lg shadow-[0_0_20px_-5px_rgba(6,182,212,0.4)] relative overflow-hidden group">
+          <div className="border border-cyan-500/30 bg-black/80 backdrop-blur-xl rounded-full px-12 py-3 text-cyan-400 font-orbitron tracking-[0.15em] uppercase text-sm md:text-lg shadow-[0_0_20px_-5px_rgba(6,182,212,0.4)] relative overflow-hidden group">
             <span className="relative z-10 font-bold">{batch}</span>
             <div className="absolute inset-0 bg-cyan-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
           </div>
 
           {/* Highlight Text */}
           {highlightText && (
-            <div className="text-cyan-300/80 text-sm font-light tracking-widest uppercase animate-pulse">
+            <div className="text-cyan-300/80 text-[10px] md:text-sm font-light tracking-widest uppercase animate-pulse">
               {highlightText}
             </div>
           )}
@@ -199,7 +199,7 @@ function ProjectBatchGroup({ batch, projects }: { batch: string, projects: Proje
               </div>
 
               <div className="space-y-2 pt-2">
-                <CardTitle className="text-xl font-black tracking-wide text-white line-clamp-1 group-hover:text-cyan-400 transition-colors uppercase font-orbitron drop-shadow-md">
+                <CardTitle className="text-base md:text-xl font-black tracking-wide text-white line-clamp-1 group-hover:text-cyan-400 transition-colors uppercase font-orbitron drop-shadow-md">
                   {project.title}
                 </CardTitle>
                 <CardDescription className="line-clamp-6 text-zinc-400 text-xs leading-relaxed font-mono">

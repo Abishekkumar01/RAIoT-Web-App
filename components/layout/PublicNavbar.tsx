@@ -259,13 +259,14 @@ export const PublicNavbar = () => {
                     href={link.href}
                     prefetch={true}
                     onClick={() => setIsMenuOpen(false)}
-                    className="group relative w-full"
+                    className="group relative w-full animate-in slide-in-from-left duration-500"
                     style={{
-                      animationDelay: `${index * 50}ms`
+                      animationDelay: `${index * 100}ms`,
+                      animationFillMode: 'backwards'
                     }}
                   >
                     {/* Container with tech corners */}
-                    <div className="relative px-6 py-3 overflow-hidden">
+                    <div className="relative pl-8 pr-6 py-3 overflow-visible">
                       {/* Corner Brackets - Smaller and more subtle */}
                       <div className="absolute top-0 left-0 w-3 h-3 border-l border-t border-cyan-400/50 transition-all duration-300 group-hover:w-4 group-hover:h-4 group-hover:border-cyan-400" />
                       <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-cyan-400/50 transition-all duration-300 group-hover:w-4 group-hover:h-4 group-hover:border-cyan-400" />
@@ -282,7 +283,7 @@ export const PublicNavbar = () => {
 
                       {/* Link Text */}
                       <div className="relative flex items-center justify-between">
-                        <span className="font-orbitron font-bold text-xl tracking-wider text-gray-400 group-hover:text-cyan-400 transition-all duration-300 group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]">
+                        <span className="font-orbitron font-bold text-xl tracking-wider text-white group-hover:text-cyan-400 transition-all duration-300 group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.6)] shadow-black drop-shadow-md">
                           {link.label.toUpperCase()}
                         </span>
 
@@ -295,7 +296,7 @@ export const PublicNavbar = () => {
                       </div>
 
                       {/* Index Number */}
-                      <div className="absolute -left-1 top-1/2 -translate-y-1/2 font-mono text-[10px] text-cyan-400/30 group-hover:text-cyan-400/70 transition-colors">
+                      <div className="absolute left-2 top-1/2 -translate-y-1/2 font-mono text-[10px] text-cyan-400/70 group-hover:text-cyan-400 transition-colors">
                         {String(index + 1).padStart(2, '0')}
                       </div>
                     </div>
