@@ -65,6 +65,7 @@ function LoginContent() {
             })
 
             // Define allowed roles for each portal
+            // Define allowed roles for each portal
             const allowedMemberRoles = [
               'member',
               'junior_developer',
@@ -84,6 +85,12 @@ function LoginContent() {
               'president',
               'admin',
               'superadmin'
+            ]
+            const allowedAdminRoles = [
+              'admin',
+              'superadmin',
+              'president',
+              'vice_president'
             ]
 
             console.log("Role Check -- Raw:", rawRole, "Normalized:", userRole)
@@ -108,8 +115,8 @@ function LoginContent() {
               }
             }
             else if (loginType === 'admin') {
-              // ONLY allow admin/superadmin
-              if (userRole !== 'admin' && userRole !== 'superadmin') {
+              // ONLY allow admin/superadmin AND executives
+              if (!allowedAdminRoles.includes(userRole)) {
                 await logout()
                 throw new Error("Access Denied: Administrative Clearance Required.")
               }
@@ -124,7 +131,10 @@ function LoginContent() {
             }
 
             // Routing Logic after successful check
-            if (userRole === 'admin' || userRole === 'superadmin') {
+            if (allowedAdminRoles.includes(userRole)) {
+              // Prioritize Admin Dashboard for Executives if they used Admin Login
+              // However, since we guide them here, let's just send them to Admin Dashboard
+              // regardless of whether they *could* go to Ops.
               router.push('/admin')
               return
             } else if (allowedOpsRoles.includes(userRole)) {
