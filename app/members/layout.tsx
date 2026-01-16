@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { DashboardSidebar } from '@/components/layout/DashboardSidebar'
+import { usePathname } from 'next/navigation'
 
 export default function MembersLayout({
     children,
@@ -10,6 +11,15 @@ export default function MembersLayout({
     children: React.ReactNode
 }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const pathname = usePathname();
+
+    // Check if we are viewing a specific member profile (public)
+    // Pattern: /members/[id] but NOT /members (list) and NOT /members/register
+    const isPublicProfile = pathname?.startsWith('/members/') && !pathname.includes('/register');
+
+    if (isPublicProfile) {
+        return <>{children}</>
+    }
 
     return (
         <ProtectedRoute requiredRole="guest">

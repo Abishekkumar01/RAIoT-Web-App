@@ -25,9 +25,11 @@ export default function MemberProfilePage() {
     const fetchMember = async () => {
       try {
         const usersRef = collection(db, 'users')
-        // Convert to lowercase for case-insensitive matching
+        // Try both lowercase and uppercase to be robust
         const normalizedRollNumber = rollNumber.toLowerCase()
-        const q = query(usersRef, where('profileData.rollNumber', '==', normalizedRollNumber))
+        const upperRollNumber = rollNumber.toUpperCase()
+
+        const q = query(usersRef, where('profileData.rollNumber', 'in', [normalizedRollNumber, upperRollNumber, rollNumber]))
         const querySnapshot = await getDocs(q)
 
         if (!querySnapshot.empty) {
@@ -53,7 +55,7 @@ export default function MemberProfilePage() {
 
           setMember(bestMatch)
         } else {
-          console.error(`Member not found with roll number: ${rollNumber} (normalized: ${normalizedRollNumber})`)
+          console.error(`Member not found with roll number: ${rollNumber}`)
           setNotFound(true)
         }
       } catch (error) {
@@ -145,9 +147,9 @@ export default function MemberProfilePage() {
               <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 blur-sm"></div>
 
               <Avatar className="w-24 h-24 md:w-36 md:h-36 border-4 border-zinc-900 bg-zinc-950 shadow-2xl relative z-10">
-                <AvatarImage src={member.profileData?.photoUrl} alt={member.displayName} className="object-cover" />
+                <AvatarImage src={member.profileData?.photoUrl} alt={member.displayName || 'Member'} className="object-cover" />
                 <AvatarFallback className="text-xl md:text-3xl font-bold bg-zinc-900 text-zinc-500">
-                  {member.displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                  {(member.displayName || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                 </AvatarFallback>
               </Avatar>
 
@@ -161,12 +163,12 @@ export default function MemberProfilePage() {
               <div>
                 <div className="flex flex-col xl:flex-row items-center md:items-start xl:items-end gap-2 md:gap-3 mb-1">
                   <h1 className="text-2xl md:text-5xl font-black tracking-tighter text-white uppercase font-sans leading-none break-words line-clamp-2">
-                    {member.displayName}
+                    {member.displayName || 'Use Name Here'}
                   </h1>
                   <div className="flex items-center gap-2 mt-1 xl:mt-0">
                     <div className="h-px w-8 bg-cyan-500/50 hidden xl:block"></div>
                     <span className="text-[10px] md:text-xs font-mono text-cyan-500 uppercase tracking-widest border border-cyan-900 bg-cyan-950/30 px-2 py-0.5 rounded flex-shrink-0 whitespace-nowrap">
-                      Unit: {member.role.replace(/_/g, ' ').toUpperCase()}
+                      Unit: {(member.role || 'Member').replace(/_/g, ' ').toUpperCase()}
                     </span>
                   </div>
                 </div>
