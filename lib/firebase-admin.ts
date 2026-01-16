@@ -11,10 +11,21 @@ if (getApps().length === 0) {
         const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
         const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 
-        let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+        let privateKey: string | undefined = process.env.FIREBASE_PRIVATE_KEY;
         if (privateKey) {
-            // Handle possibility of Base64 encoded key (to avoid newline issues entirely)
-            if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+            // Try to parse as JSON first (in case user pasted the whole service-account.json)
+            try {
+                const jsonKey = JSON.parse(privateKey);
+                if (jsonKey.private_key) {
+                    privateKey = jsonKey.private_key;
+                    console.log("Create Agent: Extracted private key from JSON.");
+                }
+            } catch (e) {
+                // Not a JSON object, continue
+            }
+
+            // Handle possibility of Base64 encoded key
+            if (privateKey && !privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
                 try {
                     const decoded = Buffer.from(privateKey, 'base64').toString('utf8');
                     if (decoded.includes('-----BEGIN PRIVATE KEY-----')) {
@@ -22,14 +33,16 @@ if (getApps().length === 0) {
                         privateKey = decoded;
                     }
                 } catch (e) {
-                    // Not base64 or failed to decode, continue to standard handling
+                    // Not base64 or failed to decode
                 }
             }
 
             // Standard cleanup:
-            // 1. Remove wrapping quotes (common in JSON/Env vars)
-            // 2. Unescape newlines
-            privateKey = privateKey.replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
+            // 1. Remove wrapping quotes (common in JSON/Env vars when pasted incorrectly)
+            // 2. Unescape newlines (fixes "\n" literals from JSON)
+            if (privateKey) {
+                privateKey = privateKey.replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
+            }
         }
 
         console.log("Create Agent: Initializing Firebase Admin...");
