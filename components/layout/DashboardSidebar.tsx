@@ -109,15 +109,15 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-card border-r w-full">
+    <div className="flex flex-col h-full bg-card border-r w-full relative">
       {/* Header - Compressed */}
-      <div className="p-3 md:p-6 flex justify-center md:justify-start">
+      <div className="p-3 md:p-6 flex justify-center md:justify-start shrink-0">
         <Link href="/" className="flex items-center space-x-2">
           <span className="font-bold text-sm md:text-xl">IoT</span>
         </Link>
       </div>
 
-      <nav className="flex-1 px-2 md:px-4 space-y-1 md:space-y-2 overflow-y-auto overflow-x-hidden">
+      <nav className="flex-1 px-2 md:px-4 space-y-1 md:space-y-2 overflow-y-auto overflow-x-hidden pb-32 scrollbar-thin scrollbar-thumb-primary/10 hover:scrollbar-thumb-primary/20">
         {links.map((link) => {
           const Icon = link.icon;
           return (
@@ -172,7 +172,7 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
         )}
       </nav>
 
-      <div className="p-2 md:p-4 border-t mt-auto">
+      <div className="absolute bottom-0 left-0 w-full bg-card border-t p-2 md:p-4 z-20">
         <div className="flex items-center space-x-2 md:space-x-3 mb-2 md:mb-4">
           <div className="w-6 h-6 md:w-8 md:h-8 bg-primary rounded-full flex items-center justify-center shrink-0">
             <span className="text-primary-foreground text-[10px] md:text-sm font-medium">

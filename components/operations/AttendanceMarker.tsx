@@ -52,7 +52,8 @@ export function AttendanceMarker() {
         try {
             setLoading(true)
             // Fetch users with role 'member'
-            const q = query(collection(db, "users"), where("role", "==", "member"))
+            // Fetch users with eligible roles
+            const q = query(collection(db, "users"), where("role", "in", ["member", "junior_developer", "senior_developer"]))
             const snapshot = await getDocs(q)
             const fetched: Student[] = []
 
@@ -298,7 +299,7 @@ export function AttendanceMarker() {
                     <div>
                         <h3 className="text-lg font-medium">No Members Found</h3>
                         <p className="text-sm text-muted-foreground mt-1">
-                            No users with role &apos;Member&apos; found. Please add members in the Manage Users section.
+                            No eligible members found. Please ensure users have role &apos;Member&apos;, &apos;Junior Developer&apos;, or &apos;Senior Developer&apos;.
                         </p>
                     </div>
                 </div>
