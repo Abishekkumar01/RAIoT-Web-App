@@ -48,6 +48,9 @@ export default function MyClasses() {
                 setClassSession(null)
             }
             setLoading(false)
+        }, (error) => {
+            console.error("Error fetching class summary:", error)
+            setLoading(false)
         })
 
         // 2. Listen to User's Attendance Status
@@ -62,6 +65,8 @@ export default function MyClasses() {
             } else {
                 setUserStatus(null)
             }
+        }, (error) => {
+            console.error("Error fetching attendance status:", error)
         })
 
         return () => {

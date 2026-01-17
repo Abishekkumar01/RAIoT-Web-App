@@ -134,15 +134,29 @@ service cloud.firestore {
     }
 
     // Attendance
+    // Attendance Records
     match /attendance/{recordId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && isCoordinator();
+      // Allow members to read their own attendance, and admins/leads to read all
+      allow read: if request.auth != null && (
+        resource.data.studentId == request.auth.uid || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in 
+        ['president', 'vice_president', 'management_head', 'technical_head', 'inventory_head', 'public_relation_head', 'student_coordinator', 'admin', 'superadmin']
+      );
+      // Only admins/leads can write (mark) attendance
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in 
+        ['president', 'vice_president', 'management_head', 'technical_head', 'inventory_head', 'public_relation_head', 'student_coordinator', 'admin', 'superadmin'];
     }
 
-    // Attendance Summaries (for History)
+    // Attendance Summaries (for History & Dashboard)
     match /attendance_summaries/{dateStr} {
-      allow read: if request.auth != null && isCoordinator();
-      allow write: if request.auth != null && isCoordinator();
+      // Allow ALL authenticated users to read class summaries (needed for Dashboard "My Classes")
+      allow read: if request.auth != null;
+      
+      // Only admins/leads can publish/manage summaries
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in 
+        ['president', 'vice_president', 'management_head', 'technical_head', 'inventory_head', 'public_relation_head', 'student_coordinator', 'admin', 'superadmin'];
     }
 
     // Students (for the list)
