@@ -36,8 +36,36 @@ export default function AdminUsersPage() {
           displayName: data.displayName || data.email,
           email: data.email,
           role: data.role || 'member',
-          joinDate: data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleDateString() : new Date().toLocaleDateString(),
-          lastActive: data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toLocaleDateString() : new Date().toLocaleDateString(),
+          joinDate: (() => {
+            const dateVal = data.joiningDate || data.createdAt;
+            if (!dateVal) return new Date().toLocaleDateString();
+            try {
+              // Handle Firestore Timestamp
+              if (typeof dateVal === 'object' && dateVal.seconds) {
+                return new Date(dateVal.seconds * 1000).toLocaleDateString();
+              }
+              // Handle standard Date object or String
+              const d = new Date(dateVal);
+              if (isNaN(d.getTime())) return "N/A";
+              return d.toLocaleDateString();
+            } catch (e) {
+              return "N/A";
+            }
+          })(),
+          lastActive: (() => {
+            const dateVal = data.updatedAt;
+            if (!dateVal) return new Date().toLocaleDateString();
+            try {
+              if (typeof dateVal === 'object' && dateVal.seconds) {
+                return new Date(dateVal.seconds * 1000).toLocaleDateString();
+              }
+              const d = new Date(dateVal);
+              if (isNaN(d.getTime())) return "N/A";
+              return d.toLocaleDateString();
+            } catch (e) {
+              return new Date().toLocaleDateString();
+            }
+          })(),
           attendanceRate: data.attendance ? data.attendance.length * 10 : 0,
           passwordChangedAt: data.passwordChangedAt ? new Date(data.passwordChangedAt.seconds * 1000) : null,
           passwordChangedBy: data.passwordChangedBy || null,
@@ -245,23 +273,31 @@ export default function AdminUsersPage() {
     setError('')
 
     try {
-      // Update in Firebase if user exists there
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('email', '==', editingUser.email)
-      )
-
-      const querySnapshot = await getDocs(usersQuery)
-
-      if (!querySnapshot.empty) {
-        const userDoc = querySnapshot.docs[0]
-        await setDoc(doc(db, 'users', userDoc.id), {
-          ...userDoc.data(),
+      // Call the API to update Auth and Firestore
+      const response = await fetch('/api/admin/users/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uid: editingUser.id,
+          email: editingUser.email,
           displayName: editingUser.displayName,
           role: editingUser.role,
-          updatedAt: new Date()
-        }, { merge: true })
+          profileData: editingUser.profileData
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update user')
       }
+
+      toast({
+        title: "✅ User Updated",
+        description: "User profile has been updated successfully.",
+      })
 
       // Update local state
       setUsers(prev => prev.map(user =>
@@ -485,12 +521,12 @@ export default function AdminUsersPage() {
                   <TableCell>
                     <div className="flex items-center text-sm">
                       <Calendar className="h-3 w-3 mr-1" />
-                      {new Date(user.joinDate).toLocaleDateString()}
+                      {user.joinDate}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm text-muted-foreground">
-                      {new Date(user.lastActive).toLocaleDateString()}
+                      {user.lastActive}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -743,7 +779,7 @@ export default function AdminUsersPage() {
 
       {/* Edit User Modal */}
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
@@ -753,26 +789,76 @@ export default function AdminUsersPage() {
 
           {editingUser && (
             <form onSubmit={(e) => handleEditUser(e)} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="editDisplayName">Full Name</Label>
-                <Input
-                  id="editDisplayName"
-                  value={editingUser.displayName}
-                  onChange={(e) => setEditingUser({ ...editingUser, displayName: e.target.value })}
-                  required
-                />
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editDisplayName">Full Name</Label>
+                  <Input
+                    id="editDisplayName"
+                    value={editingUser.displayName}
+                    onChange={(e) => setEditingUser({ ...editingUser, displayName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editEmail">Email</Label>
+                  <Input
+                    id="editEmail"
+                    type="email"
+                    value={editingUser.email}
+                    onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="editEmail">Email</Label>
-                <Input
-                  id="editEmail"
-                  type="email"
-                  value={editingUser.email}
-                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                  required
-                  disabled
-                />
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editRollNumber">Roll Number</Label>
+                  <Input
+                    id="editRollNumber"
+                    value={editingUser.profileData?.rollNumber || ''}
+                    onChange={(e) => setEditingUser({
+                      ...editingUser,
+                      profileData: { ...editingUser.profileData, rollNumber: e.target.value }
+                    })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editPhone">Phone</Label>
+                  <Input
+                    id="editPhone"
+                    value={editingUser.profileData?.phone || ''}
+                    onChange={(e) => setEditingUser({
+                      ...editingUser,
+                      profileData: { ...editingUser.profileData, phone: e.target.value }
+                    })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editBranch">Branch</Label>
+                  <Input
+                    id="editBranch"
+                    value={editingUser.profileData?.branch || ''}
+                    onChange={(e) => setEditingUser({
+                      ...editingUser,
+                      profileData: { ...editingUser.profileData, branch: e.target.value }
+                    })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editYear">Year</Label>
+                  <Input
+                    id="editYear"
+                    value={editingUser.profileData?.year || ''}
+                    onChange={(e) => setEditingUser({
+                      ...editingUser,
+                      profileData: { ...editingUser.profileData, year: e.target.value }
+                    })}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -797,6 +883,8 @@ export default function AdminUsersPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+
 
               {/* Password Change Info */}
               {editingUser.passwordChangedAt && (
@@ -928,7 +1016,7 @@ export default function AdminUsersPage() {
             </form>
           )}
         </DialogContent>
-      </Dialog>
-    </div>
+      </Dialog >
+    </div >
   )
 }
