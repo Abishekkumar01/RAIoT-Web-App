@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation"
 
 import ImageUpload from "@/components/ui/ImageUpload"
 import { InventorySection } from "./InventorySection"
+import { ReorderableList } from "./ReorderableList"
 
 export default function ProfilePage() {
   const { user, updateUserProfile, refreshUserData } = useAuth()
@@ -768,119 +769,23 @@ export default function ProfilePage() {
 
         {/* Achievements & Contributions */}
         <div className="grid md:grid-cols-2 gap-6 md:col-span-2">
-          {/* Achievements */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Trophy className="h-5 w-5 mr-2" />
-                  Achievements
-                </div>
-                {isEditing && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setFormData(prev => ({ ...prev, achievements: [...prev.achievements, ''] }))}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {formData.achievements.map((item, index) => (
-                <div key={index} className="flex gap-2">
-                  {isEditing ? (
-                    <>
-                      <Input
-                        value={item}
-                        onChange={(e) => {
-                          const newItems = [...formData.achievements];
-                          newItems[index] = e.target.value;
-                          setFormData(prev => ({ ...prev, achievements: newItems }));
-                        }}
-                        placeholder="Achievement details"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          const newItems = formData.achievements.filter((_, i) => i !== index);
-                          setFormData(prev => ({ ...prev, achievements: newItems }));
-                        }}
-                      >
-                        <Trash className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </>
-                  ) : item && (
-                    <div className="flex items-start gap-2 text-sm text-zinc-300">
-                      <Trophy className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" />
-                      <span>{item}</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {!isEditing && formData.achievements.length === 0 && <p className="text-sm text-muted-foreground">No achievements listed.</p>}
-            </CardContent>
-          </Card>
+          <ReorderableList
+            title="Achievements"
+            icon={<Trophy className="h-5 w-5 text-yellow-500" />}
+            items={formData.achievements}
+            onUpdate={(items) => setFormData(prev => ({ ...prev, achievements: items }))}
+            isEditing={isEditing}
+            placeholder="Add achievement..."
+          />
 
-          {/* Club Contributions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Star className="h-5 w-5 mr-2" />
-                  Club Contributions
-                </div>
-                {isEditing && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setFormData(prev => ({ ...prev, contributions: [...prev.contributions, ''] }))}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {formData.contributions.map((item, index) => (
-                <div key={index} className="flex gap-2">
-                  {isEditing ? (
-                    <>
-                      <Input
-                        value={item}
-                        onChange={(e) => {
-                          const newItems = [...formData.contributions];
-                          newItems[index] = e.target.value;
-                          setFormData(prev => ({ ...prev, contributions: newItems }));
-                        }}
-                        placeholder="Contribution details"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          const newItems = formData.contributions.filter((_, i) => i !== index);
-                          setFormData(prev => ({ ...prev, contributions: newItems }));
-                        }}
-                      >
-                        <Trash className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </>
-                  ) : item && (
-                    <div className="flex items-start gap-2 text-sm text-zinc-300">
-                      <Star className="h-4 w-4 text-cyan-500 flex-shrink-0 mt-0.5" />
-                      <span>{item}</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {!isEditing && formData.contributions.length === 0 && <p className="text-sm text-muted-foreground">No contributions listed.</p>}
-            </CardContent>
-          </Card>
+          <ReorderableList
+            title="Club Contributions"
+            icon={<Star className="h-5 w-5 text-purple-500" />}
+            items={formData.contributions}
+            onUpdate={(items) => setFormData(prev => ({ ...prev, contributions: items }))}
+            isEditing={isEditing}
+            placeholder="Add contribution..."
+          />
         </div>
 
 
