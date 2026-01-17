@@ -36,6 +36,8 @@ export default function AdminUsersPage() {
           displayName: data.displayName || data.email,
           email: data.email,
           role: data.role || 'member',
+          rawJoiningDate: data.joiningDate || (data.createdAt ? new Date(data.createdAt.seconds * 1000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+          joiningDate: data.joiningDate || (data.createdAt ? new Date(data.createdAt.seconds * 1000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
           joinDate: (() => {
             const dateVal = data.joiningDate || data.createdAt;
             if (!dateVal) return new Date().toLocaleDateString();
@@ -284,7 +286,8 @@ export default function AdminUsersPage() {
           email: editingUser.email,
           displayName: editingUser.displayName,
           role: editingUser.role,
-          profileData: editingUser.profileData
+          profileData: editingUser.profileData,
+          joiningDate: editingUser.joiningDate
         }),
       })
 
@@ -848,6 +851,18 @@ export default function AdminUsersPage() {
                     })}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editJoiningDate">Joining Date</Label>
+                  <Input
+                    id="editJoiningDate"
+                    type="date"
+                    value={editingUser.joiningDate || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, joiningDate: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="editYear">Year</Label>
                   <Input

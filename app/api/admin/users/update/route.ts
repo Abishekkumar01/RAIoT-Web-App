@@ -9,7 +9,8 @@ export async function PUT(request: Request) {
             email,
             displayName,
             role,
-            profileData
+            profileData,
+            joiningDate
         } = body;
 
         if (!uid) {
@@ -71,6 +72,7 @@ export async function PUT(request: Request) {
         if (displayName) firestoreUpdates.displayName = displayName;
         if (email) firestoreUpdates.email = email;
         if (role) firestoreUpdates.role = role;
+        if (joiningDate) firestoreUpdates.joiningDate = joiningDate;
 
         // Handle nested profileData updates carefully
         // We use dot notation for nested fields to avoid overwriting the entire map if not intended,
