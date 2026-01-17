@@ -27,70 +27,70 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchStats = async () => {
+    // 1. Fetch Global Stats (One-time fetch is fine for these)
+    const fetchGlobalStats = async () => {
       try {
-        // Fetch Global Stats
         const eventsColl = collection(db, "events");
         const studentsColl = collection(db, "students");
-
         const [eventsSnap, studentsSnap] = await Promise.all([
           getCountFromServer(eventsColl),
           getCountFromServer(studentsColl)
         ]);
-
         setGlobalStats({
           events: eventsSnap.data().count,
           students: studentsSnap.data().count
         });
 
-        // Fetch unique class dates from attendance collection
+        // Count unique class dates (this could also be real-time if needed, but one-off is usually ok)
         const attendanceColl = collection(db, "attendance")
         const allAttendanceSnap = await getDocs(attendanceColl)
         const uniqueDates = new Set<string>()
         allAttendanceSnap.forEach(doc => {
           const data = doc.data()
-          // Get date from timestamp or date field
-          if (data.date) {
-            // Handle Firestore timestamp
+          if (data.dateStr) {
+            uniqueDates.add(data.dateStr)
+          } else if (data.date) {
+            // Fallback
             const dateValue = data.date.seconds
               ? new Date(data.date.seconds * 1000).toDateString()
               : new Date(data.date).toDateString()
             uniqueDates.add(dateValue)
-          } else if (data.createdAt) {
-            const dateValue = data.createdAt.seconds
-              ? new Date(data.createdAt.seconds * 1000).toDateString()
-              : new Date(data.createdAt).toDateString()
-            uniqueDates.add(dateValue)
           }
         })
         setUniqueClassDates(uniqueDates.size)
-
-        // Fetch User Attendance (for developers)
-        if (user?.uid) {
-          const q = query(attendanceColl, where("studentId", "==", user.uid))
-          const snapshot = await getDocs(q)
-
-          let present = 0, late = 0, absent = 0
-          snapshot.forEach(doc => {
-            const data = doc.data()
-            const status = (data.status === true || data.status === 'present') ? 'present'
-              : (data.status === 'late') ? 'late'
-                : 'absent';
-            if (status === 'present') present++;
-            else if (status === 'late') late++;
-            else absent++;
-          })
-          setAttendanceStats({
-            present, late, absent,
-            total: snapshot.size
-          })
-        }
-
       } catch (e) {
-        console.error("Dashboard stats fetch error:", e);
+        console.error("Global stats error:", e)
       }
-    };
-    fetchStats();
+    }
+
+    fetchGlobalStats()
+
+    if (!user?.uid) return
+
+    // 2. Real-time User Attendance Stats
+    const attendanceColl = collection(db, "attendance")
+    const q = query(attendanceColl, where("studentId", "==", user.uid))
+
+    const unsubscribeAttendance = onSnapshot(q, (snapshot) => {
+      let present = 0, late = 0, absent = 0
+      snapshot.forEach(doc => {
+        const data = doc.data()
+        const status = (data.status === true || data.status === 'present') ? 'present'
+          : (data.status === 'late') ? 'late'
+            : 'absent';
+        if (status === 'present') present++;
+        else if (status === 'late') late++;
+        else absent++;
+      })
+      setAttendanceStats({
+        present, late, absent,
+        total: snapshot.size
+      })
+    }, (error) => {
+      console.error("Error listening to attendance stats:", error)
+    })
+
+    return () => unsubscribeAttendance()
   }, [user])
 
   useEffect(() => {
