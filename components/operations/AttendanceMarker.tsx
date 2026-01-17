@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/contexts/AuthContext"
 import { db } from "@/lib/firebase"
-import { collection, getDocs, query, where, writeBatch, doc, Timestamp, getDoc } from "firebase/firestore"
+import { collection, getDocs, query, where, writeBatch, doc, Timestamp, getDoc, setDoc } from "firebase/firestore"
 import { toast } from "sonner"
 
 
@@ -34,6 +34,9 @@ interface Student {
     name: string
     batch?: string
     status?: string // Optional status for local checking
+    attendanceRate?: number
+    presentCount?: number
+    totalSessions?: number
 }
 
 export function AttendanceMarker() {
@@ -45,8 +48,16 @@ export function AttendanceMarker() {
     const [searchQuery, setSearchQuery] = useState("")
 
     // Map of studentId -> status
-    const [attendanceState, setAttendanceState] = useState<Record<string, 'present' | 'absent' | 'late'>>({})
+    const [attendanceState, setAttendanceState] = useState<Record<string, 'present' | 'absent' | 'late' | 'leave'>>({})
     const [existingAttendance, setExistingAttendance] = useState<boolean>(false)
+    const [isHoliday, setIsHoliday] = useState(false)
+
+    // Class Details State
+    const [classDetails, setClassDetails] = useState({
+        subject: '',
+        timeRange: '',
+        location: ''
+    })
 
     const fetchStudents = async () => {
         try {
@@ -55,24 +66,46 @@ export function AttendanceMarker() {
             // Fetch users with eligible roles
             const q = query(collection(db, "users"), where("role", "in", ["member", "junior_developer", "senior_developer"]))
             const snapshot = await getDocs(q)
+
+            // Fetch attendance stats for calculation
+            const attendanceQuery = query(collection(db, "attendance")); // Might be heavy, optimize later if needed
+            const attendanceSnap = await getDocs(attendanceQuery);
+            const stats: Record<string, number> = {};
+            const sessions = new Set<string>();
+
+            attendanceSnap.forEach(doc => {
+                const data = doc.data();
+                if (data.dateStr) sessions.add(data.dateStr);
+                if (data.studentId && (data.status === 'present' || data.status === 'late')) {
+                    stats[data.studentId] = (stats[data.studentId] || 0) + 1;
+                }
+            });
+            const totalSessions = sessions.size;
+
             const fetched: Student[] = []
 
             snapshot.forEach((doc) => {
                 const data = doc.data()
+                const presentCount = stats[doc.id] || 0;
+                const rate = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
+
                 fetched.push({
                     id: doc.id, // User UID
                     uniqueId: data.uniqueId || data.profileData?.rollNumber || 'N/A',
                     name: data.displayName || 'Unknown',
-                    batch: data.profileData?.year ? `${data.profileData.year} - ${data.profileData.branch || ''}` : 'General'
+                    batch: data.profileData?.year ? `${data.profileData.year} - ${data.profileData.branch || ''}` : 'General',
+                    attendanceRate: rate,
+                    presentCount: presentCount,
+                    totalSessions: totalSessions
                 })
             })
             setStudents(fetched)
 
             // Initialize all as absent by default if not loading existing
             if (!existingAttendance) {
-                const initial: Record<string, 'present' | 'absent' | 'late'> = {}
+                const initial: Record<string, 'present' | 'absent' | 'late' | 'leave'> = {}
                 fetched.forEach(s => initial[s.id] = 'absent')
-                setAttendanceState(prev => ({ ...initial, ...prev })) // Keep prev if any was manually set
+                setAttendanceState(initial) // Set directly, don't merge with potentially stale prev
             }
         } catch (error) {
             console.error("Error fetching students:", error)
@@ -99,32 +132,56 @@ export function AttendanceMarker() {
                 )
                 const snapshot = await getDocs(q)
 
+                // Prepare defaults (all absent)
+                const defaults: Record<string, 'present' | 'absent' | 'late' | 'leave'> = {}
+                students.forEach(s => defaults[s.id] = 'absent')
+
+                // First check if it's a holiday
+                const summaryDoc = await getDoc(doc(db, "attendance_summaries", dateStr))
+                if (summaryDoc.exists()) {
+                    const data = summaryDoc.data()
+                    if (data.type === 'holiday') {
+                        setIsHoliday(true)
+                        setExistingAttendance(true)
+                        setAttendanceState(defaults)
+                        return;
+                    }
+                    // Load class details if they exist
+                    setClassDetails({
+                        subject: data.subject || '',
+                        timeRange: data.timeRange || '',
+                        location: data.location || ''
+                    })
+                } else {
+                    setIsHoliday(false)
+                    // Reset details for new date
+                    setClassDetails({ subject: '', timeRange: '', location: '' })
+                }
+
                 if (!snapshot.empty) {
                     setExistingAttendance(true)
                     // Load existing state
-                    const existing: Record<string, 'present' | 'absent' | 'late'> = {}
+                    const existing: Record<string, 'present' | 'absent' | 'late' | 'leave'> = {}
                     snapshot.forEach(doc => {
                         const data = doc.data()
                         if (data.studentId) {
-                            // Handle legacy boolean or string status
                             if (data.status === 'present' || data.status === true) {
                                 existing[data.studentId] = 'present'
                             } else if (data.status === 'late') {
                                 existing[data.studentId] = 'late'
+                            } else if (data.status === 'leave') {
+                                existing[data.studentId] = 'leave'
                             } else {
                                 existing[data.studentId] = 'absent'
                             }
                         }
                     })
-                    setAttendanceState(prev => ({ ...prev, ...existing }))
+                    // Merge existing into defaults (don't use prev)
+                    setAttendanceState({ ...defaults, ...existing })
                 } else {
                     setExistingAttendance(false)
-                    // If switching to a new date without records, reset state
-                    if (students.length > 0) {
-                        const reset: Record<string, 'present' | 'absent' | 'late'> = {}
-                        students.forEach(s => reset[s.id] = 'absent')
-                        setAttendanceState(reset)
-                    }
+                    // If switching to a new date without records, reset state to defaults
+                    setAttendanceState(defaults)
                 }
             } catch (error) {
                 console.error("Error checking attendance:", error)
@@ -154,6 +211,34 @@ export function AttendanceMarker() {
             const dateStr = format(date, 'yyyy-MM-dd')
             const timestamp = Timestamp.now()
 
+            // If Holiday, save summary only and return
+            if (isHoliday) {
+                const summaryRef = doc(db, "attendance_summaries", dateStr)
+                batch.set(summaryRef, {
+                    dateStr,
+                    date: Timestamp.fromDate(date),
+                    markedBy: user.uid,
+                    updatedAt: timestamp,
+                    type: 'holiday',
+                    totalStudents: students.length
+                })
+
+                // Clear any individual records for this date if they exist? 
+                // Ideally, we shouldn't have any if it was marked holiday on specific date. 
+                // But if we toggle holiday, we might want to delete them. 
+                // For simplicity/safety, we just mark summary as holiday. 
+                // But query logic counts sessions based on individual records usually.
+                // Actually, my stats logic used `attendance` collection sessions. 
+                // If I don't write to `attendance` collection for holidays, they won't count as sessions. Correct.
+
+                await batch.commit()
+                setExistingAttendance(true)
+                toast.success("Marked as Holiday")
+                setSubmitting(false)
+                return
+            }
+
+            // Normal Attendance
             students.forEach(student => {
                 const status = attendanceState[student.id] || 'absent'
                 const recordId = `${dateStr}_${student.id}`
@@ -175,21 +260,29 @@ export function AttendanceMarker() {
             const summaryRef = doc(db, "attendance_summaries", dateStr)
             const presentCount = Object.values(attendanceState).filter(s => s === 'present').length
             const lateCount = Object.values(attendanceState).filter(s => s === 'late').length
-            const absentCount = students.length - presentCount - lateCount
+            const leaveCount = Object.values(attendanceState).filter(s => s === 'leave').length
+            const absentCount = students.length - presentCount - lateCount - leaveCount
 
             batch.set(summaryRef, {
                 dateStr,
                 date: Timestamp.fromDate(date),
                 markedBy: user.uid,
                 updatedAt: timestamp,
+                type: 'regular',
                 totalStudents: students.length,
                 totalPresent: presentCount,
                 totalLate: lateCount,
-                totalAbsent: absentCount
+                totalLeave: leaveCount,
+                totalAbsent: absentCount,
+                // Class Details
+                subject: classDetails.subject,
+                timeRange: classDetails.timeRange,
+                location: classDetails.location
             })
 
             await batch.commit()
             setExistingAttendance(true)
+            await fetchStudents() // Refresh to update "Attendance %" and counts immediately
             toast.success("Attendance submitted successfully")
         } catch (error) {
             console.error("Error submitting attendance:", error)
@@ -199,7 +292,103 @@ export function AttendanceMarker() {
         }
     }
 
+    const handlePublishClass = async () => {
+        if (!date || !user) return
+        if (!classDetails.subject || !classDetails.timeRange) {
+            toast.error("Please enter Subject and Time Range")
+            return
+        }
 
+        try {
+            setSubmitting(true)
+            const dateStr = format(date, 'yyyy-MM-dd')
+            const summaryRef = doc(db, "attendance_summaries", dateStr)
+
+            const batch = writeBatch(db)
+
+            // 1. Set the Summary (Publish Class Info)
+            batch.set(summaryRef, {
+                dateStr,
+                date: Timestamp.fromDate(date),
+                updatedAt: Timestamp.now(),
+                markedBy: user.uid,
+                subject: classDetails.subject,
+                timeRange: classDetails.timeRange,
+                location: classDetails.location,
+                type: 'regular'
+            }, { merge: true })
+
+            // 2. Clear existing attendance records to ensure "Unmarked" (Gray dot) state
+            const q = query(collection(db, "attendance"), where("dateStr", "==", dateStr))
+            const snapshot = await getDocs(q)
+
+            snapshot.forEach((doc) => {
+                batch.delete(doc.ref)
+            })
+
+            await batch.commit()
+
+            // Update local state
+            setExistingAttendance(false)
+            setAttendanceState({}) // Clear local state too
+            toast.success("Class Published! Status reset to 'Unmarked'.")
+        } catch (error) {
+            console.error("Error publishing class:", error)
+            toast.error("Failed to publish class")
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    const handleReset = async () => {
+        if (!date || !user) return
+        if (!confirm("Are you sure you want to reset attendance for this day? This will clear all present/absent marks.")) return
+
+        try {
+            setSubmitting(true)
+            const dateStr = format(date, 'yyyy-MM-dd')
+            const summaryRef = doc(db, "attendance_summaries", dateStr)
+            const batch = writeBatch(db)
+
+            // 1. Reset Summary counts but keep class info
+            batch.set(summaryRef, {
+                dateStr,
+                date: Timestamp.fromDate(date),
+                updatedAt: Timestamp.now(),
+                markedBy: user.uid,
+                totalPresent: 0,
+                totalLate: 0,
+                totalLeave: 0,
+                totalAbsent: 0,
+                // Keep Class Details
+                subject: classDetails.subject,
+                timeRange: classDetails.timeRange,
+                location: classDetails.location,
+                type: 'regular'
+            }, { merge: true })
+
+            // 2. Delete all attendance records for this date
+            const q = query(collection(db, "attendance"), where("dateStr", "==", dateStr))
+            const snapshot = await getDocs(q)
+            snapshot.forEach((doc) => {
+                batch.delete(doc.ref)
+            })
+
+            await batch.commit()
+
+            // 3. Reset Local State
+            setAttendanceState({})
+            setExistingAttendance(false)
+            await fetchStudents()
+            toast.success("Attendance reset for this date.")
+
+        } catch (error) {
+            console.error("Error resetting attendance:", error)
+            toast.error("Failed to reset attendance")
+        } finally {
+            setSubmitting(false)
+        }
+    }
 
     const handleDownloadReport = () => {
         if (!date) return
@@ -239,6 +428,49 @@ export function AttendanceMarker() {
 
     return (
         <div className="space-y-6">
+            {/* Class Details Inputs */}
+            {!loading && !isHoliday && (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg bg-muted/20">
+                    <div className="space-y-2">
+                        <Label htmlFor="subject">Subject / Event Name</Label>
+                        <Input
+                            id="subject"
+                            placeholder="e.g. Robotics 101"
+                            value={classDetails.subject}
+                            onChange={(e) => setClassDetails({ ...classDetails, subject: e.target.value })}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="timeRange">Time Range</Label>
+                        <Input
+                            id="timeRange"
+                            placeholder="e.g. 10:00 AM - 11:30 AM"
+                            value={classDetails.timeRange}
+                            onChange={(e) => setClassDetails({ ...classDetails, timeRange: e.target.value })}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="location">Location</Label>
+                        <Input
+                            id="location"
+                            placeholder="e.g. Lab 3"
+                            value={classDetails.location}
+                            onChange={(e) => setClassDetails({ ...classDetails, location: e.target.value })}
+                        />
+                    </div>
+                    <div className="flex items-end">
+                        <Button
+                            onClick={handlePublishClass}
+                            disabled={submitting}
+                            className="w-full bg-blue-600 hover:bg-blue-700"
+                        >
+                            {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            Publish Class
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-2">
                     <Popover>
@@ -266,9 +498,26 @@ export function AttendanceMarker() {
                     </Popover>
                     {existingAttendance && (
                         <span className="text-sm text-green-600 font-medium bg-green-50 px-3 py-1 rounded-md border border-green-200">
-                            Submitted (Editable)
+                            {isHoliday ? 'Relax! It\'s a Holiday 🏖️' : 'Submitted (Editable)'}
                         </span>
                     )}
+                    <Button
+                        variant={isHoliday ? "default" : "outline"}
+                        onClick={() => setIsHoliday(!isHoliday)}
+                        className={cn("ml-2", isHoliday && "bg-purple-600 hover:bg-purple-700")}
+                    >
+                        {isHoliday ? "Unmark Holiday" : "Mark as Holiday"}
+                    </Button>
+
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleReset}
+                        className="ml-2"
+                        title="Clear formatted attendance"
+                    >
+                        Reset
+                    </Button>
                 </div>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -315,6 +564,7 @@ export function AttendanceMarker() {
                                 <TableHead className="w-[50px]">Status</TableHead>
                                 <TableHead>ID</TableHead>
                                 <TableHead>Name</TableHead>
+                                <TableHead>Attendance %</TableHead>
                                 <TableHead>Batch</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -335,30 +585,49 @@ export function AttendanceMarker() {
                                 filteredStudents.map((student, index) => (
                                     <TableRow key={student.id} className="hover:bg-muted/50 transition-colors">
                                         <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
-                                        <TableCell className="min-w-[200px]">
+                                        <TableCell className="min-w-[280px]">
                                             <RadioGroup
                                                 value={attendanceState[student.id] || 'absent'}
                                                 onValueChange={(val) => handleStatusChange(student.id, val as any)}
-                                                className="flex items-center space-x-4"
-                                            // disabled={existingAttendance} // Enable editing
+                                                className="flex items-center space-x-3"
+                                                disabled={isHoliday}
                                             >
                                                 <div className="flex items-center space-x-1">
                                                     <RadioGroupItem value="present" id={`p-${student.id}`} className="text-green-600 border-green-600 data-[state=checked]:bg-green-600 data-[state=checked]:text-white" />
-                                                    <Label htmlFor={`p-${student.id}`} className="text-xs text-green-700 font-medium cursor-pointer">Present</Label>
+                                                    <Label htmlFor={`p-${student.id}`} className="text-xs text-green-700 font-medium cursor-pointer">P</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-1">
                                                     <RadioGroupItem value="late" id={`l-${student.id}`} className="text-orange-500 border-orange-500 data-[state=checked]:bg-orange-500 data-[state=checked]:text-white" />
-                                                    <Label htmlFor={`l-${student.id}`} className="text-xs text-orange-600 font-medium cursor-pointer">Late</Label>
+                                                    <Label htmlFor={`l-${student.id}`} className="text-xs text-orange-600 font-medium cursor-pointer">L</Label>
+                                                </div>
+                                                <div className="flex items-center space-x-1">
+                                                    <RadioGroupItem value="leave" id={`le-${student.id}`} className="text-purple-500 border-purple-500 data-[state=checked]:bg-purple-500 data-[state=checked]:text-white" />
+                                                    <Label htmlFor={`le-${student.id}`} className="text-xs text-purple-600 font-medium cursor-pointer">Leave</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-1">
                                                     <RadioGroupItem value="absent" id={`a-${student.id}`} className="text-red-500 border-red-500 data-[state=checked]:bg-red-500 data-[state=checked]:text-white" />
-                                                    <Label htmlFor={`a-${student.id}`} className="text-xs text-red-600 font-medium cursor-pointer">Absent</Label>
+                                                    <Label htmlFor={`a-${student.id}`} className="text-xs text-red-600 font-medium cursor-pointer">A</Label>
                                                 </div>
                                             </RadioGroup>
                                         </TableCell>
-                                        <TableCell className="font-medium">{student.uniqueId}</TableCell>
-                                        <TableCell>{student.name}</TableCell>
-                                        <TableCell>{student.batch || '-'}</TableCell>
+                                        <TableCell className="font-medium text-xs">{student.uniqueId}</TableCell>
+                                        <TableCell className="text-sm font-medium">{student.name}</TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={cn(
+                                                        "font-bold text-xs px-2 py-0.5 rounded",
+                                                        (student.attendanceRate || 0) >= 75 ? "bg-green-500/10 text-green-500" : (student.attendanceRate || 0) >= 60 ? "bg-yellow-500/10 text-yellow-500" : "bg-red-500/10 text-red-500"
+                                                    )}>
+                                                        {student.attendanceRate || 0}%
+                                                    </span>
+                                                    <span className="text-xs font-medium text-zinc-400">
+                                                        {student.presentCount || 0}/{student.totalSessions || 0} Attended
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">{student.batch || '-'}</TableCell>
                                     </TableRow>
                                 ))
                             )}

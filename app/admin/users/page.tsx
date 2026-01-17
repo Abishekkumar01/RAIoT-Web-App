@@ -81,7 +81,6 @@ export default function AdminUsersPage() {
         }
       })
 
-      // Only show Firebase users, no mock data
       setUsers(firebaseUsers)
     })
 
@@ -486,8 +485,7 @@ export default function AdminUsersPage() {
                 <TableHead>User</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Academic Info</TableHead>
-                <TableHead>Attendance</TableHead>
-                <TableHead>Join Date</TableHead>
+                <TableHead className="w-[100px] text-zinc-400">Join Date</TableHead>
                 <TableHead>Last Active</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -516,14 +514,9 @@ export default function AdminUsersPage() {
                       <div className="text-muted-foreground">{user.profileData.rollNumber}</div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <span className={`font-medium ${getAttendanceColor(user.attendanceRate)}`}>
-                      {user.attendanceRate}%
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center text-sm">
-                      <Calendar className="h-3 w-3 mr-1" />
+                  <TableCell className="text-zinc-300">
+                    <div className="flex items-center text-xs">
+                      <Calendar className="w-3 h-3 mr-1 text-zinc-500" />
                       {user.joinDate}
                     </div>
                   </TableCell>

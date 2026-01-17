@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import { collection, query, where, onSnapshot, doc, getDoc, getCountFromServer, orderBy, limit, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import Link from 'next/link'
+import MyClasses from '@/components/dashboard/MyClasses'
 
 interface Event {
   id: string
@@ -218,6 +219,11 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4">
+        {/* My Classes Section for Members */}
+        {(user?.role === 'junior_developer' || user?.role === 'senior_developer' || user?.role === 'member') && (
+          <MyClasses />
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Recent Events</CardTitle>
