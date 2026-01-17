@@ -177,13 +177,25 @@ export default function AdminProjectsPage() {
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation() // Prevent triggering handleEdit
-        if (confirm("Are you sure you want to delete this project?")) {
-            try {
-                await deleteProject(id)
-                toast({ title: "Project deleted" })
-            } catch (e) {
-                toast({ title: "Error deleting", variant: "destructive" })
-            }
+        const project = projects.find(p => p.id === id)
+        const projectName = project?.title || 'this project'
+
+        if (!confirm(`⚠️ Are you sure you want to delete "${projectName}"?\n\nThis action cannot be undone.`)) {
+            return
+        }
+
+        try {
+            await deleteProject(id)
+            toast({
+                title: "🗑️ Project Deleted",
+                description: `"${projectName}" has been successfully removed.`
+            })
+        } catch (e) {
+            toast({
+                title: "❌ Delete Failed",
+                description: "Failed to delete project.",
+                variant: "destructive"
+            })
         }
     }
 

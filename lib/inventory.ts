@@ -203,11 +203,14 @@ export const getUserIssuances = async (userId: string): Promise<IIssuance[]> => 
     try {
         const q = query(
             collection(db, ISSUANCE_COLLECTION),
-            where("userId", "==", userId),
-            orderBy("issueDate", "desc")
+            where("userId", "==", userId)
+            // Removed orderBy("issueDate", "desc") to avoid composite index requirement
         );
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as IIssuance));
+        const issuances = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as IIssuance));
+
+        // Sort in memory instead
+        return issuances.sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime());
     } catch (error) {
         console.error("Error fetching user issuances:", error);
         throw error;

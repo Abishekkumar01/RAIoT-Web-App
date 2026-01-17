@@ -130,7 +130,7 @@ export default function PageClient({ galleryImages }: PageClientProps) {
                 </div>
 
 
-                <div className="w-full relative z-30 h-full flex flex-col justify-start pt-20 md:pt-40 min-h-screen pl-12 md:pl-48">
+                <div className="w-full relative z-30 h-full flex flex-col justify-start items-center md:items-start pt-20 md:pt-40 min-h-screen px-4 md:px-0 md:pl-48">
 
                     {/* Hero Content Wrapper - Left Aligned */}
                     <div className="relative w-full max-w-none">
@@ -167,7 +167,7 @@ export default function PageClient({ galleryImages }: PageClientProps) {
                                     <Link href="/auth/signup">
                                         <Button
                                             size="lg"
-                                            className="bg-cyan-600 hover:bg-cyan-500 text-white rounded-full px-10 py-7 text-lg shadow-[0_0_25px_rgba(8,145,178,0.4)] transition-all duration-300 hover:scale-105 cursor-target border border-cyan-400/30"
+                                            className="bg-cyan-600 hover:bg-cyan-500 text-white rounded-full px-10 py-7 text-lg shadow-[0_0_25px_rgba(8,145,178,0.4)] transition-all duration-300 hover:scale-105 cursor-target border border-cyan-400/30 min-w-[160px] h-[52px]"
                                         >
                                             Join the Network
                                         </Button>
@@ -176,7 +176,7 @@ export default function PageClient({ galleryImages }: PageClientProps) {
                                         <Button
                                             size="lg"
                                             variant="outline"
-                                            className="border-cyan-500/50 text-cyan-100 hover:bg-cyan-950/50 hover:border-cyan-400 rounded-full px-10 py-7 text-lg transition-all duration-300 cursor-target backdrop-blur-sm"
+                                            className="border-cyan-500/50 text-cyan-100 hover:bg-cyan-950/50 hover:border-cyan-400 rounded-full px-10 py-7 text-lg transition-all duration-300 cursor-target backdrop-blur-sm min-w-[160px] h-[52px]"
                                         >
                                             View Events
                                         </Button>

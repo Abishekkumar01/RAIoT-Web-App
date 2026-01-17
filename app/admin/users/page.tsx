@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Search, UserPlus, Edit, Mail, Calendar, Loader2, X, Trash2, Check, Save } from "lucide-react"
+import { Search, UserPlus, Edit, Mail, Calendar, Loader2, X, Trash2, Check, Save, Eye, EyeOff } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 export default function AdminUsersPage() {
@@ -41,6 +41,7 @@ export default function AdminUsersPage() {
           attendanceRate: data.attendance ? data.attendance.length * 10 : 0,
           passwordChangedAt: data.passwordChangedAt ? new Date(data.passwordChangedAt.seconds * 1000) : null,
           passwordChangedBy: data.passwordChangedBy || null,
+          initialPassword: data.initialPassword || null, // Stored password for admin reference
           profileData: {
             year: data.profileData?.year || 'N/A',
             branch: data.profileData?.branch || 'N/A',
@@ -67,6 +68,7 @@ export default function AdminUsersPage() {
   const { toast } = useToast()
   const [newPassword, setNewPassword] = useState('')
   const [passwordLoading, setPasswordLoading] = useState(false)
+  const [showStoredPassword, setShowStoredPassword] = useState(false)
 
   const [formData, setFormData] = useState({
     displayName: '',
@@ -306,7 +308,7 @@ export default function AdminUsersPage() {
   }
 
   async function handleDeleteUser(userId: string, userName: string) {
-    if (window.confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
+    if (window.confirm(`⚠️ Are you sure you want to delete "${userName}"?\n\nThis action cannot be undone and will:\n• Remove user from Authentication\n• Delete all user data from Firestore`)) {
       setLoading(true)
       setError('')
 
@@ -346,12 +348,20 @@ export default function AdminUsersPage() {
 
         // Remove from local state
         setUsers(prev => prev.filter(user => user.id !== userId))
-        setSuccess(`User ${userName} deleted successfully`)
-        setTimeout(() => setSuccess(''), 3000)
+
+        // Show toast notification
+        toast({
+          title: "🗑️ User Deleted",
+          description: `${userName} has been successfully removed from the system.`,
+        })
 
       } catch (error: any) {
         console.error('Delete user error:', error)
-        setError(`Failed to delete user: ${error.message}`)
+        toast({
+          title: "❌ Delete Failed",
+          description: error.message,
+          variant: "destructive",
+        })
       } finally {
         setLoading(false)
       }
@@ -798,55 +808,95 @@ export default function AdminUsersPage() {
                 </div>
               )}
 
-              {/* Admin Password Reset */}
+              {/* Current Password Display & Edit */}
               <div className="space-y-2 p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
-                <Label htmlFor="newPassword" className="flex items-center text-sm font-medium">
-                  🔒 Reset Password (Admin)
+                <Label className="flex items-center text-sm font-medium">
+                  🔑 Current Password
                 </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password (min 6 chars)"
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    disabled={passwordLoading || newPassword.length < 6}
-                    onClick={async () => {
-                      setPasswordLoading(true)
-                      try {
-                        const response = await fetch('/api/admin/users/update-password', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ userId: editingUser.id, newPassword })
-                        })
-                        const data = await response.json()
-                        if (!response.ok) throw new Error(data.error)
-                        toast({
-                          title: "✅ Password Reset",
-                          description: `Password has been reset for ${editingUser.displayName}`,
-                        })
-                        setNewPassword('')
-                      } catch (error: any) {
-                        toast({
-                          title: "❌ Error",
-                          description: error.message,
-                          variant: "destructive"
-                        })
-                      } finally {
-                        setPasswordLoading(false)
-                      }
-                    }}
-                  >
-                    {passwordLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reset'}
-                  </Button>
+
+                {/* Show current stored password */}
+                {editingUser.initialPassword ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-zinc-900 rounded-md px-3 py-2 font-mono text-sm border border-zinc-700">
+                      {showStoredPassword ? editingUser.initialPassword : '••••••••'}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowStoredPassword(!showStoredPassword)}
+                      title={showStoredPassword ? "Hide password" : "Show password"}
+                    >
+                      {showStoredPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(editingUser.initialPassword)
+                        toast({ title: "📋 Copied!", description: "Password copied to clipboard" })
+                      }}
+                      title="Copy password"
+                    >
+                      📋
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No password stored (user created before this feature)</p>
+                )}
+
+                {/* Edit/Reset Password */}
+                <div className="pt-3 border-t border-zinc-700 mt-3">
+                  <Label htmlFor="newPassword" className="flex items-center text-sm font-medium mb-2">
+                    ✏️ Set New Password
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password (min 6 chars)"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={passwordLoading || newPassword.length < 6}
+                      onClick={async () => {
+                        setPasswordLoading(true)
+                        try {
+                          const response = await fetch('/api/admin/users/update-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId: editingUser.id, newPassword })
+                          })
+                          const data = await response.json()
+                          if (!response.ok) throw new Error(data.error)
+                          toast({
+                            title: "✅ Password Updated",
+                            description: `Password has been set for ${editingUser.displayName}`,
+                          })
+                          // Update local state to show new password
+                          setEditingUser({ ...editingUser, initialPassword: newPassword })
+                          setNewPassword('')
+                        } catch (error: any) {
+                          toast({
+                            title: "❌ Error",
+                            description: error.message,
+                            variant: "destructive"
+                          })
+                        } finally {
+                          setPasswordLoading(false)
+                        }
+                      }}
+                    >
+                      {passwordLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Leave empty to keep current password</p>
               </div>
 
               {error && (

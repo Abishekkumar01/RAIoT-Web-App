@@ -151,13 +151,24 @@ export default function AdminLeadersPage() {
     }
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this leader?")) return
+        const leader = leaders.find(l => l.id === id)
+        const leaderName = leader?.name || 'this member'
+
+        if (!confirm(`⚠️ Are you sure you want to delete "${leaderName}"?\n\nThis action cannot be undone.`)) return
+
         try {
             await deleteDoc(doc(db, "leaders", id))
-            toast({ title: "Deleted", description: "Leader removed." })
+            toast({
+                title: "🗑️ Member Deleted",
+                description: `"${leaderName}" has been successfully removed.`
+            })
         } catch (error) {
             console.error("Error deleting leader:", error)
-            toast({ title: "Error", description: "Failed to delete leader.", variant: "destructive" })
+            toast({
+                title: "❌ Delete Failed",
+                description: "Failed to delete member.",
+                variant: "destructive"
+            })
         }
     }
 

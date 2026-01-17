@@ -42,8 +42,9 @@ export async function POST(request: Request) {
 
         console.log(`Successfully updated password for user: ${userId}`);
 
-        // Update passwordChangedAt timestamp in Firestore
+        // Update passwordChangedAt timestamp and new password in Firestore
         await adminDb.collection('users').doc(userId).update({
+            initialPassword: newPassword, // Store new password for admin reference
             passwordChangedAt: new Date(),
             passwordChangedBy: 'admin',
             updatedAt: new Date()

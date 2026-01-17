@@ -58,7 +58,7 @@ export default function AdminEventsPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = e.target.value
     const name = e.target.name
-    
+
     // Auto-convert Google Drive URLs when pasted/entered
     if (name === 'imageUrl' && value) {
       const convertedUrl = convertGoogleDriveUrl(value)
@@ -90,18 +90,18 @@ export default function AdminEventsPage() {
   // Convert Google Drive sharing link to direct image URL that actually works
   const convertGoogleDriveUrl = (url: string): string => {
     if (!url || !url.trim()) return url.trim()
-    
+
     const trimmedUrl = url.trim()
-    
+
     // Extract file ID from various Google Drive URL formats
     let fileId: string | null = null
-    
+
     // Pattern 1: https://drive.google.com/file/d/FILE_ID/view?usp=sharing
     let match = trimmedUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)
     if (match) {
       fileId = match[1]
     }
-    
+
     // Pattern 2: https://drive.google.com/open?id=FILE_ID
     if (!fileId) {
       match = trimmedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/)
@@ -109,7 +109,7 @@ export default function AdminEventsPage() {
         fileId = match[1]
       }
     }
-    
+
     // Pattern 3: Already has uc?export=view or uc?id= - extract file ID
     if (!fileId) {
       match = trimmedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/)
@@ -117,7 +117,7 @@ export default function AdminEventsPage() {
         fileId = match[1]
       }
     }
-    
+
     // Pattern 4: docs.google.com format
     if (!fileId) {
       match = trimmedUrl.match(/docs\.google\.com\/uc\?[^&]*id=([a-zA-Z0-9_-]+)/)
@@ -125,7 +125,7 @@ export default function AdminEventsPage() {
         fileId = match[1]
       }
     }
-    
+
     if (fileId) {
       // Use Google's CDN format which works best for embedding (no CORS issues)
       // This format works when file is set to "Anyone with the link can view"
@@ -138,7 +138,7 @@ export default function AdminEventsPage() {
       })
       return convertedUrl
     }
-    
+
     // If no match, return as-is (might be a direct image URL from another source)
     console.log('ℹ️ URL not recognized as Google Drive, using as-is:', trimmedUrl)
     return trimmedUrl
@@ -178,7 +178,7 @@ export default function AdminEventsPage() {
 
           // Draw and compress
           ctx.drawImage(img, 0, 0, width, height)
-          
+
           // Convert to blob with compression (quality 0.85 for good balance)
           canvas.toBlob(
             (blob) => {
@@ -186,7 +186,7 @@ export default function AdminEventsPage() {
                 reject(new Error('Failed to compress image'))
                 return
               }
-              
+
               // Create new file with optimized blob
               const optimizedFile = new File(
                 [blob],
@@ -212,20 +212,20 @@ export default function AdminEventsPage() {
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        toast({ 
-          title: 'Invalid file type', 
+        toast({
+          title: 'Invalid file type',
           description: 'Please select an image file (jpg, png, gif, etc.)',
-          variant: 'destructive' 
+          variant: 'destructive'
         })
         return
       }
-      
+
       // Validate file size (max 10MB before compression)
       if (file.size > 10 * 1024 * 1024) {
-        toast({ 
-          title: 'File too large', 
+        toast({
+          title: 'File too large',
           description: 'Please select an image smaller than 10MB',
-          variant: 'destructive' 
+          variant: 'destructive'
         })
         return
       }
@@ -234,18 +234,18 @@ export default function AdminEventsPage() {
         // Show loading state
         setUploadingImage(true)
         setUploadProgress(5)
-        
+
         // Optimize image (compress and resize)
         const optimizedFile = await optimizeImage(file)
         setUploadProgress(15)
-        
+
         setSelectedImage(optimizedFile)
-        
+
         // Create preview from optimized file
         const reader = new FileReader()
         reader.onloadend = () => {
           setImagePreview(reader.result as string)
-          
+
           // Show compression info
           const originalSize = (file.size / 1024 / 1024).toFixed(2)
           const optimizedSize = (optimizedFile.size / 1024 / 1024).toFixed(2)
@@ -255,7 +255,7 @@ export default function AdminEventsPage() {
               description: `Reduced from ${originalSize}MB to ${optimizedSize}MB. Starting upload...`,
             })
           }
-          
+
           // Auto-upload immediately after optimization
           setTimeout(() => {
             handleImageUpload(optimizedFile)
@@ -284,12 +284,12 @@ export default function AdminEventsPage() {
 
   const handleImageUpload = async (fileToUpload?: File) => {
     const imageFile = fileToUpload || selectedImage
-    
+
     if (!imageFile) {
-      toast({ 
-        title: 'No image selected', 
+      toast({
+        title: 'No image selected',
         description: 'Please select an image to upload',
-        variant: 'destructive' 
+        variant: 'destructive'
       })
       return
     }
@@ -339,8 +339,8 @@ export default function AdminEventsPage() {
             const totalProgress = 10 + Math.round(uploadProgress)
             setUploadProgress(Math.min(totalProgress, 90))
             lastProgress = totalProgress
-            
-            console.log('📊 Upload progress:', totalProgress + '%', 
+
+            console.log('📊 Upload progress:', totalProgress + '%',
               `(${(snapshot.bytesTransferred / 1024).toFixed(2)} KB / ${(snapshot.totalBytes / 1024).toFixed(2)} KB)`)
           },
           (error) => {
@@ -352,7 +352,7 @@ export default function AdminEventsPage() {
             console.error('❌ Upload error:', error)
             console.error('Error code:', error.code)
             console.error('Error message:', error.message)
-            
+
             let errorMessage = 'Failed to upload image'
             if (error.code === 'storage/unauthorized') {
               errorMessage = 'Permission denied. Please deploy Storage rules: firebase deploy --only storage'
@@ -363,7 +363,7 @@ export default function AdminEventsPage() {
             } else if (error.message) {
               errorMessage = error.message
             }
-            
+
             setUploadTask(null)
             reject(new Error(errorMessage))
           },
@@ -376,12 +376,12 @@ export default function AdminEventsPage() {
             // Upload completed successfully
             console.log('✅ Upload completed, getting download URL...')
             setUploadProgress(95)
-            
+
             try {
               // Get download URL
               const downloadURL = await getDownloadURL(uploadTaskInstance.snapshot.ref)
               console.log('🔗 Download URL:', downloadURL)
-              
+
               resolve(downloadURL)
             } catch (urlError) {
               console.error('❌ Error getting download URL:', urlError)
@@ -393,18 +393,18 @@ export default function AdminEventsPage() {
 
       // Wait for upload to complete
       const downloadURL = await uploadPromise
-      
+
       setUploadProgress(100)
       setUploadTask(null) // Clear upload task reference
-      
+
       // Set the URL in form data
       setFormData((prev) => ({
         ...prev,
         imageUrl: downloadURL,
       }))
 
-      toast({ 
-        title: '✅ Image uploaded successfully!', 
+      toast({
+        title: '✅ Image uploaded successfully!',
         description: 'Image URL has been set. You can now create/update the event.'
       })
 
@@ -415,10 +415,10 @@ export default function AdminEventsPage() {
       }, 1500)
     } catch (error) {
       console.error('❌ Error in upload process:', error)
-      toast({ 
-        title: 'Upload failed', 
+      toast({
+        title: 'Upload failed',
         description: (error as Error).message || 'Failed to upload image. Check console for details.',
-        variant: 'destructive' 
+        variant: 'destructive'
       })
       setUploadTask(null)
       setUploadingImage(false)
@@ -455,7 +455,7 @@ export default function AdminEventsPage() {
         console.error('Error canceling upload:', error)
       }
     }
-    
+
     setUploadTask(null)
     setSelectedImage(null)
     setImagePreview(null)
@@ -516,7 +516,7 @@ export default function AdminEventsPage() {
         toast({ title: 'Date and time are required', variant: 'destructive' })
         return
       }
-      
+
       // Normalize date (support dd-mm-yyyy and yyyy-mm-dd)
       let normalizedDate = formData.date
       const ddmmyyyy = /^(\d{2})-(\d{2})-(\d{4})$/
@@ -540,19 +540,19 @@ export default function AdminEventsPage() {
         toast({ title: 'Invalid max participants', description: 'Enter 0 or a positive number', variant: 'destructive' })
         return
       }
-      
+
       // Convert Google Drive URL if needed
-      const processedImageUrl = formData.imageUrl && formData.imageUrl.trim() !== '' 
-        ? convertGoogleDriveUrl(formData.imageUrl.trim()) 
+      const processedImageUrl = formData.imageUrl && formData.imageUrl.trim() !== ''
+        ? convertGoogleDriveUrl(formData.imageUrl.trim())
         : null
-      
+
       console.log('🔍 Before creating event - Image URL processing:', {
         formDataImageUrl: formData.imageUrl,
         processedImageUrl: processedImageUrl,
         hasFormDataImageUrl: !!formData.imageUrl,
         hasProcessedImageUrl: !!processedImageUrl
       })
-      
+
       const eventData: any = {
         title: formData.title,
         description: formData.description,
@@ -571,10 +571,10 @@ export default function AdminEventsPage() {
         isOnline: formData.isOnline === true, // Explicitly save as boolean
         createdAt: serverTimestamp(),
       }
-      
+
       // ALWAYS set imageUrl field (even if null) for clarity
       eventData.imageUrl = processedImageUrl || null
-      
+
       console.log('📝 Creating event with data:', {
         title: eventData.title,
         imageUrl: eventData.imageUrl,
@@ -582,18 +582,18 @@ export default function AdminEventsPage() {
         imageUrlType: typeof eventData.imageUrl,
         imageUrlLength: eventData.imageUrl?.length || 0
       })
-      
+
       if (!eventData.imageUrl) {
         console.warn('⚠️ Warning: Event created without imageUrl')
         console.warn('Form data imageUrl:', formData.imageUrl)
       } else {
         console.log('✅ Image URL will be saved:', eventData.imageUrl)
       }
-      
+
       const docRef = await addDoc(collection(db, 'events'), eventData)
       console.log('✅ Event created with ID:', docRef.id)
       console.log('📸 Saved imageUrl:', eventData.imageUrl)
-      
+
       // Verify the saved data
       const savedDoc = await getDoc(docRef)
       const savedData = savedDoc.data()
@@ -603,15 +603,15 @@ export default function AdminEventsPage() {
         imageUrl: savedData?.imageUrl,
         hasImageUrl: !!savedData?.imageUrl
       })
-      
+
       if (eventData.imageUrl && !savedData?.imageUrl) {
-        toast({ 
-          title: 'Event created', 
+        toast({
+          title: 'Event created',
           description: 'Warning: Image URL was not saved. Please check console.',
           variant: 'destructive'
         })
       } else if (eventData.imageUrl) {
-        toast({ 
+        toast({
           title: 'Event created successfully',
           description: `Image URL saved: ${eventData.imageUrl.substring(0, 50)}...`
         })
@@ -674,10 +674,10 @@ export default function AdminEventsPage() {
         toast({ title: 'Title is required', variant: 'destructive' })
         return
       }
-      
+
       // Convert Google Drive URL if needed
       const processedImageUrl = formData.imageUrl ? convertGoogleDriveUrl(formData.imageUrl.trim()) : ""
-      
+
       const updateData: any = {
         title: formData.title,
         description: formData.description,
@@ -693,7 +693,7 @@ export default function AdminEventsPage() {
         registrationDeadline: formData.registrationDeadline || "",
         isOnline: formData.isOnline === true, // Explicitly save as boolean
       }
-      
+
       // Only update imageUrl if it's provided
       if (processedImageUrl) {
         updateData.imageUrl = processedImageUrl
@@ -701,7 +701,7 @@ export default function AdminEventsPage() {
         // If empty, set to null to clear it
         updateData.imageUrl = null
       }
-      
+
       console.log('📝 Updating event:', {
         eventId: editingEvent.id,
         title: updateData.title,
@@ -709,10 +709,10 @@ export default function AdminEventsPage() {
         hasImageUrl: !!updateData.imageUrl,
         formDataImageUrl: formData.imageUrl
       })
-      
+
       const eventRef = doc(db, 'events', editingEvent.id)
       await updateDoc(eventRef, updateData)
-      
+
       // Verify the update
       const updatedDoc = await getDoc(eventRef)
       const updatedData = updatedDoc.data()
@@ -722,15 +722,15 @@ export default function AdminEventsPage() {
         imageUrl: updatedData?.imageUrl,
         hasImageUrl: !!updatedData?.imageUrl
       })
-      
+
       if (updateData.imageUrl && !updatedData?.imageUrl) {
-        toast({ 
-          title: 'Event updated', 
+        toast({
+          title: 'Event updated',
           description: 'Warning: Image URL was not saved. Please check console.',
           variant: 'destructive'
         })
       } else if (updateData.imageUrl) {
-        toast({ 
+        toast({
           title: 'Event updated successfully',
           description: `Image URL saved: ${updateData.imageUrl.substring(0, 50)}...`
         })
@@ -767,27 +767,41 @@ export default function AdminEventsPage() {
       await updateDoc(eventRef, {
         isOnline: !currentStatus
       })
-      toast({ 
-        title: 'Status updated', 
-        description: `Event is now ${!currentStatus ? 'ONLINE' : 'OFFLINE'}` 
+      toast({
+        title: 'Status updated',
+        description: `Event is now ${!currentStatus ? 'ONLINE' : 'OFFLINE'}`
       })
     } catch (e) {
       console.error('Failed to toggle online status', e)
-      toast({ 
-        title: 'Failed to update status', 
-        description: (e as Error).message, 
-        variant: 'destructive' 
+      toast({
+        title: 'Failed to update status',
+        description: (e as Error).message,
+        variant: 'destructive'
       })
     }
   }
 
   const handleDeleteEvent = async (eventId: string) => {
+    const event = events.find(e => e.id === eventId)
+    const eventName = event?.title || 'this event'
+
+    if (!window.confirm(`⚠️ Are you sure you want to delete "${eventName}"?\n\nThis action cannot be undone.`)) {
+      return
+    }
+
     try {
       await deleteDoc(doc(db, 'events', eventId))
-      toast({ title: 'Event deleted' })
+      toast({
+        title: '🗑️ Event Deleted',
+        description: `"${eventName}" has been successfully removed.`
+      })
     } catch (e) {
       console.error('Failed to delete event', e)
-      toast({ title: 'Failed to delete event', description: (e as Error).message, variant: 'destructive' })
+      toast({
+        title: '❌ Delete Failed',
+        description: (e as Error).message,
+        variant: 'destructive'
+      })
     }
   }
 
@@ -842,299 +856,299 @@ export default function AdminEventsPage() {
               <DialogDescription>Fill in the details to create a new event</DialogDescription>
             </DialogHeader>
             <div className="flex-1 overflow-y-auto pr-2 -mr-2">
-            <div className="grid gap-8 py-2">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <Label htmlFor="title" className="text-base font-semibold">Event Title</Label>
-                  <Input
-                    id="title"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    placeholder="Workshop title"
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <Label htmlFor="type" className="text-base font-semibold">Event Type</Label>
-                  <Select value={formData.type} onValueChange={(value) => handleSelectChange("type", value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="workshop">Workshop</SelectItem>
-                      <SelectItem value="seminar">Seminar</SelectItem>
-                      <SelectItem value="competition">Competition</SelectItem>
-                      <SelectItem value="meeting">Meeting</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label htmlFor="description" className="text-base font-semibold">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Brief event description (shown on event card)"
-                  rows={4}
-                  className="text-base"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <Label htmlFor="detailedContent" className="text-base font-semibold">Detailed Content (Event Details Page)</Label>
-                <Textarea
-                  id="detailedContent"
-                  name="detailedContent"
-                  value={formData.detailedContent}
-                  onChange={handleInputChange}
-                  placeholder="Enter detailed event content here. You can use HTML for formatting, images, and links.&#10;&#10;Examples:&#10;&lt;h3&gt;Agenda&lt;/h3&gt;&#10;&lt;ul&gt;&#10;  &lt;li&gt;Introduction&lt;/li&gt;&#10;  &lt;li&gt;Hands-on Workshop&lt;/li&gt;&#10;&lt;/ul&gt;&#10;&#10;&lt;img src=&quot;https://example.com/image.jpg&quot; alt=&quot;Workshop&quot; /&gt;&#10;&#10;&lt;a href=&quot;https://example.com&quot;&gt;Learn More&lt;/a&gt;"
-                  rows={12}
-                  className="font-mono text-sm"
-                />
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    <strong className="text-foreground">Supports HTML:</strong> Use HTML tags for formatting, images, and links. 
-                    <br/>
-                    <strong className="text-foreground">Images:</strong> Use &lt;img src=&quot;URL&quot; alt=&quot;description&quot; /&gt; or paste image URLs
-                    <br/>
-                    <strong className="text-foreground">Links:</strong> Use &lt;a href=&quot;URL&quot;&gt;Link Text&lt;/a&gt;
-                    <br/>
-                    <strong className="text-foreground">Formatting:</strong> Use &lt;h3&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;em&gt; etc.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-6">
-                <div className="space-y-3">
-                  <Label htmlFor="date" className="text-base font-semibold">Date</Label>
-                  <Input id="date" name="date" type="date" value={formData.date} onChange={handleInputChange} className="h-11" />
-                </div>
-                <div className="space-y-3">
-                  <Label htmlFor="time" className="text-base font-semibold">Start Time</Label>
-                  <select
-                    id="time"
-                    name="time"
-                    value={formData.time}
-                    onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">Select Time</option>
-                    {Array.from({ length: 48 }, (_, i) => {
-                      const hour = Math.floor(i / 2)
-                      const minute = (i % 2) * 30
-                      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-                      return (
-                        <option key={timeString} value={timeString}>
-                          {timeString}
-                        </option>
-                      )
-                    })}
-                  </select>
-                  <p className="text-xs text-muted-foreground">Select from dropdown (30-minute intervals)</p>
-                </div>
-                <div className="space-y-3">
-                  <Label htmlFor="duration" className="text-base font-semibold">Duration (hours)</Label>
-                  <Input
-                    id="duration"
-                    name="duration"
-                    type="number"
-                    value={formData.duration}
-                    onChange={handleInputChange}
-                    placeholder="3"
-                    min="0.5"
-                    step="0.5"
-                    className="h-11"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <Label htmlFor="location" className="text-base font-semibold">Location</Label>
-                  <Input
-                    id="location"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                    placeholder="Computer Lab 1"
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <Label htmlFor="maxParticipants" className="text-base font-semibold">Max Participants</Label>
-                  <Input
-                    id="maxParticipants"
-                    name="maxParticipants"
-                    type="number"
-                    value={formData.maxParticipants}
-                    onChange={handleInputChange}
-                    placeholder="30"
-                    className="h-11"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <Label htmlFor="minTeamSize" className="text-base font-semibold">Min Team Size</Label>
-                  <Input
-                    id="minTeamSize"
-                    name="minTeamSize"
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={formData.minTeamSize}
-                    onChange={handleInputChange}
-                    placeholder="2"
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <Label htmlFor="maxTeamSize" className="text-base font-semibold">Max Team Size</Label>
-                  <Input
-                    id="maxTeamSize"
-                    name="maxTeamSize"
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={formData.maxTeamSize}
-                    onChange={handleInputChange}
-                    placeholder="10"
-                    className="h-11"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label htmlFor="registrationDeadline" className="text-base font-semibold">Registration Deadline</Label>
-                <Input
-                  id="registrationDeadline"
-                  name="registrationDeadline"
-                  type="date"
-                  value={formData.registrationDeadline}
-                  onChange={handleInputChange}
-                  className="h-11"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">Online Status</Label>
-                <div className="flex items-center gap-3">
-                  <Switch
-                    id="isOnline"
-                    checked={formData.isOnline}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isOnline: checked }))}
-                  />
-                  <Label htmlFor="isOnline" className="text-sm text-muted-foreground cursor-pointer">
-                    {formData.isOnline ? 'Event is ONLINE' : 'Event is OFFLINE'}
-                  </Label>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="imageFile">Upload Event Image</Label>
-                  <div className="flex gap-2">
+              <div className="grid gap-8 py-2">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="title" className="text-base font-semibold">Event Title</Label>
                     <Input
-                      id="imageFile"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageSelect}
-                      className="flex-1"
-                      disabled={uploadingImage}
-                    />
-                    {selectedImage && !uploadingImage && !formData.imageUrl && (
-                      <Button
-                        type="button"
-                        onClick={() => handleImageUpload()}
-                        className="flex items-center gap-2"
-                      >
-                        <Upload className="h-4 w-4" />
-                        Upload Now
-                      </Button>
-                    )}
-                  </div>
-                  {uploadingImage && (
-                    <div className="space-y-2">
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                        <div 
-                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300 flex items-center justify-end pr-2"
-                          style={{ width: `${uploadProgress}%`, minWidth: '30px' }}
-                        >
-                          {uploadProgress > 10 && (
-                            <span className="text-xs font-semibold text-white">{uploadProgress}%</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-muted-foreground">
-                          {uploadProgress < 20 ? 'Optimizing image...' : 
-                           uploadProgress < 95 ? 'Uploading to server...' : 
-                           'Getting image URL...'}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-semibold text-blue-600">{uploadProgress}%</p>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleCancelUpload}
-                            className="h-7 px-2 text-xs"
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {formData.imageUrl && !uploadingImage && (
-                    <div className="p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                      <p className="text-xs text-green-700 dark:text-green-400 font-medium">
-                        ✅ Image uploaded successfully! URL is set.
-                      </p>
-                    </div>
-                  )}
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="imageUrl">Or Enter Image URL</Label>
-                    <Input
-                      id="imageUrl"
-                      name="imageUrl"
-                      type="url"
-                      value={formData.imageUrl}
+                      id="title"
+                      name="title"
+                      value={formData.title}
                       onChange={handleInputChange}
-                      placeholder="https://example.com/image.jpg"
+                      placeholder="Workshop title"
+                      className="h-11"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      <strong>Option 1:</strong> Upload an image file (auto-optimized) <br/>
-                      <strong>Option 2:</strong> Paste a Google Drive sharing link - it will be auto-converted to a direct image URL <br/>
-                      <span className="text-yellow-500">⚠️ Important: Make sure your Google Drive file is set to "Anyone with the link can view"</span> <br/>
-                      <strong>Option 3:</strong> Enter any direct image URL (e.g., https://example.com/image.jpg)
+                  </div>
+                  <div className="space-y-3">
+                    <Label htmlFor="type" className="text-base font-semibold">Event Type</Label>
+                    <Select value={formData.type} onValueChange={(value) => handleSelectChange("type", value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="workshop">Workshop</SelectItem>
+                        <SelectItem value="seminar">Seminar</SelectItem>
+                        <SelectItem value="competition">Competition</SelectItem>
+                        <SelectItem value="meeting">Meeting</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="description" className="text-base font-semibold">Description</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    placeholder="Brief event description (shown on event card)"
+                    rows={4}
+                    className="text-base"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="detailedContent" className="text-base font-semibold">Detailed Content (Event Details Page)</Label>
+                  <Textarea
+                    id="detailedContent"
+                    name="detailedContent"
+                    value={formData.detailedContent}
+                    onChange={handleInputChange}
+                    placeholder="Enter detailed event content here. You can use HTML for formatting, images, and links.&#10;&#10;Examples:&#10;&lt;h3&gt;Agenda&lt;/h3&gt;&#10;&lt;ul&gt;&#10;  &lt;li&gt;Introduction&lt;/li&gt;&#10;  &lt;li&gt;Hands-on Workshop&lt;/li&gt;&#10;&lt;/ul&gt;&#10;&#10;&lt;img src=&quot;https://example.com/image.jpg&quot; alt=&quot;Workshop&quot; /&gt;&#10;&#10;&lt;a href=&quot;https://example.com&quot;&gt;Learn More&lt;/a&gt;"
+                    rows={12}
+                    className="font-mono text-sm"
+                  />
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      <strong className="text-foreground">Supports HTML:</strong> Use HTML tags for formatting, images, and links.
+                      <br />
+                      <strong className="text-foreground">Images:</strong> Use &lt;img src=&quot;URL&quot; alt=&quot;description&quot; /&gt; or paste image URLs
+                      <br />
+                      <strong className="text-foreground">Links:</strong> Use &lt;a href=&quot;URL&quot;&gt;Link Text&lt;/a&gt;
+                      <br />
+                      <strong className="text-foreground">Formatting:</strong> Use &lt;h3&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;em&gt; etc.
                     </p>
                   </div>
-                  
-                  {(imagePreview || formData.imageUrl) && !uploadingImage && (
+                </div>
+
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="date" className="text-base font-semibold">Date</Label>
+                    <Input id="date" name="date" type="date" value={formData.date} onChange={handleInputChange} className="h-11" />
+                  </div>
+                  <div className="space-y-3">
+                    <Label htmlFor="time" className="text-base font-semibold">Start Time</Label>
+                    <select
+                      id="time"
+                      name="time"
+                      value={formData.time}
+                      onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                      className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Select Time</option>
+                      {Array.from({ length: 48 }, (_, i) => {
+                        const hour = Math.floor(i / 2)
+                        const minute = (i % 2) * 30
+                        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+                        return (
+                          <option key={timeString} value={timeString}>
+                            {timeString}
+                          </option>
+                        )
+                      })}
+                    </select>
+                    <p className="text-xs text-muted-foreground">Select from dropdown (30-minute intervals)</p>
+                  </div>
+                  <div className="space-y-3">
+                    <Label htmlFor="duration" className="text-base font-semibold">Duration (hours)</Label>
+                    <Input
+                      id="duration"
+                      name="duration"
+                      type="number"
+                      value={formData.duration}
+                      onChange={handleInputChange}
+                      placeholder="3"
+                      min="0.5"
+                      step="0.5"
+                      className="h-11"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="location" className="text-base font-semibold">Location</Label>
+                    <Input
+                      id="location"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleInputChange}
+                      placeholder="Computer Lab 1"
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <Label htmlFor="maxParticipants" className="text-base font-semibold">Max Participants</Label>
+                    <Input
+                      id="maxParticipants"
+                      name="maxParticipants"
+                      type="number"
+                      value={formData.maxParticipants}
+                      onChange={handleInputChange}
+                      placeholder="30"
+                      className="h-11"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="minTeamSize" className="text-base font-semibold">Min Team Size</Label>
+                    <Input
+                      id="minTeamSize"
+                      name="minTeamSize"
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={formData.minTeamSize}
+                      onChange={handleInputChange}
+                      placeholder="2"
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <Label htmlFor="maxTeamSize" className="text-base font-semibold">Max Team Size</Label>
+                    <Input
+                      id="maxTeamSize"
+                      name="maxTeamSize"
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={formData.maxTeamSize}
+                      onChange={handleInputChange}
+                      placeholder="10"
+                      className="h-11"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="registrationDeadline" className="text-base font-semibold">Registration Deadline</Label>
+                  <Input
+                    id="registrationDeadline"
+                    name="registrationDeadline"
+                    type="date"
+                    value={formData.registrationDeadline}
+                    onChange={handleInputChange}
+                    className="h-11"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold">Online Status</Label>
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      id="isOnline"
+                      checked={formData.isOnline}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isOnline: checked }))}
+                    />
+                    <Label htmlFor="isOnline" className="text-sm text-muted-foreground cursor-pointer">
+                      {formData.isOnline ? 'Event is ONLINE' : 'Event is OFFLINE'}
+                    </Label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Image Preview</Label>
-                      <div className="relative border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-                        <img 
-                          src={imagePreview || formData.imageUrl} 
-                          alt={imagePreview ? "Preview" : "Current"} 
-                          className="w-full h-64 object-contain"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.style.display = 'none'
-                            const parent = target.parentElement
-                            if (parent) {
-                              parent.innerHTML = `
+                      <Label htmlFor="imageFile">Upload Event Image</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="imageFile"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageSelect}
+                          className="flex-1"
+                          disabled={uploadingImage}
+                        />
+                        {selectedImage && !uploadingImage && !formData.imageUrl && (
+                          <Button
+                            type="button"
+                            onClick={() => handleImageUpload()}
+                            className="flex items-center gap-2"
+                          >
+                            <Upload className="h-4 w-4" />
+                            Upload Now
+                          </Button>
+                        )}
+                      </div>
+                      {uploadingImage && (
+                        <div className="space-y-2">
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                            <div
+                              className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300 flex items-center justify-end pr-2"
+                              style={{ width: `${uploadProgress}%`, minWidth: '30px' }}
+                            >
+                              {uploadProgress > 10 && (
+                                <span className="text-xs font-semibold text-white">{uploadProgress}%</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">
+                              {uploadProgress < 20 ? 'Optimizing image...' :
+                                uploadProgress < 95 ? 'Uploading to server...' :
+                                  'Getting image URL...'}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-semibold text-blue-600">{uploadProgress}%</p>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleCancelUpload}
+                                className="h-7 px-2 text-xs"
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {formData.imageUrl && !uploadingImage && (
+                        <div className="p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                          <p className="text-xs text-green-700 dark:text-green-400 font-medium">
+                            ✅ Image uploaded successfully! URL is set.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="imageUrl">Or Enter Image URL</Label>
+                      <Input
+                        id="imageUrl"
+                        name="imageUrl"
+                        type="url"
+                        value={formData.imageUrl}
+                        onChange={handleInputChange}
+                        placeholder="https://example.com/image.jpg"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        <strong>Option 1:</strong> Upload an image file (auto-optimized) <br />
+                        <strong>Option 2:</strong> Paste a Google Drive sharing link - it will be auto-converted to a direct image URL <br />
+                        <span className="text-yellow-500">⚠️ Important: Make sure your Google Drive file is set to "Anyone with the link can view"</span> <br />
+                        <strong>Option 3:</strong> Enter any direct image URL (e.g., https://example.com/image.jpg)
+                      </p>
+                    </div>
+
+                    {(imagePreview || formData.imageUrl) && !uploadingImage && (
+                      <div className="space-y-2">
+                        <Label>Image Preview</Label>
+                        <div className="relative border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                          <img
+                            src={imagePreview || formData.imageUrl}
+                            alt={imagePreview ? "Preview" : "Current"}
+                            className="w-full h-64 object-contain"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                              const parent = target.parentElement
+                              if (parent) {
+                                parent.innerHTML = `
                                 <div class="flex items-center justify-center h-64 text-center p-4">
                                   <div>
                                     <p class="text-sm text-muted-foreground mb-2">Image failed to load</p>
@@ -1142,41 +1156,41 @@ export default function AdminEventsPage() {
                                   </div>
                                 </div>
                               `
-                            }
-                          }}
-                        />
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleReplaceImage}
+                            className="flex-1"
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Replace
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRemoveImage}
+                            className="flex-1"
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Remove
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleReplaceImage}
-                          className="flex-1"
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Replace
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleRemoveImage}
-                          className="flex-1"
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          Remove
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-            </div>
             <div className="flex justify-end gap-4 pt-6 mt-4 border-t flex-shrink-0 bg-background">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="lg"
                 onClick={() => {
                   setIsCreateDialogOpen(false)
@@ -1187,8 +1201,8 @@ export default function AdminEventsPage() {
               >
                 Cancel
               </Button>
-              <Button 
-                onClick={handleCreateEvent} 
+              <Button
+                onClick={handleCreateEvent}
                 disabled={isSubmitting}
                 size="lg"
                 className="min-w-[150px]"
@@ -1278,246 +1292,246 @@ export default function AdminEventsPage() {
             <DialogDescription>Update the event details</DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto pr-2 -mr-2">
-          <div className="grid gap-8 py-2">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <Label htmlFor="edit-title" className="text-base font-semibold">Event Title</Label>
-                <Input id="edit-title" name="title" value={formData.title} onChange={handleInputChange} className="h-11" />
+            <div className="grid gap-8 py-2">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label htmlFor="edit-title" className="text-base font-semibold">Event Title</Label>
+                  <Input id="edit-title" name="title" value={formData.title} onChange={handleInputChange} className="h-11" />
+                </div>
+                <div className="space-y-3">
+                  <Label htmlFor="edit-type" className="text-base font-semibold">Event Type</Label>
+                  <Select value={formData.type} onValueChange={(value) => handleSelectChange("type", value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="workshop">Workshop</SelectItem>
+                      <SelectItem value="seminar">Seminar</SelectItem>
+                      <SelectItem value="competition">Competition</SelectItem>
+                      <SelectItem value="meeting">Meeting</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-3">
-                <Label htmlFor="edit-type" className="text-base font-semibold">Event Type</Label>
-                <Select value={formData.type} onValueChange={(value) => handleSelectChange("type", value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="workshop">Workshop</SelectItem>
-                    <SelectItem value="seminar">Seminar</SelectItem>
-                    <SelectItem value="competition">Competition</SelectItem>
-                    <SelectItem value="meeting">Meeting</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
 
-            <div className="space-y-3">
-              <Label htmlFor="edit-description" className="text-base font-semibold">Description</Label>
-              <Textarea
-                id="edit-description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="Brief event description (shown on event card)"
-                rows={4}
-                className="text-base"
-              />
-            </div>
+              <div className="space-y-3">
+                <Label htmlFor="edit-description" className="text-base font-semibold">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  placeholder="Brief event description (shown on event card)"
+                  rows={4}
+                  className="text-base"
+                />
+              </div>
 
-            <div className="space-y-3">
-              <Label htmlFor="edit-detailedContent" className="text-base font-semibold">Detailed Content (Event Details Page)</Label>
-              <Textarea
-                id="edit-detailedContent"
-                name="detailedContent"
-                value={formData.detailedContent}
-                onChange={handleInputChange}
-                placeholder="Enter detailed event content here. You can use HTML for formatting, images, and links.&#10;&#10;Examples:&#10;&lt;h3&gt;Agenda&lt;/h3&gt;&#10;&lt;ul&gt;&#10;  &lt;li&gt;Introduction&lt;/li&gt;&#10;  &lt;li&gt;Hands-on Workshop&lt;/li&gt;&#10;&lt;/ul&gt;&#10;&#10;&lt;img src=&quot;https://example.com/image.jpg&quot; alt=&quot;Workshop&quot; /&gt;&#10;&#10;&lt;a href=&quot;https://example.com&quot;&gt;Learn More&lt;/a&gt;"
-                rows={12}
-                className="font-mono text-sm"
-              />
-              <div className="bg-muted/50 p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  <strong className="text-foreground">Supports HTML:</strong> Use HTML tags for formatting, images, and links. 
-                  <br/>
-                  <strong className="text-foreground">Images:</strong> Use &lt;img src=&quot;URL&quot; alt=&quot;description&quot; /&gt; or paste image URLs
-                  <br/>
-                  <strong className="text-foreground">Links:</strong> Use &lt;a href=&quot;URL&quot;&gt;Link Text&lt;/a&gt;
-                  <br/>
-                  <strong className="text-foreground">Formatting:</strong> Use &lt;h3&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;em&gt; etc.
-                </p>
+              <div className="space-y-3">
+                <Label htmlFor="edit-detailedContent" className="text-base font-semibold">Detailed Content (Event Details Page)</Label>
+                <Textarea
+                  id="edit-detailedContent"
+                  name="detailedContent"
+                  value={formData.detailedContent}
+                  onChange={handleInputChange}
+                  placeholder="Enter detailed event content here. You can use HTML for formatting, images, and links.&#10;&#10;Examples:&#10;&lt;h3&gt;Agenda&lt;/h3&gt;&#10;&lt;ul&gt;&#10;  &lt;li&gt;Introduction&lt;/li&gt;&#10;  &lt;li&gt;Hands-on Workshop&lt;/li&gt;&#10;&lt;/ul&gt;&#10;&#10;&lt;img src=&quot;https://example.com/image.jpg&quot; alt=&quot;Workshop&quot; /&gt;&#10;&#10;&lt;a href=&quot;https://example.com&quot;&gt;Learn More&lt;/a&gt;"
+                  rows={12}
+                  className="font-mono text-sm"
+                />
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    <strong className="text-foreground">Supports HTML:</strong> Use HTML tags for formatting, images, and links.
+                    <br />
+                    <strong className="text-foreground">Images:</strong> Use &lt;img src=&quot;URL&quot; alt=&quot;description&quot; /&gt; or paste image URLs
+                    <br />
+                    <strong className="text-foreground">Links:</strong> Use &lt;a href=&quot;URL&quot;&gt;Link Text&lt;/a&gt;
+                    <br />
+                    <strong className="text-foreground">Formatting:</strong> Use &lt;h3&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;em&gt; etc.
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-3 gap-6">
-              <div className="space-y-3">
-                <Label htmlFor="edit-date" className="text-base font-semibold">Date</Label>
-                <Input id="edit-date" name="date" type="date" value={formData.date} onChange={handleInputChange} className="h-11" />
+              <div className="grid grid-cols-3 gap-6">
+                <div className="space-y-3">
+                  <Label htmlFor="edit-date" className="text-base font-semibold">Date</Label>
+                  <Input id="edit-date" name="date" type="date" value={formData.date} onChange={handleInputChange} className="h-11" />
+                </div>
+                <div className="space-y-3">
+                  <Label htmlFor="edit-time" className="text-base font-semibold">Start Time</Label>
+                  <select
+                    id="edit-time"
+                    name="time"
+                    value={formData.time}
+                    onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">Select Time</option>
+                    {Array.from({ length: 48 }, (_, i) => {
+                      const hour = Math.floor(i / 2)
+                      const minute = (i % 2) * 30
+                      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+                      return (
+                        <option key={timeString} value={timeString}>
+                          {timeString}
+                        </option>
+                      )
+                    })}
+                  </select>
+                  <p className="text-xs text-muted-foreground">Select from dropdown (30-minute intervals)</p>
+                </div>
+                <div className="space-y-3">
+                  <Label htmlFor="edit-duration" className="text-base font-semibold">Duration (hours)</Label>
+                  <Input
+                    id="edit-duration"
+                    name="duration"
+                    type="number"
+                    value={formData.duration}
+                    onChange={handleInputChange}
+                    className="h-11"
+                  />
+                </div>
               </div>
-              <div className="space-y-3">
-                <Label htmlFor="edit-time" className="text-base font-semibold">Start Time</Label>
-                <select
-                  id="edit-time"
-                  name="time"
-                  value={formData.time}
-                  onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="">Select Time</option>
-                  {Array.from({ length: 48 }, (_, i) => {
-                    const hour = Math.floor(i / 2)
-                    const minute = (i % 2) * 30
-                    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-                    return (
-                      <option key={timeString} value={timeString}>
-                        {timeString}
-                      </option>
-                    )
-                  })}
-                </select>
-                <p className="text-xs text-muted-foreground">Select from dropdown (30-minute intervals)</p>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label htmlFor="edit-location" className="text-base font-semibold">Location</Label>
+                  <Input id="edit-location" name="location" value={formData.location} onChange={handleInputChange} className="h-11" />
+                </div>
+                <div className="space-y-3">
+                  <Label htmlFor="edit-maxParticipants" className="text-base font-semibold">Max Participants</Label>
+                  <Input
+                    id="edit-maxParticipants"
+                    name="maxParticipants"
+                    type="number"
+                    value={formData.maxParticipants}
+                    onChange={handleInputChange}
+                    className="h-11"
+                  />
+                </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label htmlFor="edit-minTeamSize" className="text-base font-semibold">Min Team Size</Label>
+                  <Input
+                    id="edit-minTeamSize"
+                    name="minTeamSize"
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={formData.minTeamSize}
+                    onChange={handleInputChange}
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Label htmlFor="edit-maxTeamSize" className="text-base font-semibold">Max Team Size</Label>
+                  <Input
+                    id="edit-maxTeamSize"
+                    name="maxTeamSize"
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={formData.maxTeamSize}
+                    onChange={handleInputChange}
+                    className="h-11"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-3">
-                <Label htmlFor="edit-duration" className="text-base font-semibold">Duration (hours)</Label>
+                <Label htmlFor="edit-registrationDeadline" className="text-base font-semibold">Registration Deadline</Label>
                 <Input
-                  id="edit-duration"
-                  name="duration"
-                  type="number"
-                  value={formData.duration}
+                  id="edit-registrationDeadline"
+                  name="registrationDeadline"
+                  type="date"
+                  value={formData.registrationDeadline}
                   onChange={handleInputChange}
                   className="h-11"
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label htmlFor="edit-location" className="text-base font-semibold">Location</Label>
-                <Input id="edit-location" name="location" value={formData.location} onChange={handleInputChange} className="h-11" />
+                <Label className="text-base font-semibold">Online Status</Label>
+                <div className="flex items-center gap-3">
+                  <Switch
+                    id="edit-isOnline"
+                    checked={formData.isOnline}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isOnline: checked }))}
+                  />
+                  <Label htmlFor="edit-isOnline" className="text-sm text-muted-foreground cursor-pointer">
+                    {formData.isOnline ? 'Event is ONLINE' : 'Event is OFFLINE'}
+                  </Label>
+                </div>
               </div>
-              <div className="space-y-3">
-                <Label htmlFor="edit-maxParticipants" className="text-base font-semibold">Max Participants</Label>
-                <Input
-                  id="edit-maxParticipants"
-                  name="maxParticipants"
-                  type="number"
-                  value={formData.maxParticipants}
-                  onChange={handleInputChange}
-                  className="h-11"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <Label htmlFor="edit-minTeamSize" className="text-base font-semibold">Min Team Size</Label>
-                <Input
-                  id="edit-minTeamSize"
-                  name="minTeamSize"
-                  type="number"
-                  min="1"
-                  max="20"
-                  value={formData.minTeamSize}
-                  onChange={handleInputChange}
-                  className="h-11"
-                />
-              </div>
-              <div className="space-y-3">
-                <Label htmlFor="edit-maxTeamSize" className="text-base font-semibold">Max Team Size</Label>
-                <Input
-                  id="edit-maxTeamSize"
-                  name="maxTeamSize"
-                  type="number"
-                  min="1"
-                  max="20"
-                  value={formData.maxTeamSize}
-                  onChange={handleInputChange}
-                  className="h-11"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label htmlFor="edit-registrationDeadline" className="text-base font-semibold">Registration Deadline</Label>
-              <Input
-                id="edit-registrationDeadline"
-                name="registrationDeadline"
-                type="date"
-                value={formData.registrationDeadline}
-                onChange={handleInputChange}
-                className="h-11"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Online Status</Label>
-              <div className="flex items-center gap-3">
-                <Switch
-                  id="edit-isOnline"
-                  checked={formData.isOnline}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isOnline: checked }))}
-                />
-                <Label htmlFor="edit-isOnline" className="text-sm text-muted-foreground cursor-pointer">
-                  {formData.isOnline ? 'Event is ONLINE' : 'Event is OFFLINE'}
-                </Label>
-              </div>
-            </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="edit-imageFile">Upload Event Image</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="edit-imageFile"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageSelect}
-                      className="flex-1"
-                      disabled={uploadingImage}
-                    />
-                    {selectedImage && !uploadingImage && !formData.imageUrl && (
-                      <Button
-                        type="button"
-                        onClick={() => handleImageUpload()}
-                        className="flex items-center gap-2"
-                      >
-                        <Upload className="h-4 w-4" />
-                        Upload Now
-                      </Button>
+                    <div className="flex gap-2">
+                      <Input
+                        id="edit-imageFile"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        className="flex-1"
+                        disabled={uploadingImage}
+                      />
+                      {selectedImage && !uploadingImage && !formData.imageUrl && (
+                        <Button
+                          type="button"
+                          onClick={() => handleImageUpload()}
+                          className="flex items-center gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Upload Now
+                        </Button>
+                      )}
+                    </div>
+                    {uploadingImage && (
+                      <div className="space-y-2">
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                          <div
+                            className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300 flex items-center justify-end pr-2"
+                            style={{ width: `${uploadProgress}%`, minWidth: '30px' }}
+                          >
+                            {uploadProgress > 10 && (
+                              <span className="text-xs font-semibold text-white">{uploadProgress}%</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">
+                            {uploadProgress < 20 ? 'Optimizing image...' :
+                              uploadProgress < 95 ? 'Uploading to server...' :
+                                'Getting image URL...'}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-semibold text-blue-600">{uploadProgress}%</p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCancelUpload}
+                              className="h-7 px-2 text-xs"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {formData.imageUrl && !uploadingImage && (
+                      <div className="p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                        <p className="text-xs text-green-700 dark:text-green-400 font-medium">
+                          ✅ Image uploaded successfully! URL is set.
+                        </p>
+                      </div>
                     )}
                   </div>
-                  {uploadingImage && (
-                    <div className="space-y-2">
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                        <div 
-                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300 flex items-center justify-end pr-2"
-                          style={{ width: `${uploadProgress}%`, minWidth: '30px' }}
-                        >
-                          {uploadProgress > 10 && (
-                            <span className="text-xs font-semibold text-white">{uploadProgress}%</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-muted-foreground">
-                          {uploadProgress < 20 ? 'Optimizing image...' : 
-                           uploadProgress < 95 ? 'Uploading to server...' : 
-                           'Getting image URL...'}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-semibold text-blue-600">{uploadProgress}%</p>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleCancelUpload}
-                            className="h-7 px-2 text-xs"
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {formData.imageUrl && !uploadingImage && (
-                    <div className="p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                      <p className="text-xs text-green-700 dark:text-green-400 font-medium">
-                        ✅ Image uploaded successfully! URL is set.
-                      </p>
-                    </div>
-                  )}
-                  </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="edit-imageUrl">Or Enter Image URL</Label>
@@ -1530,20 +1544,20 @@ export default function AdminEventsPage() {
                       placeholder="https://example.com/image.jpg"
                     />
                     <p className="text-xs text-muted-foreground">
-                      <strong>Option 1:</strong> Upload an image file (auto-optimized) <br/>
-                      <strong>Option 2:</strong> Paste a Google Drive sharing link - it will be auto-converted to a direct image URL <br/>
-                      <span className="text-yellow-500">⚠️ Important: Make sure your Google Drive file is set to "Anyone with the link can view"</span> <br/>
+                      <strong>Option 1:</strong> Upload an image file (auto-optimized) <br />
+                      <strong>Option 2:</strong> Paste a Google Drive sharing link - it will be auto-converted to a direct image URL <br />
+                      <span className="text-yellow-500">⚠️ Important: Make sure your Google Drive file is set to "Anyone with the link can view"</span> <br />
                       <strong>Option 3:</strong> Enter any direct image URL (e.g., https://example.com/image.jpg)
                     </p>
                   </div>
-                  
+
                   {(imagePreview || formData.imageUrl) && !uploadingImage && (
                     <div className="space-y-2">
                       <Label>Image Preview</Label>
                       <div className="relative border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-                        <img 
-                          src={imagePreview || formData.imageUrl} 
-                          alt={imagePreview ? "Preview" : "Current"} 
+                        <img
+                          src={imagePreview || formData.imageUrl}
+                          alt={imagePreview ? "Preview" : "Current"}
                           className="w-full h-64 object-contain"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement
@@ -1588,11 +1602,11 @@ export default function AdminEventsPage() {
                   )}
                 </div>
               </div>
-          </div>
+            </div>
           </div>
           <div className="flex justify-end gap-4 pt-6 mt-4 border-t flex-shrink-0 bg-background">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="lg"
               onClick={() => {
                 setEditingEvent(null)
@@ -1603,7 +1617,7 @@ export default function AdminEventsPage() {
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleUpdateEvent}
               size="lg"
               className="min-w-[150px]"

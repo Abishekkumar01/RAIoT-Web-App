@@ -83,6 +83,8 @@ export async function POST(request: Request) {
                 branch: profileData?.branch || 'N/A',
                 year: profileData?.year || 'N/A'
             },
+            // Store initial password for admin reference (so they can share with new user)
+            initialPassword: password,
             attendance: [],
             joiningDate: joiningDate || new Date().toISOString(),
             createdAt: new Date(),
