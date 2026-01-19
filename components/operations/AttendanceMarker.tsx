@@ -101,11 +101,11 @@ export function AttendanceMarker() {
             })
             setStudents(fetched)
 
-            // Initialize all as absent by default if not loading existing
+            // Initialize all as PRESENT by default (Green side)
             if (!existingAttendance) {
                 const initial: Record<string, 'present' | 'absent' | 'late' | 'leave'> = {}
-                fetched.forEach(s => initial[s.id] = 'absent')
-                setAttendanceState(initial) // Set directly, don't merge with potentially stale prev
+                fetched.forEach(s => initial[s.id] = 'present')
+                setAttendanceState(initial)
             }
         } catch (error) {
             console.error("Error fetching students:", error)
@@ -132,9 +132,9 @@ export function AttendanceMarker() {
                 )
                 const snapshot = await getDocs(q)
 
-                // Prepare defaults (all absent)
+                // Prepare defaults (all present)
                 const defaults: Record<string, 'present' | 'absent' | 'late' | 'leave'> = {}
-                students.forEach(s => defaults[s.id] = 'absent')
+                students.forEach(s => defaults[s.id] = 'present')
 
                 // First check if it's a holiday
                 const summaryDoc = await getDoc(doc(db, "attendance_summaries", dateStr))
@@ -240,7 +240,7 @@ export function AttendanceMarker() {
 
             // Normal Attendance
             students.forEach(student => {
-                const status = attendanceState[student.id] || 'absent'
+                const status = attendanceState[student.id] || 'present'
                 const recordId = `${dateStr}_${student.id}`
                 const ref = doc(db, "attendance", recordId)
 
@@ -318,20 +318,15 @@ export function AttendanceMarker() {
                 type: 'regular'
             }, { merge: true })
 
-            // 2. Clear existing attendance records to ensure "Unmarked" (Gray dot) state
-            const q = query(collection(db, "attendance"), where("dateStr", "==", dateStr))
-            const snapshot = await getDocs(q)
 
-            snapshot.forEach((doc) => {
-                batch.delete(doc.ref)
-            })
 
             await batch.commit()
 
-            // Update local state
-            setExistingAttendance(false)
-            setAttendanceState({}) // Clear local state too
-            toast.success("Class Published! Status reset to 'Unmarked'.")
+            // Update local state - Keep existing attendance state if any
+            // setExistingAttendance(false) // Don't reset this flag
+            // setAttendanceState({}) // Don't clear local state
+            await fetchStudents() // Refresh to sync
+            toast.success("Class Published successfully!")
         } catch (error) {
             console.error("Error publishing class:", error)
             toast.error("Failed to publish class")
@@ -587,7 +582,7 @@ export function AttendanceMarker() {
                                         <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                                         <TableCell className="min-w-[280px]">
                                             <RadioGroup
-                                                value={attendanceState[student.id] || 'absent'}
+                                                value={attendanceState[student.id] || 'present'}
                                                 onValueChange={(val) => handleStatusChange(student.id, val as any)}
                                                 className="flex items-center space-x-3"
                                                 disabled={isHoliday}

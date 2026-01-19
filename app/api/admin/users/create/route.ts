@@ -4,7 +4,7 @@ import { getAdminDb, getAdminAuth, getInitError } from '@/lib/firebase-admin';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const {
+        let {
             email,
             password,
             displayName,
@@ -12,6 +12,11 @@ export async function POST(request: Request) {
             profileData,
             joiningDate
         } = body;
+
+        // Sanitize inputs
+        if (email) email = email.trim();
+        if (password) password = password.trim();
+        if (displayName) displayName = displayName.trim();
 
         // Basic validation
         if (!email || !password || !displayName || !role) {

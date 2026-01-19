@@ -4,7 +4,12 @@ import { getAdminDb, getAdminAuth, getInitError } from '@/lib/firebase-admin';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { userId, newPassword } = body;
+        let { userId, newPassword } = body;
+
+        // Trim password to avoid copy-paste whitespace issues
+        if (newPassword && typeof newPassword === 'string') {
+            newPassword = newPassword.trim();
+        }
 
         // Basic validation
         if (!userId || !newPassword) {
