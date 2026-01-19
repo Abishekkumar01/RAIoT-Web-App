@@ -12,6 +12,9 @@ const TechCursor = () => {
         // Only run on client
         if (typeof window === "undefined") return;
 
+        // Don't show custom cursor on touch devices
+        if (window.matchMedia("(pointer: coarse)").matches) return;
+
         const updatePosition = (e: MouseEvent) => {
             // Use requestAnimationFrame for smoother performance if needed, 
             // but state update is usually fine for simple cursors.
@@ -52,6 +55,10 @@ const TechCursor = () => {
                 setIsHovering(false);
             }
         };
+
+
+
+
 
         window.addEventListener("mousemove", updatePosition);
         window.addEventListener("mousedown", handleMouseDown);
