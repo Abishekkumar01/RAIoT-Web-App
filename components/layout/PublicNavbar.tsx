@@ -45,7 +45,8 @@ export const PublicNavbar = () => {
           <div className="grid grid-cols-3 items-center h-24">
 
             {/* Logo Section (Left) */}
-            <div className="flex items-center">
+            {/* Logo Section (Left) */}
+            <div className="flex items-center gap-4">
               <Link
                 href="/"
                 className="flex items-center space-x-3 cursor-target group"
@@ -61,6 +62,18 @@ export const PublicNavbar = () => {
                 </div>
                 <span className="font-bold text-2xl font-orbitron tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-white group-hover:text-cyan-400 transition-all duration-300">RAIoT</span>
               </Link>
+
+              <span className="text-white font-bold text-2xl pb-1">X</span>
+
+              <div className="relative flex items-center overflow-hidden w-[44px] h-[45px]">
+                <Image
+                  src="/amity_logo_transparent.png"
+                  alt="Amity University Logo"
+                  width={140}
+                  height={45}
+                  className="max-w-none object-contain object-left hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] transition-all duration-300"
+                />
+              </div>
             </div>
 
             {/* Desktop Navigation (Center) - Hidden on Mobile */}

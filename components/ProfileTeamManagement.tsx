@@ -90,7 +90,7 @@ export default function ProfileTeamManagement({ preloadedRegistrations }: Profil
     }
 
     // IF PRELOADED REGISTRATIONS EXIST, USE THEM AND SKIP FETCH
-    if (preloadedRegistrations && preloadedRegistrations.length > 0) {
+    if (preloadedRegistrations) {
       console.log('📦 Using preloaded registrations:', preloadedRegistrations)
       setRegisteredEvents(preloadedRegistrations)
       if (preloadedRegistrations.length > 0 && !selectedEventId) {

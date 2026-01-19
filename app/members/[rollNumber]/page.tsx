@@ -14,6 +14,12 @@ import { Github, Linkedin, Globe, Mail, Phone, ExternalLink, Trophy, Star, Cpu, 
 import Link from 'next/link'
 import { Separator } from '@/components/ui/separator'
 
+const ensureProtocol = (url: string | undefined) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `https://${url}`;
+}
+
 export default function MemberProfilePage() {
   const params = useParams()
   const rollNumber = params.rollNumber as string
@@ -203,19 +209,19 @@ export default function MemberProfilePage() {
                     </a>
                   )}
                   {member.profileData?.githubLink && (
-                    <a href={member.profileData.githubLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-zinc-950 border border-zinc-800 hover:border-white text-zinc-400 hover:text-white transition-all group rounded-sm">
+                    <a href={ensureProtocol(member.profileData.githubLink)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-zinc-950 border border-zinc-800 hover:border-white text-zinc-400 hover:text-white transition-all group rounded-sm">
                       <Github className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
                       <span className="text-[10px] font-mono tracking-wider hidden sm:inline-block">GITHUB</span>
                     </a>
                   )}
                   {member.profileData?.linkedinLink && (
-                    <a href={member.profileData.linkedinLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-[#0077b5]/10 border border-[#0077b5]/30 hover:bg-[#0077b5]/20 hover:border-[#0077b5] text-[#0077b5] hover:text-white transition-all group rounded-sm">
+                    <a href={ensureProtocol(member.profileData.linkedinLink)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-[#0077b5]/10 border border-[#0077b5]/30 hover:bg-[#0077b5]/20 hover:border-[#0077b5] text-[#0077b5] hover:text-white transition-all group rounded-sm">
                       <Linkedin className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
                       <span className="text-[10px] font-mono tracking-wider hidden sm:inline-block">LINKEDIN</span>
                     </a>
                   )}
                   {member.profileData?.websiteLink && (
-                    <a href={member.profileData.websiteLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-cyan-950/10 border border-cyan-500/30 hover:bg-cyan-500/20 hover:border-cyan-400 text-cyan-500 hover:text-white transition-all group rounded-sm">
+                    <a href={ensureProtocol(member.profileData.websiteLink)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-cyan-950/10 border border-cyan-500/30 hover:bg-cyan-500/20 hover:border-cyan-400 text-cyan-500 hover:text-white transition-all group rounded-sm">
                       <Globe className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
                       <span className="text-[10px] font-mono tracking-wider hidden sm:inline-block">WEBSITE</span>
                     </a>
@@ -415,7 +421,7 @@ function ProjectCard({ project }: { project: any }) {
 
         {project.link && (
           <a
-            href={project.link}
+            href={ensureProtocol(project.link)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 text-xs font-mono text-emerald-500 hover:text-emerald-400 uppercase tracking-wider"

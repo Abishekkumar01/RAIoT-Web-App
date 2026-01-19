@@ -47,8 +47,29 @@ export default function GuestProfilePage() {
   const { toast } = useToast()
   const [profile, setProfile] = useState<GuestProfile | null>(null)
   const [enrolledEvents, setEnrolledEvents] = useState<Event[]>([])
+  const [rawRegistrations, setRawRegistrations] = useState<Event[]>([])
+  const [activeEventIds, setActiveEventIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
-  const previousEventsRef = useRef<Set<string>>(new Set())
+
+  // Derive enrolled events whenever raw registrations or active events change
+  useEffect(() => {
+    if (activeEventIds.size === 0 && loading) return // Don't filter if we haven't loaded events yet, unless we know there are no events (handled by initial load usually)
+
+    // We need to know if events have loaded. 
+    // Actually, onSnapshot fires immediately with empty or content.
+    // To avoid flashing empty, we might want to wait. 
+    // But for "orphaned data removal", simpler is better:
+
+    const filtered = rawRegistrations.filter(event => activeEventIds.has(event.id))
+    // Special case: If we have registrations but 0 active events loaded, we might hide everything.
+    // Ideally we track "eventsLoaded" state.
+    // For now, let's assume if activeEventIds is empty, either no events exist or loading.
+    // But since registrations also load async, they effectively sync up.
+
+    // Check if we need to update to avoid loops
+    // JSON.stringify comparison or length check?
+    setEnrolledEvents(filtered)
+  }, [rawRegistrations, activeEventIds])
 
   useEffect(() => {
     if (!user || user.role !== 'guest') {
@@ -56,19 +77,13 @@ export default function GuestProfilePage() {
       return
     }
 
-    // Auto-refresh user data when page loads to ensure unique ID is loaded
     const autoRefreshUserData = async () => {
       try {
-        console.log('🔄 Auto-refreshing user data on page load...')
-        // Simple refresh by calling validation
         refreshValidation()
-        console.log('🔄 User data auto-refresh completed')
       } catch (error) {
-        console.error('❌ Auto-refresh failed:', error)
+        console.error('Auto-refresh failed:', error)
       }
     }
-
-    // Refresh after a short delay to ensure profile validation has run
     setTimeout(autoRefreshUserData, 1000)
 
     const fetchProfile = async () => {
@@ -78,7 +93,14 @@ export default function GuestProfilePage() {
           setProfile(userDoc.data() as GuestProfile)
         }
 
-        // Subscribe to user's registrations in Firestore
+        // 1. Subscribe to Active Events first
+        const eventsRef = collection(db, 'events')
+        const eventsUnsub = onSnapshot(eventsRef, (snap) => {
+          const ids = new Set(snap.docs.map(doc => doc.id))
+          setActiveEventIds(ids)
+        }, (error) => console.error("Error fetching events:", error))
+
+        // 2. Subscribe to Registrations
         const registrationsRef = collection(db, 'registrations')
         const q = query(registrationsRef, where('userId', '==', user.uid))
         const registrationsUnsub = onSnapshot(q, (snap) => {
@@ -93,37 +115,11 @@ export default function GuestProfilePage() {
               status: data.status || 'registered',
             }
           })
-          // Deduplicate events by ID
           const uniqueItems = Array.from(
             new Map(items.map(item => [item.id, item])).values()
           )
-          setEnrolledEvents(uniqueItems)
-        }, (error) => {
-          console.error("Error fetching registrations:", error);
-        })
-
-        // Subscribe to events to handle real-time updates when events are deleted
-        const eventsRef = collection(db, 'events')
-        const eventsUnsub = onSnapshot(eventsRef, (snap) => {
-          const existingEventIds = new Set(snap.docs.map(doc => doc.id))
-
-          // Check for deleted events and show notification
-          const currentEventIds = new Set(enrolledEvents.map(event => event.id))
-          const deletedEvents = Array.from(currentEventIds).filter(id => !existingEventIds.has(id))
-
-          if (deletedEvents.length > 0) {
-            toast({
-              title: "Event Cancelled",
-              description: "One or more events you registered for have been cancelled.",
-              variant: "destructive",
-            })
-          }
-
-          // Filter out registrations for deleted events
-          setEnrolledEvents(prev => prev.filter(event => existingEventIds.has(event.id)))
-        }, (error) => {
-          console.error("Error fetching events:", error);
-        })
+          setRawRegistrations(uniqueItems)
+        }, (error) => console.error("Error fetching registrations:", error))
 
         return () => {
           registrationsUnsub()

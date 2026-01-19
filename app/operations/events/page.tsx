@@ -21,12 +21,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, Upload, X } from "lucide-react"
 import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, getDoc } from 'firebase/firestore'
+import { logAuditAction } from '@/lib/audit'
+import { useAuth } from '@/lib/contexts/AuthContext'
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
 import { db, storage } from '@/lib/firebase'
 import { useToast } from '@/hooks/use-toast'
 import AdminEventExport from '@/components/AdminEventExport'
 
 export default function OperationsEventsPage() {
+    const { user } = useAuth()
     const [events, setEvents] = useState<any[]>([])
 
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -754,6 +757,7 @@ export default function OperationsEventsPage() {
                 registrationDeadline: "",
                 imageUrl: "",
                 detailedContent: "",
+                isOnline: false
             })
         } catch (e) {
             console.error('Failed to update event', e)
@@ -783,6 +787,21 @@ export default function OperationsEventsPage() {
 
     const handleDeleteEvent = async (eventId: string) => {
         try {
+            // Find event details for the log
+            const eventToDelete = events.find(e => e.id === eventId)
+
+            await logAuditAction({
+                action: 'DELETE_EVENT',
+                resourceType: 'events',
+                resourceId: eventId,
+                userId: user?.uid || 'unknown',
+                userName: user?.displayName || 'Unknown User',
+                metadata: {
+                    eventTitle: eventToDelete?.title || 'Unknown Title',
+                    eventDate: eventToDelete?.date
+                }
+            })
+
             await deleteDoc(doc(db, 'events', eventId))
             toast({ title: 'Event deleted' })
         } catch (e) {
@@ -891,26 +910,15 @@ export default function OperationsEventsPage() {
                                         name="detailedContent"
                                         value={formData.detailedContent}
                                         onChange={handleInputChange}
-                                        placeholder="Enter detailed event content here. You can use HTML for formatting, images, and links.&#10;&#10;Examples:&#10;&lt;h3&gt;Agenda&lt;/h3&gt;&#10;&lt;ul&gt;&#10;  &lt;li&gt;Introduction&lt;/li&gt;&#10;  &lt;li&gt;Hands-on Workshop&lt;/li&gt;&#10;&lt;/ul&gt;&#10;&#10;&lt;img src=&quot;https://example.com/image.jpg&quot; alt=&quot;Workshop&quot; /&gt;&#10;&#10;&lt;a href=&quot;https://example.com&quot;&gt;Learn More&lt;/a&gt;"
+                                        placeholder="Enter detailed event content here. This text will be displayed exactly as typed, so you can use newlines for spacing."
                                         rows={12}
                                         className="font-mono text-sm"
                                     />
-                                    <div className="bg-muted/50 p-4 rounded-lg">
-                                        <p className="text-sm text-muted-foreground">
-                                            <strong className="text-foreground">Supports HTML:</strong> Use HTML tags for formatting, images, and links.
-                                            <br />
-                                            <strong className="text-foreground">Images:</strong> Use &lt;img src=&quot;URL&quot; alt=&quot;description&quot; /&gt; or paste image URLs
-                                            <br />
-                                            <strong className="text-foreground">Links:</strong> Use &lt;a href=&quot;URL&quot;&gt;Link Text&lt;/a&gt;
-                                            <br />
-                                            <strong className="text-foreground">Formatting:</strong> Use &lt;h3&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;em&gt; etc.
-                                        </p>
-                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-3 gap-6">
                                     <div className="space-y-3">
-                                        <Label htmlFor="date" className="text-base font-semibold">Date</Label>
+                                        <Label htmlFor="date" className="text-base font-semibold">Event Date</Label>
                                         <Input id="date" name="date" type="date" value={formData.date} onChange={handleInputChange} className="h-11" />
                                     </div>
                                     <div className="space-y-3">
@@ -1320,26 +1328,15 @@ export default function OperationsEventsPage() {
                                     name="detailedContent"
                                     value={formData.detailedContent}
                                     onChange={handleInputChange}
-                                    placeholder="Enter detailed event content here. You can use HTML for formatting, images, and links.&#10;&#10;Examples:&#10;&lt;h3&gt;Agenda&lt;/h3&gt;&#10;&lt;ul&gt;&#10;  &lt;li&gt;Introduction&lt;/li&gt;&#10;  &lt;li&gt;Hands-on Workshop&lt;/li&gt;&#10;&lt;/ul&gt;&#10;&#10;&lt;img src=&quot;https://example.com/image.jpg&quot; alt=&quot;Workshop&quot; /&gt;&#10;&#10;&lt;a href=&quot;https://example.com&quot;&gt;Learn More&lt;/a&gt;"
+                                    placeholder="Enter detailed event content here. This text will be displayed exactly as typed, so you can use newlines for spacing."
                                     rows={12}
                                     className="font-mono text-sm"
                                 />
-                                <div className="bg-muted/50 p-4 rounded-lg">
-                                    <p className="text-sm text-muted-foreground">
-                                        <strong className="text-foreground">Supports HTML:</strong> Use HTML tags for formatting, images, and links.
-                                        <br />
-                                        <strong className="text-foreground">Images:</strong> Use &lt;img src=&quot;URL&quot; alt=&quot;description&quot; /&gt; or paste image URLs
-                                        <br />
-                                        <strong className="text-foreground">Links:</strong> Use &lt;a href=&quot;URL&quot;&gt;Link Text&lt;/a&gt;
-                                        <br />
-                                        <strong className="text-foreground">Formatting:</strong> Use &lt;h3&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;em&gt; etc.
-                                    </p>
-                                </div>
                             </div>
 
                             <div className="grid grid-cols-3 gap-6">
                                 <div className="space-y-3">
-                                    <Label htmlFor="edit-date" className="text-base font-semibold">Date</Label>
+                                    <Label htmlFor="edit-date" className="text-base font-semibold">Event Date</Label>
                                     <Input id="edit-date" name="date" type="date" value={formData.date} onChange={handleInputChange} className="h-11" />
                                 </div>
                                 <div className="space-y-3">

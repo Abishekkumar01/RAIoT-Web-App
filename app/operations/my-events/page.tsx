@@ -426,13 +426,15 @@ export default function OperationsMyEventsPage() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <ProfileTeamManagement preloadedRegistrations={registrations.map(r => ({
-                                    id: r.id,
-                                    eventId: r.eventId,
-                                    eventTitle: r.eventTitle,
-                                    eventType: r.eventType,
-                                    eventDate: new Date(r.eventDate) // Convert string date to Date object
-                                }))} />
+                                <ProfileTeamManagement preloadedRegistrations={registrations
+                                    .filter(r => events.some(e => e.id === r.eventId))
+                                    .map(r => ({
+                                        id: r.id,
+                                        eventId: r.eventId,
+                                        eventTitle: r.eventTitle,
+                                        eventType: r.eventType,
+                                        eventDate: new Date(r.eventDate) // Convert string date to Date object
+                                    }))} />
                             </CardContent>
                         </Card>
                     ) : (

@@ -150,10 +150,7 @@ export default function EventDetailPage() {
   }
 
   // Render HTML content safely
-  const renderContent = (content: string) => {
-    // Simple HTML rendering - in production, use a proper sanitizer
-    return { __html: content }
-  }
+
 
   const handleRegister = async () => {
     if (!user || !event) return
@@ -277,8 +274,8 @@ export default function EventDetailPage() {
     <div className="min-h-screen bg-background">
       <PublicNavbar />
 
-      <div className="w-full px-3 sm:px-4 md:px-6 py-6">
-        <div className="max-w-[1800px] mx-auto">
+      <div className="w-full px-6 md:px-20 py-6">
+        <div className="max-w-[1400px] mx-auto">
           <Button
             variant="ghost"
             onClick={() => router.back()}
@@ -288,54 +285,61 @@ export default function EventDetailPage() {
             Back to Events
           </Button>
 
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid gap-8 lg:grid-cols-3">
             {/* Main Content */}
-            <div className="lg:col-span-2 space-y-4">
-              {/* Event Image */}
-              {event.imageUrl && (
-                <div className="relative w-full h-64 md:h-80 rounded-lg overflow-hidden bg-gray-800">
-                  <img
-                    src={event.imageUrl}
-                    alt={event.title}
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement
-                      target.style.display = 'none'
-                    }}
-                  />
-                </div>
-              )}
+            <div className="lg:col-span-2 space-y-8">
 
-              {/* Event Title */}
-              <div className="space-y-2">
-                <h1 className="text-3xl md:text-4xl font-bold">{event.title}</h1>
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${event.type === 'workshop' ? 'bg-blue-500/20 text-blue-400' :
-                    event.type === 'seminar' ? 'bg-purple-500/20 text-purple-400' :
-                      event.type === 'competition' ? 'bg-red-500/20 text-red-400' :
-                        'bg-gray-500/20 text-gray-400'
-                    }`}>
-                    {event.type.toUpperCase()}
-                  </span>
-                  {isFull && (
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400">
-                      FULL
-                    </span>
+              {/* Header Section: Image + Title/Info Side-by-Side */}
+              <div className="flex flex-col md:flex-row gap-8 items-start">
+
+                {/* Event Image */}
+                {event.imageUrl && (
+                  <div className="w-full md:w-auto md:max-w-sm shrink-0">
+                    <img
+                      src={event.imageUrl}
+                      alt={event.title}
+                      className="w-full h-auto rounded-lg shadow-md object-contain max-h-[500px]"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Title and Basic Info */}
+                <div className="flex-1 space-y-4">
+                  <div className="space-y-2">
+                    <h1 className="text-3xl md:text-4xl font-bold">{event.title}</h1>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${event.type === 'workshop' ? 'bg-blue-500/20 text-blue-400' :
+                        event.type === 'seminar' ? 'bg-purple-500/20 text-purple-400' :
+                          event.type === 'competition' ? 'bg-red-500/20 text-red-400' :
+                            'bg-gray-500/20 text-gray-400'
+                        }`}>
+                        {event.type.toUpperCase()}
+                      </span>
+                      {isFull && (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400">
+                          FULL
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* About This Event (Moved here to be next to image) */}
+                  {event.description && (
+                    <Card className="p-4 border-none shadow-none bg-transparent px-0">
+                      <CardHeader className="p-0 pb-2">
+                        <CardTitle className="text-xl">About This Event</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <p className="text-muted-foreground whitespace-pre-wrap text-sm leading-relaxed">{event.description}</p>
+                      </CardContent>
+                    </Card>
                   )}
                 </div>
               </div>
-
-              {/* Event Description */}
-              {event.description && (
-                <Card className="p-4">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xl">About This Event</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground whitespace-pre-wrap text-sm leading-relaxed">{event.description}</p>
-                  </CardContent>
-                </Card>
-              )}
 
               {/* Detailed Content */}
               {event.detailedContent && event.detailedContent.trim() !== '' && (
@@ -345,12 +349,10 @@ export default function EventDetailPage() {
                   </CardHeader>
                   <CardContent>
                     <div
-                      className="prose prose-invert max-w-none prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-a:text-primary prose-ul:text-muted-foreground prose-li:text-muted-foreground prose-sm"
-                      dangerouslySetInnerHTML={renderContent(event.detailedContent)}
-                      style={{
-                        lineHeight: '1.6',
-                      }}
-                    />
+                      className="text-foreground text-sm leading-relaxed whitespace-pre-wrap font-sans"
+                    >
+                      {event.detailedContent}
+                    </div>
                   </CardContent>
                 </Card>
               )}

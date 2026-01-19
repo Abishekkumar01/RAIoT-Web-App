@@ -63,6 +63,7 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     { href: "/admin/inventory", label: "Manage Inventory", icon: Box },
     { href: "/admin/projects", label: "Manage Projects", icon: Rocket },
     { href: "/admin/contact", label: "Manage Contact", icon: Mail },
+    { href: "/admin/audit-logs", label: "Audit Logs", icon: FileText },
   ];
 
   const publicSiteLinks = [
@@ -113,7 +114,7 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
       {/* Header - Compressed */}
       <div className="p-3 md:p-6 flex justify-center md:justify-start shrink-0">
         <Link href="/" className="flex items-center space-x-2">
-          <span className="font-bold text-sm md:text-xl">IoT</span>
+          <span className="font-bold text-sm md:text-xl">RAIoT</span>
         </Link>
       </div>
 
@@ -174,10 +175,18 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
 
       <div className="absolute bottom-0 left-0 w-full bg-card border-t p-2 md:p-4 z-20">
         <div className="flex items-center space-x-2 md:space-x-3 mb-2 md:mb-4">
-          <div className="w-6 h-6 md:w-8 md:h-8 bg-primary rounded-full flex items-center justify-center shrink-0">
-            <span className="text-primary-foreground text-[10px] md:text-sm font-medium">
-              {user?.displayName?.charAt(0) || "U"}
-            </span>
+          <div className="w-6 h-6 md:w-8 md:h-8 bg-primary rounded-full flex items-center justify-center shrink-0 overflow-hidden relative">
+            {user?.profileData?.photoUrl ? (
+              <img
+                src={user.profileData.photoUrl}
+                alt={user.displayName || "User"}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-primary-foreground text-[10px] md:text-sm font-medium">
+                {user?.displayName?.charAt(0) || "U"}
+              </span>
+            )}
           </div>
           <div className="flex-1 min-w-0 overflow-hidden">
             <p className="text-[10px] md:text-sm font-medium truncate">{user?.displayName}</p>
