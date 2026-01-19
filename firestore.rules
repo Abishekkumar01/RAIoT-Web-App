@@ -138,7 +138,8 @@ service cloud.firestore {
     match /attendance/{recordId} {
       // Allow members to read their own attendance, and admins/leads to read all
       allow read: if request.auth != null && (
-        resource.data.studentId == request.auth.uid || 
+        (resource != null && resource.data.studentId == request.auth.uid) ||
+        (resource == null && recordId.matches('.*_' + request.auth.uid)) ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in 
         ['president', 'vice_president', 'management_head', 'technical_head', 'inventory_head', 'public_relation_head', 'student_coordinator', 'admin', 'superadmin']
       );

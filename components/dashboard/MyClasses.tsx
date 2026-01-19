@@ -37,6 +37,11 @@ export default function MyClasses() {
     useEffect(() => {
         if (!user) return
 
+        // Reset state when date changes to prevent showing stale data
+        setLoading(true)
+        setClassSession(null)
+        setUserStatus(null)
+
         const dateStr = format(date, 'yyyy-MM-dd')
 
         // 1. Listen to Class Session (Attendance Summary)
