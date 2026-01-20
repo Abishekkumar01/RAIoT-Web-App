@@ -26,11 +26,18 @@ const MaintenanceScreen = () => {
                     <p className="text-xs text-muted-foreground mb-4">
                         Are you a team member?
                     </p>
-                    <Link href="/auth/login">
-                        <Button variant="outline" size="sm">
-                            Team Login
-                        </Button>
-                    </Link>
+                    <div className="flex gap-4 justify-center">
+                        <Link href="/auth/login?type=admin">
+                            <Button variant="outline" size="sm">
+                                Admin Login
+                            </Button>
+                        </Link>
+                        <Link href="/auth/login?type=operations">
+                            <Button variant="outline" size="sm">
+                                Operations Login
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
             </div>
         </div>
