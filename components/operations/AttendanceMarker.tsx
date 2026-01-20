@@ -46,6 +46,7 @@ export function AttendanceMarker() {
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
     // Map of studentId -> status
     const [attendanceState, setAttendanceState] = useState<Record<string, 'present' | 'absent' | 'late' | 'leave'>>({})
@@ -470,7 +471,7 @@ export function AttendanceMarker() {
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-2">
-                    <Popover>
+                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                         <PopoverTrigger asChild>
                             <Button
                                 variant={"outline"}
@@ -487,7 +488,12 @@ export function AttendanceMarker() {
                             <Calendar
                                 mode="single"
                                 selected={date}
-                                onSelect={(d) => d && setDate(d)}
+                                onSelect={(d) => {
+                                    if (d) {
+                                        setDate(d)
+                                        setIsCalendarOpen(false)
+                                    }
+                                }}
                                 initialFocus
                                 disabled={(date) => date > new Date()}
                             />
