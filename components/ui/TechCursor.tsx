@@ -84,7 +84,7 @@ const TechCursor = () => {
             {/* Main Center Dot */}
             <div
                 id="tech-cursor"
-                className="fixed top-0 left-0 pointer-events-none z-[9999] mix-blend-difference"
+                className="fixed top-0 left-0 pointer-events-none z-[10001] mix-blend-difference"
                 style={{
                     transform: "translate(-50%, -50%)", // Centering logic handled in JS + CSS
                     width: "8px",
@@ -101,7 +101,7 @@ const TechCursor = () => {
             {/* Outer Ring */}
             <div
                 id="tech-cursor-ring"
-                className="fixed top-0 left-0 pointer-events-none z-[9998] mix-blend-difference"
+                className="fixed top-0 left-0 pointer-events-none z-[10000] mix-blend-difference"
                 style={{
                     width: isHovering ? "40px" : "24px",
                     height: isHovering ? "40px" : "24px",
