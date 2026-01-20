@@ -200,19 +200,15 @@ export function AttendanceMarker() {
 
     const handleSubmit = async () => {
         if (!date || !user) return
-        // if (existingAttendance) {
-        //     toast.error("Attendance for this date has already been submitted.")
-        //     return
-        // }
 
         try {
             setSubmitting(true)
-            const batch = writeBatch(db)
             const dateStr = format(date, 'yyyy-MM-dd')
             const timestamp = Timestamp.now()
 
             // If Holiday, save summary only and return
             if (isHoliday) {
+                const batch = writeBatch(db)
                 const summaryRef = doc(db, "attendance_summaries", dateStr)
                 batch.set(summaryRef, {
                     dateStr,
@@ -222,15 +218,6 @@ export function AttendanceMarker() {
                     type: 'holiday',
                     totalStudents: students.length
                 })
-
-                // Clear any individual records for this date if they exist? 
-                // Ideally, we shouldn't have any if it was marked holiday on specific date. 
-                // But if we toggle holiday, we might want to delete them. 
-                // For simplicity/safety, we just mark summary as holiday. 
-                // But query logic counts sessions based on individual records usually.
-                // Actually, my stats logic used `attendance` collection sessions. 
-                // If I don't write to `attendance` collection for holidays, they won't count as sessions. Correct.
-
                 await batch.commit()
                 setExistingAttendance(true)
                 toast.success("Marked as Holiday")
@@ -238,32 +225,46 @@ export function AttendanceMarker() {
                 return
             }
 
-            // Normal Attendance
-            students.forEach(student => {
-                const status = attendanceState[student.id] || 'present'
-                const recordId = `${dateStr}_${student.id}`
-                const ref = doc(db, "attendance", recordId)
+            // Normal Attendance - Batch Chunking
+            // limit is 500, keeping it safe at 400
+            const BATCH_SIZE = 400
+            const chunks = []
 
-                batch.set(ref, {
-                    dateStr,
-                    date: Timestamp.fromDate(date),
-                    studentId: student.id,
-                    studentName: student.name,
-                    studentUniqueId: student.uniqueId || '',
-                    status: status,
-                    markedBy: user.uid,
-                    timestamp
+            for (let i = 0; i < students.length; i += BATCH_SIZE) {
+                chunks.push(students.slice(i, i + BATCH_SIZE))
+            }
+
+            // Process student batches
+            for (const chunk of chunks) {
+                const batch = writeBatch(db)
+                chunk.forEach(student => {
+                    const status = attendanceState[student.id] || 'present'
+                    const recordId = `${dateStr}_${student.id}`
+                    const ref = doc(db, "attendance", recordId)
+
+                    batch.set(ref, {
+                        dateStr,
+                        date: Timestamp.fromDate(date),
+                        studentId: student.id,
+                        studentName: student.name,
+                        studentUniqueId: student.uniqueId || '',
+                        status: status,
+                        markedBy: user.uid,
+                        timestamp
+                    })
                 })
-            })
+                await batch.commit()
+            }
 
-            // Create summary document
+            // Final step: Update Summary
+            const summaryBatch = writeBatch(db)
             const summaryRef = doc(db, "attendance_summaries", dateStr)
             const presentCount = Object.values(attendanceState).filter(s => s === 'present').length
             const lateCount = Object.values(attendanceState).filter(s => s === 'late').length
             const leaveCount = Object.values(attendanceState).filter(s => s === 'leave').length
             const absentCount = students.length - presentCount - lateCount - leaveCount
 
-            batch.set(summaryRef, {
+            summaryBatch.set(summaryRef, {
                 dateStr,
                 date: Timestamp.fromDate(date),
                 markedBy: user.uid,
@@ -280,7 +281,8 @@ export function AttendanceMarker() {
                 location: classDetails.location
             })
 
-            await batch.commit()
+            await summaryBatch.commit()
+
             setExistingAttendance(true)
             await fetchStudents() // Refresh to update "Attendance %" and counts immediately
             toast.success("Attendance submitted successfully")

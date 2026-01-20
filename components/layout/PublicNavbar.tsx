@@ -42,7 +42,7 @@ export const PublicNavbar = () => {
     <>
       <nav className="bg-background relative z-50">
         <div className="w-full max-w-[1920px] mx-auto px-6 md:px-12">
-          <div className="grid grid-cols-3 items-center h-24">
+          <div className="flex justify-between md:grid md:grid-cols-3 items-center h-24">
 
             {/* Logo Section (Left) */}
             {/* Logo Section (Left) */}
