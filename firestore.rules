@@ -6,6 +6,12 @@ service cloud.firestore {
     // - PUBLIC READ: Allow unauthenticated users to read user profiles (for public member pages)
     // - Users can read/write their own document
     // - Admins can read/write any user document (needed for Invite Member)
+    // System settings (Maintenance Mode) - Publicly readable
+    match /system/settings {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /users/{userId} {
       // Allow public read access for member profiles (required for /members/[rollNumber] pages)
       allow read: if true;
