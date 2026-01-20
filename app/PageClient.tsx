@@ -139,7 +139,8 @@ export default function PageClient({ galleryImages }: PageClientProps) {
                         <HeroScrollAnimation triggerY={50} xDistance={600}>
                             <div className="flex flex-col items-center text-center md:items-start md:text-left">
                                 {/* Logo */}
-                                <div className="mb-6 animate-fade-in-up md:pl-1 mx-auto md:mx-0">
+                                {/* Logo with Shloka */}
+                                <div className="mb-6 animate-fade-in-up md:pl-1 mx-auto md:mx-0 flex items-center justify-center md:justify-start gap-5">
                                     <Image
                                         src="/logo.png"
                                         alt="RAIoT Logo"
@@ -148,6 +149,11 @@ export default function PageClient({ galleryImages }: PageClientProps) {
                                         className="w-20 h-20 md:w-[90px] md:h-[90px] object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]"
                                         priority
                                     />
+                                    <div className="flex flex-col justify-center h-[90px]">
+                                        <p className="text-4xl md:text-5xl font-black text-white tracking-wide font-sans drop-shadow-[0_0_15px_rgba(255,255,255,0.6)] leading-none mt-2">
+                                            यत्र ज्ञानं, तत्र सृष्टिः।
+                                        </p>
+                                    </div>
                                 </div>
 
                                 {/* Headings */}

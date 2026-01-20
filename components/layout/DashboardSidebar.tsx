@@ -25,9 +25,13 @@ import {
   FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
+import { Loader2, Construction } from "lucide-react";
 
 export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
   const { user, logout } = useAuth();
+  const { isMaintenanceMode, toggleMaintenanceMode, loading: maintenanceLoading } = useMaintenanceMode();
   const pathname = usePathname();
 
   const handleLogout = async () => {
@@ -168,6 +172,29 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
                   </a>
                 );
               })}
+            </div>
+
+            <div className="pt-2 mt-2 md:pt-4 md:mt-4 border-t px-2">
+              <div className="flex items-center justify-between p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <Construction className="h-4 w-4 text-red-500 shrink-0" />
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] md:text-sm font-semibold text-red-500 truncate">Maintenance</span>
+                    <span className="text-[8px] md:text-[10px] text-muted-foreground truncate">
+                      {isMaintenanceMode ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                </div>
+                {maintenanceLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                ) : (
+                  <Switch
+                    checked={isMaintenanceMode}
+                    onCheckedChange={toggleMaintenanceMode}
+                    className="bg-red-500/20 data-[state=checked]:bg-red-500"
+                  />
+                )}
+              </div>
             </div>
           </>
         )}

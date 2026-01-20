@@ -131,7 +131,9 @@ export function AttendanceMarker() {
                     collection(db, "attendance"),
                     where("dateStr", "==", dateStr)
                 )
+                console.log(`Checking attendance for ${dateStr}...`)
                 const snapshot = await getDocs(q)
+                console.log(`Found ${snapshot.size} records for ${dateStr}`)
 
                 // Prepare defaults (all present)
                 const defaults: Record<string, 'present' | 'absent' | 'late' | 'leave'> = {}
@@ -140,6 +142,7 @@ export function AttendanceMarker() {
                 // First check if it's a holiday
                 const summaryDoc = await getDoc(doc(db, "attendance_summaries", dateStr))
                 if (summaryDoc.exists()) {
+                    console.log("Found summary doc:", summaryDoc.data())
                     const data = summaryDoc.data()
                     if (data.type === 'holiday') {
                         setIsHoliday(true)
@@ -154,12 +157,14 @@ export function AttendanceMarker() {
                         location: data.location || ''
                     })
                 } else {
+                    console.log("No summary doc found for", dateStr)
                     setIsHoliday(false)
                     // Reset details for new date
                     setClassDetails({ subject: '', timeRange: '', location: '' })
                 }
 
                 if (!snapshot.empty) {
+                    console.log(`Loading existing attendance state for ${snapshot.size} students...`)
                     setExistingAttendance(true)
                     // Load existing state
                     const existing: Record<string, 'present' | 'absent' | 'late' | 'leave'> = {}
@@ -201,6 +206,11 @@ export function AttendanceMarker() {
 
     const handleSubmit = async () => {
         if (!date || !user) return
+
+        if (students.length === 0) {
+            toast.error("No eligible students found to mark attendance.")
+            return
+        }
 
         try {
             setSubmitting(true)
@@ -287,9 +297,9 @@ export function AttendanceMarker() {
             setExistingAttendance(true)
             await fetchStudents() // Refresh to update "Attendance %" and counts immediately
             toast.success("Attendance submitted successfully")
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error submitting attendance:", error)
-            toast.error("Failed to submit attendance")
+            toast.error(`Failed to submit: ${error.message || "Unknown error"}`)
         } finally {
             setSubmitting(false)
         }

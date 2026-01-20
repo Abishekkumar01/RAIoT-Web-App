@@ -14,6 +14,7 @@ import Footer from "@/components/layout/Footer";
 import { RoutePrefetcher } from "@/components/utils/RoutePrefetcher";
 
 import TechCursor from "@/components/ui/TechCursor";
+import MaintenanceGuard from "@/components/auth/MaintenanceGuard";
 
 // Google font
 const inter = Inter({ subsets: ["latin"] });
@@ -55,14 +56,16 @@ export default function RootLayout({
           {/* AuthProvider wraps your app's routes */}
           <AuthProvider>
             <LoaderProvider>
-              {children}
-              {/* WhatsApp Help Desk Floating Button */}
-              <WhatsAppButton />
-              {/* Tech Themed Scrollbars */}
-              <TechScrollbar orientation="vertical" />
-              <TechScrollbar orientation="horizontal" />
-              <RoutePrefetcher />
-              <Footer />
+              <MaintenanceGuard>
+                {children}
+                {/* WhatsApp Help Desk Floating Button */}
+                <WhatsAppButton />
+                {/* Tech Themed Scrollbars */}
+                <TechScrollbar orientation="vertical" />
+                <TechScrollbar orientation="horizontal" />
+                <RoutePrefetcher />
+                <Footer />
+              </MaintenanceGuard>
 
               {/* Elements that should stay 1:1 (Outside Zoom) */}
               <Toaster />
