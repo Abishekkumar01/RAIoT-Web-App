@@ -1,4 +1,5 @@
 "use client";
+import React from 'react';
 
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
@@ -28,7 +29,13 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
     const { user, loading: authLoading } = useAuth();
     const pathname = usePathname();
 
-    if (maintenanceLoading || authLoading) {
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted || maintenanceLoading || authLoading) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />

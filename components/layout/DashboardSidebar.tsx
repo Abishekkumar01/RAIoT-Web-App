@@ -144,7 +144,7 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
           );
         })}
 
-        {(user?.role === "admin" || user?.role === "superadmin") && (
+        {["admin", "superadmin", "president", "vice_president"].includes(user?.role || "") && (
           <>
             <div className="pt-2 mt-2 md:pt-4 md:mt-4 border-t">
               <div className="px-2 md:px-3 py-1 md:py-2 mb-1 md:mb-2">
