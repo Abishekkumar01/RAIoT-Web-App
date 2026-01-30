@@ -68,8 +68,10 @@ export default function RootLayout({
               </MaintenanceGuard>
 
               {/* Elements that should stay 1:1 (Outside Zoom) */}
-              <Toaster />
-              <SonnerToaster position="bottom-right" richColors />
+              <div>
+                <Toaster />
+                <SonnerToaster position="bottom-right" richColors />
+              </div>
             </LoaderProvider>
           </AuthProvider>
         </ThemeProvider>
