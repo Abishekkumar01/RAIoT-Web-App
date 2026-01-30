@@ -6,23 +6,19 @@ import gsap from "gsap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, User, ArrowRight, Loader2, Sparkles, Hexagon, AtSign, Hash } from "lucide-react";
+import { Mail, User, ArrowRight, Loader2, Sparkles, Hexagon, AtSign, MessageSquare } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/contexts/AuthContext";
 import { toast } from "sonner";
 
 export default function PreJoinExperience() {
-    const { signup } = useAuth();
-    const router = useRouter();
     const [viewState, setViewState] = useState<'INTRO' | 'GALAXY' | 'FORM'>('INTRO');
     const [inputText, setInputText] = useState("");
     const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
+    const [message, setMessage] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
     const [showGalaxyInput, setShowGalaxyInput] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
 
     // ... refs ...
 
@@ -30,26 +26,43 @@ export default function PreJoinExperience() {
 
     // ... animations ...
 
-    const handleSignup = async () => {
-        if (!inputText || !email || !password || !confirmPassword) {
+    const handleSendMessage = async () => {
+        if (!inputText || !email || !message) {
             toast.error("Please fill in all fields.");
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            toast.error("Passwords do not match.");
             return;
         }
 
         setIsProcessing(true);
         try {
-            await signup(email, password, inputText, 'guest');
-            toast.success("Account created successfully! Redirecting...");
-            router.push('/dashboard');
-            // Don't set isProcessing(false) here to prevent UI flickering before navigation
+            const response = await fetch("https://api.web3forms.com/submit", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify({
+                    access_key: "de848823-c7ca-41c2-bb0f-82548e9c718e",
+                    name: inputText,
+                    email: email,
+                    message: `New message from ${inputText}:\n\n${message}`,
+                    subject: `Contact Form: New Message from ${inputText}`,
+                    from_name: "RAIoT Website"
+                }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                toast.success("Message sent successfully!");
+                setSubmitted(true);
+            } else {
+                console.error("Web3Forms error:", result);
+                toast.error("Something went wrong. It might be an invalid access key or rate limit.");
+            }
         } catch (error: any) {
-            console.error("Signup error:", error);
-            toast.error(error.message || "Failed to create account.");
+            console.error("Submission error:", error);
+            toast.error("Failed to send message.");
+        } finally {
             setIsProcessing(false);
         }
     };
@@ -521,124 +534,143 @@ export default function PreJoinExperience() {
             {/* VIEW 3: CREATE ACCOUNT FORM */}
             {viewState === 'FORM' && (
                 <div ref={formRef} className="z-20 w-full max-w-lg px-4 animate-fade-in-up scale-[0.85] md:scale-100 origin-center">
-                    <div className="bg-black/95 backdrop-blur-xl border border-cyan-500/30 p-1 rounded-sm shadow-[0_0_40px_rgba(6,182,212,0.1)]">
-                        <div className="bg-black border border-white/5 p-4 md:p-8 relative overflow-hidden">
-                            {/* Decorative Corners */}
-                            <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-cyan-500"></div>
-                            <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-cyan-500"></div>
-                            <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-cyan-500"></div>
-                            <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-cyan-500"></div>
+                    {/* CYBER-HUD CONTAINER */}
+                    <div className="relative group">
+                        {/* GLOWING BACKDROP */}
+                        <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/20 via-blue-600/20 to-cyan-500/20 blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-1000" />
 
-                            {/* Header */}
-                            <div className="flex items-center justify-between mb-4 md:mb-8">
-                                <div className="flex items-center gap-2 md:gap-3">
-                                    <div className="w-8 h-8 md:w-10 md:h-10 rounded bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.5)]">
-                                        <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-white" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-sm md:text-xl font-bold text-white font-orbitron tracking-widest leading-none">GUEST ACCESS PORTAL</h2>
-                                        <p className="text-cyan-500/60 text-[8px] md:text-[10px] font-mono mt-0.5 md:mt-1 uppercase tracking-[0.2em]">Authorized Guest Entry</p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-1 md:gap-1.5 opacity-50">
-                                    <div className="w-1 h-1 rounded-full bg-cyan-400"></div>
-                                    <div className="w-1 h-1 rounded-full bg-cyan-400"></div>
-                                    <div className="w-1 h-1 rounded-full bg-cyan-400"></div>
-                                </div>
-                            </div>
+                        {/* MAIN STRUCTURE WITH CLIPPED CORNERS */}
+                        <div className="relative bg-black/90 backdrop-blur-xl p-1" style={{ clipPath: 'polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)' }}>
+                            {/* BORDER ACCENTS (Pseudo-borders since real borders don't follow clip-path) */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/50 to-blue-600/50" style={{ zIndex: -1 }} />
+                            <div className="absolute inset-[1px] bg-black" style={{ clipPath: 'polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)' }} />
 
-
-
-                            {/* Form Fields */}
-                            <div className="space-y-3 md:space-y-6">
-                                <div className="space-y-1 md:space-y-2 group">
-                                    <Label className="text-cyan-500 text-[8px] md:text-[10px] font-bold font-orbitron uppercase tracking-widest pl-1 group-focus-within:text-cyan-300 transition-colors">Full Name</Label>
-                                    <div className="flex h-9 md:h-12 bg-black border border-white/10 focus-within:border-cyan-500 transition-all duration-300 hover:border-white/20">
-                                        <div className="w-9 md:w-12 flex items-center justify-center border-r border-white/10 group-focus-within:border-cyan-500/50 group-focus-within:bg-cyan-950/20 transition-colors">
-                                            <Hexagon className="w-4 h-4 md:w-5 md:h-5 text-gray-600 group-focus-within:text-cyan-400 transition-colors" />
-                                        </div>
-                                        <input
-                                            autoComplete="off"
-                                            placeholder="John Doe"
-                                            className="flex-1 bg-transparent px-2 md:px-4 text-white text-xs md:text-sm outline-none placeholder:text-gray-800 font-mono tracking-wide"
-                                            value={inputText}
-                                            onChange={(e) => setInputText(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1 md:space-y-2 group">
-                                    <Label className="text-cyan-500 text-[8px] md:text-[10px] font-bold font-orbitron uppercase tracking-widest pl-1 group-focus-within:text-cyan-300 transition-colors">Email Address</Label>
-                                    <div className="flex h-9 md:h-12 bg-black border border-white/10 focus-within:border-cyan-500 transition-all duration-300 hover:border-white/20">
-                                        <div className="w-9 md:w-12 flex items-center justify-center border-r border-white/10 group-focus-within:border-cyan-500/50 group-focus-within:bg-cyan-950/20 transition-colors">
-                                            <AtSign className="w-4 h-4 md:w-5 md:h-5 text-gray-600 group-focus-within:text-cyan-400 transition-colors" />
-                                        </div>
-                                        <input
-                                            placeholder="your.email@example.com"
-                                            type="email"
-                                            autoComplete="off"
-                                            className="flex-1 bg-transparent px-2 md:px-4 text-white text-xs md:text-sm outline-none placeholder:text-gray-800 font-mono tracking-wide"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-2 md:gap-4">
-                                    <div className="space-y-1 md:space-y-2 group">
-                                        <Label className="text-cyan-500 text-[8px] md:text-[10px] font-bold font-orbitron uppercase tracking-widest pl-1 group-focus-within:text-cyan-300 transition-colors">Password</Label>
-                                        <div className="flex h-9 md:h-12 bg-black border border-white/10 focus-within:border-cyan-500 transition-all duration-300 hover:border-white/20">
-                                            <div className="w-9 md:w-12 flex items-center justify-center border-r border-white/10 group-focus-within:border-cyan-500/50 group-focus-within:bg-cyan-950/20 transition-colors">
-                                                <Hash className="w-4 h-4 md:w-5 md:h-5 text-gray-600 group-focus-within:text-cyan-400 transition-colors" />
+                            {/* CONTENT AREA */}
+                            <div className="relative p-6 md:p-8 bg-grid-white/[0.02]">
+                                {submitted ? (
+                                    <div className="text-center flex flex-col items-center justify-center min-h-[400px]">
+                                        <div className="w-24 h-24 mb-6 relative">
+                                            <div className="absolute inset-0 animate-ping rounded-full bg-cyan-500/20"></div>
+                                            <div className="absolute inset-0 rounded-full border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                                                <Sparkles className="w-10 h-10 text-cyan-400" />
                                             </div>
-                                            <input
-                                                placeholder="••••••"
-                                                type="password"
-                                                autoComplete="new-password"
-                                                className="flex-1 bg-transparent px-2 md:px-4 text-white text-xs md:text-sm outline-none placeholder:text-gray-800 font-mono tracking-widest"
-                                                value={password}
-                                                onChange={(e) => setPassword(e.target.value)}
-                                            />
                                         </div>
+                                        <h2 className="text-2xl md:text-3xl font-bold text-white font-orbitron tracking-widest mb-2 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]">TRANSMISSION SENT</h2>
+                                        <p className="text-cyan-500/80 font-mono text-xs md:text-sm tracking-widest uppercase mb-8">SECURE CHANNEL CONFIRMED</p>
+                                        <Button
+                                            onClick={() => {
+                                                setSubmitted(false);
+                                                setMessage("");
+                                            }}
+                                            className="bg-cyan-950/30 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 font-bold tracking-widest px-8 py-6 font-orbitron transition-all relative z-50 cursor-pointer pointer-events-auto hover:shadow-[0_0_20px_rgba(6,182,212,0.2)] skew-x-[-10deg]"
+                                        >
+                                            <span className="skew-x-[10deg]">SEND ANOTHER</span>
+                                        </Button>
                                     </div>
-
-                                    <div className="space-y-1 md:space-y-2 group">
-                                        <Label className="text-cyan-500 text-[8px] md:text-[10px] font-bold font-orbitron uppercase tracking-widest pl-1 group-focus-within:text-cyan-300 transition-colors">Confirm</Label>
-                                        <div className="flex h-9 md:h-12 bg-black border border-white/10 focus-within:border-cyan-500 transition-all duration-300 hover:border-white/20">
-                                            <div className="w-9 md:w-12 flex items-center justify-center border-r border-white/10 group-focus-within:border-cyan-500/50 group-focus-within:bg-cyan-950/20 transition-colors">
-                                                <Hash className="w-4 h-4 md:w-5 md:h-5 text-gray-600 group-focus-within:text-cyan-400 transition-colors" />
-                                            </div>
-                                            <input
-                                                placeholder="••••••"
-                                                type="password"
-                                                autoComplete="new-password"
-                                                className="flex-1 bg-transparent px-2 md:px-4 text-white text-xs md:text-sm outline-none placeholder:text-gray-800 font-mono tracking-widest"
-                                                value={confirmPassword}
-                                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <Button
-                                onClick={handleSignup}
-                                disabled={isProcessing}
-                                className="w-full h-10 md:h-14 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm md:text-lg mt-4 md:mt-8 rounded-none border border-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] tracking-widest font-orbitron flex items-center justify-center gap-2 group transition-all duration-300">
-                                {isProcessing ? (
-                                    <>CREATING ACCOUNT <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" /></>
                                 ) : (
-                                    <>SIGN UP <ArrowRight className="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" /></>
-                                )}
-                            </Button>
+                                    <>
+                                        {/* DECORATIVE TOP BAR */}
+                                        <div className="flex justify-between items-start mb-8 border-b border-white/10 pb-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-cyan-950/30 border border-cyan-500/30 flex items-center justify-center relative overflow-hidden group-hover:border-cyan-500/60 transition-colors">
+                                                    <div className="absolute inset-0 bg-cyan-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                                                    <MessageSquare className="w-6 h-6 text-cyan-400 relative z-10" />
+                                                </div>
+                                                <div>
+                                                    <h2 className="text-xl font-bold text-white font-orbitron tracking-widest leading-none">CONTACT US</h2>
+                                                    <p className="text-cyan-500/60 text-[10px] font-mono mt-1 uppercase tracking-[0.2em]">Send us a message directly</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-1 items-end opacity-50">
+                                                <div className="w-16 h-[2px] bg-cyan-500/50"></div>
+                                                <div className="w-8 h-[2px] bg-cyan-500/30"></div>
+                                            </div>
+                                        </div>
 
-                            <div className="border-t border-white/10 mt-4 md:mt-8 pt-3 md:pt-6 text-center">
-                                <Link href="/auth/login?type=guest" className="inline-flex flex-col items-center group">
-                                    <span className="text-[8px] md:text-[10px] text-gray-600 font-mono uppercase tracking-widest mb-1 group-hover:text-cyan-500/70 transition-colors">Already have an account?</span>
-                                    <span className="text-cyan-400 group-hover:text-cyan-300 font-bold tracking-widest font-orbitron transition-all flex items-center gap-2 text-xs md:text-sm">
-                                        <span className="text-[10px] md:text-xs opacity-50 group-hover:translate-x-1 transition-transform">{`>>`}</span> LOG IN
-                                    </span>
-                                </Link>
+                                        {/* INPUT FIELDS */}
+                                        <div className="space-y-5">
+                                            <div className="space-y-1 group">
+                                                <div className="flex justify-between text-[10px] text-cyan-500/70 font-mono uppercase tracking-widest px-1">
+                                                    <span>Name</span>
+                                                    <span className="opacity-0 group-focus-within:opacity-100 transition-opacity text-cyan-400">Targeting...</span>
+                                                </div>
+                                                <div className="relative flex items-center bg-black/50 border-b border-white/20 focus-within:border-cyan-500 focus-within:bg-cyan-950/10 transition-all duration-300">
+                                                    <div className="w-10 flex items-center justify-center text-cyan-600/50">
+                                                        <Hexagon className="w-4 h-4" />
+                                                    </div>
+                                                    <input
+                                                        autoComplete="off"
+                                                        placeholder="Your Name"
+                                                        className="w-full bg-transparent py-3 pr-4 text-white placeholder-white/20 font-mono text-sm focus:outline-none"
+                                                        value={inputText}
+                                                        onChange={(e) => setInputText(e.target.value)}
+                                                    />
+                                                    <div className="absolute bottom-0 left-0 h-[1px] bg-cyan-500 w-0 group-focus-within:w-full transition-all duration-500" />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1 group">
+                                                <div className="flex justify-between text-[10px] text-cyan-500/70 font-mono uppercase tracking-widest px-1">
+                                                    <span>Email</span>
+                                                    <span className="opacity-0 group-focus-within:opacity-100 transition-opacity text-cyan-400">Locking...</span>
+                                                </div>
+                                                <div className="relative flex items-center bg-black/50 border-b border-white/20 focus-within:border-cyan-500 focus-within:bg-cyan-950/10 transition-all duration-300">
+                                                    <div className="w-10 flex items-center justify-center text-cyan-600/50">
+                                                        <AtSign className="w-4 h-4" />
+                                                    </div>
+                                                    <input
+                                                        placeholder="name@example.com"
+                                                        type="email"
+                                                        autoComplete="off"
+                                                        className="w-full bg-transparent py-3 pr-4 text-white placeholder-white/20 font-mono text-sm focus:outline-none"
+                                                        value={email}
+                                                        onChange={(e) => setEmail(e.target.value)}
+                                                    />
+                                                    <div className="absolute bottom-0 left-0 h-[1px] bg-cyan-500 w-0 group-focus-within:w-full transition-all duration-500" />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1 group">
+                                                <div className="flex justify-between text-[10px] text-cyan-500/70 font-mono uppercase tracking-widest px-1">
+                                                    <span>Message</span>
+                                                    <span className="opacity-0 group-focus-within:opacity-100 transition-opacity text-cyan-400">Uploading...</span>
+                                                </div>
+                                                <div className="relative flex items-start bg-black/50 border-b border-white/20 focus-within:border-cyan-500 focus-within:bg-cyan-950/10 transition-all duration-300">
+                                                    <div className="w-10 pt-3 flex justify-center text-cyan-600/50">
+                                                        <MessageSquare className="w-4 h-4" />
+                                                    </div>
+                                                    <textarea
+                                                        placeholder="Write your message here..."
+                                                        rows={4}
+                                                        className="w-full bg-transparent py-3 pr-4 text-white placeholder-white/20 font-mono text-sm focus:outline-none resize-none"
+                                                        value={message}
+                                                        onChange={(e) => setMessage(e.target.value)}
+                                                    />
+                                                    <div className="absolute bottom-0 left-0 h-[1px] bg-cyan-500 w-0 group-focus-within:w-full transition-all duration-500" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            onClick={handleSendMessage}
+                                            disabled={isProcessing}
+                                            className="w-full h-14 mt-8 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-lg rounded-none shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] tracking-widest font-orbitron flex items-center justify-center gap-2 group transition-all duration-300 relative overflow-hidden"
+                                            style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}
+                                        >
+                                            <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
+                                            {isProcessing ? (
+                                                <>SENDING <Loader2 className="w-5 h-5 animate-spin" /></>
+                                            ) : (
+                                                <>SEND MESSAGE <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>
+                                            )}
+                                        </Button>
+
+                                        <div className="mt-6 flex justify-between items-center text-[10px] text-gray-500 font-mono">
+                                            <span>ENCRYPTED_SHA256</span>
+                                            <span className="flex items-center gap-1 text-cyan-500/50"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> NETWORK ONLINE</span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
