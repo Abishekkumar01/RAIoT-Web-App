@@ -35,7 +35,10 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
         setMounted(true);
     }, []);
 
-    if (!mounted || maintenanceLoading || authLoading) {
+    // Prevent hydration mismatch by returning null on server/initial render
+    if (!mounted) return null;
+
+    if (maintenanceLoading || authLoading) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
