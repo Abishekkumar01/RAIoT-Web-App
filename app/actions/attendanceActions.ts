@@ -11,8 +11,8 @@ function serialize(obj: any) {
 
 // 1. Get Attendance for a specific date
 export async function getAttendanceByDate(dateStr: string) {
-    await dbConnect();
     try {
+        await dbConnect();
         const doc = await Attendance.findOne({ date: dateStr });
         if (!doc) return { success: true, data: null };
         return { success: true, data: serialize(doc) };
@@ -32,8 +32,8 @@ export async function saveAttendance(data: {
     type: 'regular' | 'holiday';
     markedBy: string;
 }) {
-    await dbConnect();
     try {
+        await dbConnect();
         // Upsert: Update if exists, Insert if not
         const { date, ...updateData } = data;
         const doc = await Attendance.findOneAndUpdate(
@@ -50,8 +50,8 @@ export async function saveAttendance(data: {
 
 // 3. Fetch ALL Attendance (for Export)
 export async function getAllAttendanceRecords() {
-    await dbConnect();
     try {
+        await dbConnect();
         // Fetch all documents, sorted by date
         const docs = await Attendance.find({}).sort({ date: 1 });
 
@@ -95,8 +95,8 @@ export async function getAllAttendanceRecords() {
 
 // 4. Clear ALL Attendance (after export)
 export async function deleteAllAttendanceData() {
-    await dbConnect();
     try {
+        await dbConnect();
         await Attendance.deleteMany({});
         return { success: true, message: 'All attendance history cleared.' };
     } catch (error: any) {

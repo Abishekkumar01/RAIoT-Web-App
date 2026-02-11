@@ -32,8 +32,8 @@ function serializeTrainee(trainee: any) {
 }
 
 export async function getAllTrainees() {
-    await dbConnect();
     try {
+        await dbConnect();
         const trainees = await Trainee.find({}).sort({ createdAt: -1 });
         return { success: true, data: trainees.map(serializeTrainee) };
     } catch (error: any) {
@@ -43,8 +43,8 @@ export async function getAllTrainees() {
 }
 
 export async function updateTraineeStatus(id: string, status: string) {
-    await dbConnect();
     try {
+        await dbConnect();
         const trainee = await Trainee.findByIdAndUpdate(
             id,
             { status },
@@ -62,8 +62,8 @@ export async function updateTraineeStatus(id: string, status: string) {
 }
 
 export async function deleteTrainee(id: string) {
-    await dbConnect();
     try {
+        await dbConnect();
         const trainee = await Trainee.findByIdAndDelete(id);
         if (!trainee) {
             return { success: false, error: 'Trainee not found' };
@@ -77,8 +77,8 @@ export async function deleteTrainee(id: string) {
 }
 
 export async function deleteAllTrainees() {
-    await dbConnect();
     try {
+        await dbConnect();
         // This is a destructive action!
         await Trainee.deleteMany({});
         revalidatePath('/admin/trainees');
