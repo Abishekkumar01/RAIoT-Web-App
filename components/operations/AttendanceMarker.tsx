@@ -27,6 +27,7 @@ import { db } from "@/lib/firebase"
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore"
 import { toast } from "sonner"
 import { getAttendanceByDate, saveAttendance, getAllAttendanceRecords, deleteAllAttendanceData } from '@/app/actions/attendanceActions';
+import { testConnection } from '@/app/actions/testConnection';
 import * as XLSX from 'xlsx';
 import {
     Dialog,
@@ -305,7 +306,24 @@ export function AttendanceMarker() {
         <div className="space-y-6">
 
             {/* Top Bar with Export/Clear */}
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-end mb-4 gap-2">
+                <Button
+                    variant="outline"
+                    className="gap-2 border-yellow-500/50 hover:bg-yellow-500/10 text-yellow-600"
+                    onClick={async () => {
+                        toast.info("Testing connection...");
+                        const result = await testConnection();
+                        if (result.success) {
+                            toast.success(result.message); // Connected!
+                        } else {
+                            toast.error(result.error || "Connection failed");
+                            console.error(result);
+                        }
+                    }}
+                >
+                    <Database className="h-4 w-4" />
+                    Test Connection
+                </Button>
                 <Button
                     variant="outline"
                     className="gap-2 border-primary/20 hover:bg-primary/10"
