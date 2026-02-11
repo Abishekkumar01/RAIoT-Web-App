@@ -3,18 +3,25 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, doc, onSnapshot, updateDoc, setDoc, query, orderBy, deleteDoc } from 'firebase/firestore';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import {
+    getAllTrainees,
+    updateTraineeStatus,
+    deleteTrainee
+} from '@/app/actions/adminTraineeActions';
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle2, XCircle, Search, Calendar, Mail, Phone, BookOpen, User, Eye, Download, ExternalLink, Trash2, RotateCcw } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Search, Mail, Phone, User, Eye, Download as DownloadIcon, Trash2, RotateCcw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import * as XLSX from 'xlsx';
-import { Download as DownloadIcon } from 'lucide-react';
+import Image from 'next/image';
+import { ExternalLink } from 'lucide-react';
 
 const shortenInterest = (interest: string) => {
     const map: Record<string, string> = {
@@ -25,40 +32,44 @@ const shortenInterest = (interest: string) => {
     };
     return map[interest] || interest;
 };
-import Image from 'next/image';
 
+// Interface matching the MongoDB serialization
 interface Trainee {
     id: string;
     name: string;
     email: string;
     phoneWhatsApp: string;
     phoneCall: string;
-    department?: string; // Legacy support
-    course?: string;
+    dob?: string;
     enrollmentNo?: string;
+    course?: string;
+    department?: string;
     currentStatus?: string;
-    areaOfInterest?: string; // Legacy
     areasOfInterest?: string[];
     skills?: string;
     hobby?: string;
+    laptopSpecs?: string;
+    hasLaptop?: string;
     passportPhotoUrl?: string;
     whatsappScreenshotUrl?: string;
-    dob?: string;
     status: 'Pending' | 'Accepted' | 'Rejected' | 'Trash';
-    timestamp: any;
+    timestamp: string; // ISO string from server
 }
 
 export default function ManageTraineePage() {
     const { user } = useAuth();
     const [recruitmentOpen, setRecruitmentOpen] = useState(false);
     const [loadingSettings, setLoadingSettings] = useState(true);
+
+    // MongoDB Data State
     const [trainees, setTrainees] = useState<Trainee[]>([]);
     const [loadingTrainees, setLoadingTrainees] = useState(true);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
     const [viewMode, setViewMode] = useState<'Active' | 'Trash'>('Active');
 
-    // Fetch Recruitment Settings
+    // 1. Fetch Recruitment Settings (Keep in Firestore as requested/consistent)
     useEffect(() => {
         const unsubscribe = onSnapshot(doc(db, 'settings', 'recruitment'), (docSnap) => {
             if (docSnap.exists()) {
@@ -74,21 +85,20 @@ export default function ManageTraineePage() {
         return () => unsubscribe();
     }, []);
 
-    // Fetch Trainees
+    // 2. Fetch Trainees from MongoDB (via Server Action)
+    const fetchTrainees = async () => {
+        setLoadingTrainees(true);
+        const result = await getAllTrainees();
+        if (result.success && result.data) {
+            setTrainees(result.data as Trainee[]);
+        } else {
+            toast.error("Failed to load trainees from MongoDB");
+        }
+        setLoadingTrainees(false);
+    };
+
     useEffect(() => {
-        const q = query(collection(db, 'trainees'), orderBy('timestamp', 'desc'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const traineeList = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            } as Trainee));
-            setTrainees(traineeList);
-            setLoadingTrainees(false);
-        }, (error) => {
-            console.error("Error fetching trainees:", error);
-            setLoadingTrainees(false);
-        });
-        return () => unsubscribe();
+        fetchTrainees();
     }, []);
 
     const toggleRecruitment = async (checked: boolean) => {
@@ -102,17 +112,21 @@ export default function ManageTraineePage() {
         }
     };
 
+    // Update Status Action
     const updateStatus = async (traineeId: string, newStatus: 'Accepted' | 'Rejected' | 'Trash' | 'Pending') => {
         try {
-            await updateDoc(doc(db, 'trainees', traineeId), {
-                status: newStatus
-            });
-            const action = newStatus === 'Trash' ? 'moved to Trash' : newStatus;
-            toast.success(`Trainee ${action} successfully`);
+            const result = await updateTraineeStatus(traineeId, newStatus);
+            if (result.success) {
+                const action = newStatus === 'Trash' ? 'moved to Trash' : newStatus;
+                toast.success(`Trainee ${action} successfully`);
+                // Update local state
+                setTrainees(prev => prev.map(t => t.id === traineeId ? { ...t, status: newStatus } : t));
 
-            if (selectedTrainee && selectedTrainee.id === traineeId) {
-                // If viewing details and moved to trash, maybe close it or update status
-                setSelectedTrainee(prev => prev ? ({ ...prev, status: newStatus }) : null);
+                if (selectedTrainee && selectedTrainee.id === traineeId) {
+                    setSelectedTrainee(prev => prev ? ({ ...prev, status: newStatus }) : null);
+                }
+            } else {
+                toast.error(result.error || "Failed to update status");
             }
         } catch (error) {
             console.error("Error updating status:", error);
@@ -120,13 +134,19 @@ export default function ManageTraineePage() {
         }
     };
 
-    const deleteTrainee = async (traineeId: string) => {
+    // Delete Single Action
+    const handleDeleteTrainee = async (traineeId: string) => {
         if (!window.confirm("Are you sure? This action cannot be undone.")) return;
         try {
-            await deleteDoc(doc(db, 'trainees', traineeId));
-            toast.success("Trainee deleted permanently");
-            if (selectedTrainee && selectedTrainee.id === traineeId) {
-                setSelectedTrainee(null);
+            const result = await deleteTrainee(traineeId);
+            if (result.success) {
+                toast.success("Trainee deleted permanently");
+                setTrainees(prev => prev.filter(t => t.id !== traineeId));
+                if (selectedTrainee && selectedTrainee.id === traineeId) {
+                    setSelectedTrainee(null);
+                }
+            } else {
+                toast.error(result.error || "Failed to delete");
             }
         } catch (error) {
             console.error("Error deleting trainee:", error);
@@ -134,34 +154,41 @@ export default function ManageTraineePage() {
         }
     };
 
-    const handleExport = (status: 'Accepted' | 'Rejected') => {
-        const dataToExport = trainees
-            .filter(t => t.status === status)
-            .map(t => ({
-                Name: t.name,
-                Email: t.email,
-                'Enrollment No': t.enrollmentNo || 'N/A',
-                Course: t.course || t.department || 'N/A',
-                'Phone (Call)': t.phoneCall || 'N/A',
-                'Phone (WA)': t.phoneWhatsApp || 'N/A',
-                Interest: t.areaOfInterest || t.areasOfInterest?.join(', ') || 'N/A',
-                Status: t.status,
-                'Applied On': t.timestamp?.toDate ? new Date(t.timestamp.toDate()).toLocaleDateString() : 'N/A'
-            }));
+    // EXCEL EXPORT
+    const handleExport = (status: 'Accepted' | 'Rejected' | 'All') => {
+        // Prepare data
+        let exportData = trainees;
+        if (status !== 'All') {
+            exportData = trainees.filter(t => t.status === status);
+        }
 
-        if (dataToExport.length === 0) {
+        if (exportData.length === 0) {
             toast.error(`No ${status} trainees found to export.`);
             return;
         }
+
+        const dataToExport = exportData.map(t => ({
+            Name: t.name,
+            Email: t.email,
+            'Enrollment No': t.enrollmentNo || 'N/A',
+            Course: t.course || t.department || 'N/A',
+            'Phone (Call)': t.phoneCall || 'N/A',
+            'Phone (WA)': t.phoneWhatsApp || 'N/A',
+            Interest: t.areasOfInterest?.join(', ') || 'N/A',
+            Status: t.status,
+            'Applied On': new Date(t.timestamp).toLocaleDateString(),
+            'Laptop Specs': t.laptopSpecs || 'N/A',
+            'Has Laptop': t.hasLaptop || 'N/A'
+        }));
 
         const ws = XLSX.utils.json_to_sheet(dataToExport);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, status);
         XLSX.writeFile(wb, `Trainees_${status}_${new Date().toISOString().split('T')[0]}.xlsx`);
-        toast.success(`${status} list exported successfully!`);
+        toast.success(`Exported ${exportData.length} records!`);
     };
 
-
+    // Filter Logic
     const filteredTrainees = trainees.filter(t => {
         const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             t.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -186,36 +213,41 @@ export default function ManageTraineePage() {
                     </p>
                 </div>
 
-                <Card className={`border-l-4 transition-all duration-300 ${recruitmentOpen ? 'border-l-green-500 shadow-green-500/10' : 'border-l-destructive shadow-destructive/10'} shadow-lg`}>
-                    <CardContent className="p-4 flex items-center gap-4">
-                        <div className="space-y-0.5">
-                            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                Recruitment Status
-                            </label>
-                            <p className="text-xs text-muted-foreground">
-                                {recruitmentOpen ? 'Registrations are currently active' : 'Registrations are closed'}
-                            </p>
-                        </div>
-                        {loadingSettings ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : (
-                            <Switch
-                                checked={recruitmentOpen}
-                                onCheckedChange={toggleRecruitment}
-                                className="data-[state=checked]:bg-green-500"
-                            />
-                        )}
-                    </CardContent>
-                </Card>
+                <div className="flex gap-4 items-center">
+                    {/* Recruitment Switch (Firestore) */}
+                    <Card className={`border-l-4 transition-all duration-300 ${recruitmentOpen ? 'border-l-green-500 shadow-green-500/10' : 'border-l-destructive shadow-destructive/10'} shadow-lg`}>
+                        <CardContent className="p-3 flex items-center gap-4">
+                            <div className="space-y-0.5">
+                                <label className="text-sm font-medium leading-none">
+                                    Recruitment
+                                </label>
+                                <p className="text-xs text-muted-foreground">
+                                    {recruitmentOpen ? 'Active' : 'Closed'}
+                                </p>
+                            </div>
+                            {loadingSettings ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                                <Switch
+                                    checked={recruitmentOpen}
+                                    onCheckedChange={toggleRecruitment}
+                                    className="data-[state=checked]:bg-green-500"
+                                />
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
 
-            {/* Trainee List */}
+            {/* Trainee List Card */}
             <Card className="border-muted-foreground/20 shadow-md bg-card/50 backdrop-blur-sm">
                 <CardHeader>
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div className='flex items-center gap-2'>
+                    <div className="flex flex-col xl:flex-row justify-between items-center gap-4">
+                        <div className='flex items-center gap-2 flex-wrap'>
                             <CardTitle>Applications</CardTitle>
                             <Badge variant="secondary" className="ml-2">{filteredTrainees.length}</Badge>
+
+                            {/* View Toggles */}
                             <div className="flex bg-muted rounded-lg p-1 ml-4">
                                 <button
                                     onClick={() => setViewMode('Active')}
@@ -232,33 +264,26 @@ export default function ManageTraineePage() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                            {/* EXPORT BUTTONS */}
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-8 gap-1 text-green-600 border-green-200 hover:bg-green-50"
-                                onClick={() => handleExport('Accepted')}
+                                className="h-8 gap-1 border-primary/20 hover:bg-primary/10"
+                                onClick={() => handleExport('All')}
                             >
-                                <DownloadIcon className="h-3 w-3" /> Accepted
+                                <DownloadIcon className="h-3 w-3" /> Export All
                             </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 gap-1 text-red-600 border-red-200 hover:bg-red-50"
-                                onClick={() => handleExport('Rejected')}
-                            >
-                                <DownloadIcon className="h-3 w-3" /> Rejected
-                            </Button>
-                        </div>
 
-                        <div className="relative w-full md:w-64">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search trainees..."
-                                className="pl-8"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                            <div className="relative w-full md:w-64 ml-2">
+                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search trainees..."
+                                    className="pl-8"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
                         </div>
                     </div>
                 </CardHeader>
@@ -305,7 +330,7 @@ export default function ManageTraineePage() {
                                                         ? trainee.areasOfInterest.slice(0, 1).map(area => (
                                                             <Badge key={area} variant="outline" className="text-[10px]">{shortenInterest(area)}</Badge>
                                                         ))
-                                                        : <Badge variant="outline" className="text-[10px]">{shortenInterest(trainee.areaOfInterest || 'N/A')}</Badge>
+                                                        : <Badge variant="outline" className="text-[10px]">N/A</Badge>
                                                     }
                                                     {(trainee.areasOfInterest?.length || 0) > 1 && (
                                                         <Badge variant="outline" className="text-[10px]">+{(trainee.areasOfInterest?.length || 0) - 1}</Badge>
@@ -389,7 +414,7 @@ export default function ManageTraineePage() {
                                                                 size="sm"
                                                                 variant="ghost"
                                                                 className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
-                                                                onClick={() => deleteTrainee(trainee.id)}
+                                                                onClick={() => handleDeleteTrainee(trainee.id)}
                                                                 title="Delete Permanently"
                                                             >
                                                                 <XCircle className="h-4 w-4" />
@@ -425,7 +450,7 @@ export default function ManageTraineePage() {
                             </Badge>
                         </DialogTitle>
                         <DialogDescription>
-                            Applicant Details • Submitted on {selectedTrainee?.timestamp?.toDate ? new Date(selectedTrainee.timestamp.toDate()).toLocaleDateString() : 'N/A'}
+                            Applicant Details • Submitted on {selectedTrainee?.timestamp ? new Date(selectedTrainee.timestamp).toLocaleDateString() : 'N/A'}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -493,9 +518,6 @@ export default function ManageTraineePage() {
                                             {selectedTrainee.areasOfInterest?.map(area => (
                                                 <Badge key={area} variant="secondary">{area}</Badge>
                                             ))}
-                                            {!selectedTrainee.areasOfInterest && selectedTrainee.areaOfInterest && (
-                                                <Badge variant="secondary">{selectedTrainee.areaOfInterest}</Badge>
-                                            )}
                                         </div>
                                         {selectedTrainee.skills && (
                                             <div className="text-sm border-l-2 border-primary/20 pl-2">
@@ -513,7 +535,19 @@ export default function ManageTraineePage() {
                                 </div>
                             </div>
 
-
+                            {/* NEW: Laptop Details */}
+                            <div className="grid md:grid-cols-2 gap-6 pt-2">
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold text-xs text-muted-foreground uppercase">Laptop</h4>
+                                    <p className="text-sm">{selectedTrainee.hasLaptop || 'N/A'}</p>
+                                </div>
+                                {selectedTrainee.laptopSpecs && (
+                                    <div className="space-y-2">
+                                        <h4 className="font-semibold text-xs text-muted-foreground uppercase">Specs</h4>
+                                        <p className="text-sm">{selectedTrainee.laptopSpecs}</p>
+                                    </div>
+                                )}
+                            </div>
 
                             {/* Action Buttons for Pending */}
                             {selectedTrainee.status === 'Pending' && (
