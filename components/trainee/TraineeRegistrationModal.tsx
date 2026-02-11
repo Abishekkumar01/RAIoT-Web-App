@@ -11,11 +11,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { db, storage } from '@/lib/firebase';
+import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // Kept for reference but unused in new flow, actually we can remove specific imports or keep file clean.
 // Since we are not using storage anymore in this file, we can remove the import or leave it if other components might need it (but this is a specific file). 
 // Let's remove the import of storage functions to be clean.
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+// import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { Loader2, Upload, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -86,6 +86,7 @@ export default function TraineeRegistrationModal({
         onOpenChange?.(newOpen);
     };
 
+
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         if (!user) {
             toast.error("You must be logged in to submit.");
@@ -105,7 +106,7 @@ export default function TraineeRegistrationModal({
         }
 
         setIsSubmitting(true);
-        console.log("Submitting form (Cloudinary)...");
+        console.log("Submitting form...");
         try {
             // 1. Optimize Image
             console.log("Optimizing image...");
@@ -143,21 +144,26 @@ export default function TraineeRegistrationModal({
             const photoURL = cloudinaryData.secure_url;
             console.log("Upload Complete. URL:", photoURL);
 
-            // 3. Save Data to Firestore
-            console.log("Saving to Firestore...");
-            const dataToSave = {
+            // 3. Submit to MongoDB via Server Action
+            console.log("Submitting to MongoDB...");
+
+            // Import dynamically to avoid server-side issues in client component if checking types
+            const { submitTraineeRegistration } = await import('@/app/actions/traineeActions');
+
+            const result = await submitTraineeRegistration({
                 ...values,
                 passportPhotoUrl: photoURL,
                 status: 'Pending',
-                timestamp: serverTimestamp(),
                 userId: user.uid,
-            };
+            });
 
-            await addDoc(collection(db, 'trainees'), dataToSave);
-            console.log("Firestore Save Complete.");
+            if (result.success) {
+                toast.success(result.message);
+                handleOpenChange(false);
+            } else {
+                throw new Error(result.message);
+            }
 
-            toast.success("Application submitted successfully!");
-            handleOpenChange(false);
         } catch (error: any) {
             console.error("Error submitting registration:", error);
             toast.error(`Failed to submit: ${error.message || 'Unknown error'}`);
