@@ -312,12 +312,17 @@ export function AttendanceMarker() {
                     className="gap-2 border-yellow-500/50 hover:bg-yellow-500/10 text-yellow-600"
                     onClick={async () => {
                         toast.info("Testing connection...");
-                        const result = await testConnection();
-                        if (result.success) {
-                            toast.success(result.message); // Connected!
-                        } else {
-                            toast.error(result.error || "Connection failed");
-                            console.error(result);
+                        try {
+                            const result = await testConnection();
+                            if (result.success) {
+                                toast.success(result.message);
+                            } else {
+                                // Use alert for persistence so user can read it
+                                alert(`CONNECTION FAILED:\n\n${result.error}\n\nCheck Vercel Environment Variables.`);
+                                console.error(result);
+                            }
+                        } catch (err: any) {
+                            alert(`CRITICAL FAILURE:\n\n${err.message}`);
                         }
                     }}
                 >
