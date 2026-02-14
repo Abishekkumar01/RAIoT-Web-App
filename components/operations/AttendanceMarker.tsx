@@ -26,7 +26,7 @@ import { useAuth } from "@/lib/contexts/AuthContext"
 import { db } from "@/lib/firebase"
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore"
 import { toast } from "sonner"
-import { getAttendanceByDate, saveAttendance, getAllAttendanceRecords } from '@/app/actions/attendanceActions';
+import { getAttendanceByDate, saveAttendance, getAllAttendanceRecords, getAttendanceStats } from '@/app/actions/attendanceActions';
 import { testConnection } from '@/app/actions/testConnection';
 import * as XLSX from 'xlsx';
 import { getDatabaseStats } from '@/app/actions/storageActions';
@@ -61,7 +61,7 @@ export function AttendanceMarker() {
     const [existingAttendance, setExistingAttendance] = useState<boolean>(false)
     const [isHoliday, setIsHoliday] = useState(false)
 
-    // Class Details State (Removed from UI per request, but keeping state for compatibility if logic depends on it, but can be simplified)
+    // (Class Details State removed per request)
     const [classDetails, setClassDetails] = useState({
         subject: '',
         timeRange: '',
@@ -94,24 +94,30 @@ export function AttendanceMarker() {
     const fetchStudents = async () => {
         try {
             setLoading(true)
-            // Fetch users from FIREBASE (keep existing logic for user list)
+
+            // 1. Fetch Users from Firebase
             const q = query(collection(db, "users"), where("role", "in", ["member", "junior_developer", "senior_developer"]))
             const snapshot = await getDocs(q)
 
-            // TODO: In future, fetch stats from MongoDB if needed. For now, stats might be 0 until migrated.
-            // Simplified: Just listing students
+            // 2. Fetch Attendance Stats from MongoDB
+            const statsResult = await getAttendanceStats();
+            const statsMap = statsResult.success && statsResult.data ? statsResult.data : {};
+
             const fetched: Student[] = []
 
             snapshot.forEach((doc) => {
                 const data = doc.data()
+                const studentId = doc.id;
+                const studentStats = statsMap[studentId] || { present: 0, total: 0, rate: 0 };
+
                 fetched.push({
-                    id: doc.id, // User UID
+                    id: studentId,
                     uniqueId: data.uniqueId || data.profileData?.rollNumber || 'N/A',
                     name: data.displayName || 'Unknown',
                     batch: data.profileData?.year ? `${data.profileData.year} - ${data.profileData.branch || ''}` : 'General',
-                    attendanceRate: 0, // Placeholder
-                    presentCount: 0,
-                    totalSessions: 0
+                    attendanceRate: studentStats.rate,
+                    presentCount: studentStats.present,
+                    totalSessions: studentStats.total
                 })
             })
             setStudents(fetched)
@@ -133,7 +139,7 @@ export function AttendanceMarker() {
     // Fetch students on mount
     useEffect(() => {
         fetchStudents()
-    }, [])
+    }, [submitting]) // Re-fetch students (and stats) after submitting attendance
 
     // Check for existing attendance (MONGODB) when date changes
     useEffect(() => {
@@ -500,9 +506,14 @@ export function AttendanceMarker() {
                                                 <div className="flex items-center gap-2">
                                                     <span className={cn(
                                                         "font-bold text-xs px-2 py-0.5 rounded",
-                                                        "bg-gray-100 text-gray-500" // Reset styles as % is not calculated yet
+                                                        (student.attendanceRate || 0) >= 75 ? "bg-green-100 text-green-700" :
+                                                            (student.attendanceRate || 0) >= 50 ? "bg-yellow-100 text-yellow-700" :
+                                                                "bg-red-100 text-red-700"
                                                     )}>
-                                                        N/A
+                                                        {student.attendanceRate !== undefined ? `${student.attendanceRate}%` : '0%'}
+                                                    </span>
+                                                    <span className="text-[10px] text-muted-foreground">
+                                                        ({student.presentCount}/{student.totalSessions})
                                                     </span>
                                                 </div>
                                             </div>

@@ -104,3 +104,45 @@ export async function deleteAllAttendanceData() {
         return { success: false, error: error.message };
     }
 }
+
+// 5. Get Attendance Stats (Percentage)
+export async function getAttendanceStats() {
+    try {
+        await dbConnect();
+
+        const stats = await Attendance.aggregate([
+            { $match: { type: 'regular' } }, // Only count regular sessions
+            { $unwind: '$records' },
+            {
+                $group: {
+                    _id: '$records.studentId',
+                    presentCount: {
+                        $sum: {
+                            $cond: [{ $in: ['$records.status', ['present', 'late']] }, 1, 0]
+                        }
+                    },
+                    totalSessions: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const statsMap: Record<string, { present: number, total: number, rate: number }> = {};
+
+        stats.forEach(item => {
+            if (item._id) {
+                statsMap[item._id] = {
+                    present: item.presentCount,
+                    total: item.totalSessions,
+                    rate: item.totalSessions > 0
+                        ? parseFloat(((item.presentCount / item.totalSessions) * 100).toFixed(1))
+                        : 0
+                };
+            }
+        });
+
+        return { success: true, data: statsMap };
+    } catch (error: any) {
+        console.error('Error fetching aggregate stats:', error);
+        return { success: false, error: error.message };
+    }
+}
