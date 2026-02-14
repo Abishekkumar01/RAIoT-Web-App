@@ -1,10 +1,72 @@
+"use client"
+
+import { useState, useEffect, useRef } from "react"
+import { format } from "date-fns"
+import { Calendar as CalendarIcon, Check, Loader2, Search, AlertCircle, Download, Database } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useAuth } from "@/lib/contexts/AuthContext"
+import { db } from "@/lib/firebase"
+import { collection, getDocs, query, where, Timestamp } from "firebase/firestore"
+import { toast } from "sonner"
+import { getAttendanceByDate, saveAttendance, getAllAttendanceRecords } from '@/app/actions/attendanceActions';
+import { testConnection } from '@/app/actions/testConnection';
+import * as XLSX from 'xlsx';
 import { getDatabaseStats } from '@/app/actions/storageActions';
 
-// ... (existing imports)
+interface Student {
+    id: string
+    uniqueId: string
+    name: string
+    batch?: string
+    status?: string // Optional status for local checking
+    attendanceRate?: number
+    presentCount?: number
+    totalSessions?: number
+}
 
 export function AttendanceMarker() {
     const { user } = useAuth()
-    // ... (existing state)
+    const [date, setDate] = useState<Date | undefined>(undefined)
+    const [students, setStudents] = useState<Student[]>([])
+    const [loading, setLoading] = useState(true)
+
+    // Fix Hydration mismatch by setting date on mount
+    useEffect(() => {
+        setDate(new Date())
+    }, [])
+    const [submitting, setSubmitting] = useState(false)
+    const [searchQuery, setSearchQuery] = useState("")
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+
+    // Map of studentId -> status
+    const [attendanceState, setAttendanceState] = useState<Record<string, 'present' | 'absent' | 'late' | 'leave'>>({})
+    const [existingAttendance, setExistingAttendance] = useState<boolean>(false)
+    const [isHoliday, setIsHoliday] = useState(false)
+
+    // Class Details State (Removed from UI per request, but keeping state for compatibility if logic depends on it, but can be simplified)
+    const [classDetails, setClassDetails] = useState({
+        subject: '',
+        timeRange: '',
+        location: ''
+    })
 
     // Storage Stats State
     const [storageStats, setStorageStats] = useState({
@@ -12,8 +74,6 @@ export function AttendanceMarker() {
         estimatedBytes: 0,
         maxBytes: 512 * 1024 * 1024 // 512MB
     });
-
-    // ... (existing useEffects)
 
     // Fetch Storage Stats
     useEffect(() => {
@@ -30,7 +90,176 @@ export function AttendanceMarker() {
         fetchStats();
     }, [date, submitting]); // Refresh when date changes or after submit
 
-    // ... (existing handlers)
+
+    const fetchStudents = async () => {
+        try {
+            setLoading(true)
+            // Fetch users from FIREBASE (keep existing logic for user list)
+            const q = query(collection(db, "users"), where("role", "in", ["member", "junior_developer", "senior_developer"]))
+            const snapshot = await getDocs(q)
+
+            // TODO: In future, fetch stats from MongoDB if needed. For now, stats might be 0 until migrated.
+            // Simplified: Just listing students
+            const fetched: Student[] = []
+
+            snapshot.forEach((doc) => {
+                const data = doc.data()
+                fetched.push({
+                    id: doc.id, // User UID
+                    uniqueId: data.uniqueId || data.profileData?.rollNumber || 'N/A',
+                    name: data.displayName || 'Unknown',
+                    batch: data.profileData?.year ? `${data.profileData.year} - ${data.profileData.branch || ''}` : 'General',
+                    attendanceRate: 0, // Placeholder
+                    presentCount: 0,
+                    totalSessions: 0
+                })
+            })
+            setStudents(fetched)
+
+            // Initialize all as PRESENT by default (Green side)
+            if (!existingAttendance) {
+                const initial: Record<string, 'present' | 'absent' | 'late' | 'leave'> = {}
+                fetched.forEach(s => initial[s.id] = 'present')
+                setAttendanceState(initial)
+            }
+        } catch (error) {
+            console.error("Error fetching students:", error)
+            toast.error("Failed to load student list from users")
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // Fetch students on mount
+    useEffect(() => {
+        fetchStudents()
+    }, [])
+
+    // Check for existing attendance (MONGODB) when date changes
+    useEffect(() => {
+        const checkExisting = async () => {
+            if (!date) return
+            const dateStr = format(date, 'yyyy-MM-dd')
+
+            try {
+                // Fetch from MongoDB
+                const result = await getAttendanceByDate(dateStr);
+
+                // Prepare defaults
+                const defaults: Record<string, 'present' | 'absent' | 'late' | 'leave'> = {}
+                students.forEach(s => defaults[s.id] = 'present')
+
+                if (result.success && result.data) {
+                    const data = result.data;
+                    console.log("Found MongoDB record:", data);
+
+                    setExistingAttendance(true);
+
+                    // Set Holiday
+                    if (data.type === 'holiday') {
+                        setIsHoliday(true);
+                        setAttendanceState(defaults); // Default state behind holiday
+                    } else {
+                        setIsHoliday(false);
+                        // Set Class Details
+                        setClassDetails({
+                            subject: data.subject || '',
+                            timeRange: data.timeRange || '',
+                            location: data.location || ''
+                        });
+
+                        // Set Student Statuses
+                        const existing: Record<string, any> = {};
+                        data.records.forEach((rec: any) => {
+                            existing[rec.studentId] = rec.status;
+                        });
+                        setAttendanceState({ ...defaults, ...existing });
+                    }
+
+                } else {
+                    // No record found
+                    console.log("No MongoDB record for", dateStr);
+                    setExistingAttendance(false);
+                    setIsHoliday(false);
+                    setClassDetails({ subject: '', timeRange: '', location: '' });
+                    setAttendanceState(defaults);
+                }
+
+            } catch (error) {
+                console.error("Error checking attendance:", error)
+                toast.error("Failed to check existing attendance")
+            }
+        }
+
+        if (students.length > 0) {
+            checkExisting()
+        }
+    }, [date, students.length])
+
+    const handleStatusChange = (studentId: string, status: 'present' | 'absent' | 'late') => {
+        setAttendanceState(prev => ({
+            ...prev,
+            [studentId]: status
+        }))
+    }
+
+    // Submit to MONGODB
+    const handleSubmit = async () => {
+        if (!date || !user) return
+
+        if (students.length === 0) {
+            toast.error("No eligible students found to mark attendance.")
+            return
+        }
+
+        try {
+            setSubmitting(true)
+            const dateStr = format(date, 'yyyy-MM-dd')
+
+            // Prepare records
+            const records = students.map(student => ({
+                studentId: student.id,
+                studentName: student.name,
+                studentUniqueId: student.uniqueId,
+                status: attendanceState[student.id] || 'present',
+                markedBy: user.uid
+            }));
+
+            // Prepare payload
+            const payload = {
+                date: dateStr,
+                records: isHoliday ? [] : records, // If holiday, we might not need records, or empty
+                subject: classDetails.subject,
+                timeRange: classDetails.timeRange,
+                location: classDetails.location,
+                type: isHoliday ? 'holiday' : 'regular' as 'holiday' | 'regular',
+                markedBy: user.uid
+            };
+
+            const result = await saveAttendance(payload);
+
+            if (result.success) {
+                toast.success("Attendance saved to MongoDB!");
+                setExistingAttendance(true);
+            } else {
+                toast.error("Failed to save: " + result.error);
+            }
+
+        } catch (error: any) {
+            console.error("Error submitting attendance:", error)
+            toast.error(`Failed to submit: ${error.message || "Unknown error"}`)
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    const handlePublishClass = async () => {
+        // In MongoDB model, class details are part of the 'Attendance' document.
+        // So basically we just trigger a submit with the current details.
+        /* REMOVED UI for class details as per user request to simplify workflow, 
+           but kept this function just in case we need it back */
+        handleSubmit();
+    }
 
     // MODIFIED EXPORT FUNCTION (No Clear)
     const handleExportOnly = async () => {
@@ -63,6 +292,11 @@ export function AttendanceMarker() {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
+
+    const filteredStudents = students.filter(s =>
+        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.uniqueId?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
 
     return (
         <div className="space-y-6">
@@ -130,7 +364,78 @@ export function AttendanceMarker() {
                 </Button>
             </div>
 
-            {/* ... rest of the component ... */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex items-center gap-2">
+                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-[240px] justification-start text-left font-normal",
+                                    !date && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {date ? format(date, "PPP") : <span>Pick a date</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={(d) => {
+                                    if (d) {
+                                        setDate(d)
+                                        setIsCalendarOpen(false)
+                                    }
+                                }}
+                                initialFocus
+                                disabled={(date) => date > new Date()}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                    {existingAttendance && (
+                        <span className="text-sm text-green-600 font-medium bg-green-50 px-3 py-1 rounded-md border border-green-200">
+                            {isHoliday ? 'Relax! It\'s a Holiday 🏖️' : 'Saved to MongoDB'}
+                        </span>
+                    )}
+                    <Button
+                        variant={isHoliday ? "default" : "outline"}
+                        onClick={() => setIsHoliday(!isHoliday)}
+                        className={cn("ml-2", isHoliday && "bg-purple-600 hover:bg-purple-700")}
+                    >
+                        {isHoliday ? "Unmark Holiday" : "Mark as Holiday"}
+                    </Button>
+
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search students..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-8"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Empty State */}
+            {!loading && students.length === 0 && (
+                <div className="border border-dashed border-gray-300 rounded-lg p-8 text-center space-y-4">
+                    <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                        <AlertCircle className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-medium">No Members Found</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            No eligible members found. Please ensure users have role &apos;Member&apos;, &apos;Junior Developer&apos;, or &apos;Senior Developer&apos;.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* List */}
             {students.length > 0 && (
