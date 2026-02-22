@@ -11,3 +11,5 @@ npm-debug.log*
 .DS_Store
 
 .next/
+.vercel
+.env*.local
