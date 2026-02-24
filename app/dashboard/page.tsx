@@ -9,6 +9,7 @@ import { collection, query, where, onSnapshot, doc, getDoc, getCountFromServer, 
 import { db } from '@/lib/firebase'
 import Link from 'next/link'
 import MyClasses from '@/components/dashboard/MyClasses'
+import { getStudentAttendanceStats } from '@/app/actions/attendanceActions'
 
 interface Event {
   id: string
@@ -67,30 +68,20 @@ export default function DashboardPage() {
 
     if (!user?.uid) return
 
-    // 2. Real-time User Attendance Stats
-    const attendanceColl = collection(db, "attendance")
-    const q = query(attendanceColl, where("studentId", "==", user.uid))
+    // 2. MongoDB User Attendance Stats
+    const fetchAttendance = async () => {
+      const result = await getStudentAttendanceStats(user.uid);
+      if (result.success && result.data) {
+        setAttendanceStats({
+          present: result.data.present,
+          late: result.data.late,
+          absent: result.data.absent,
+          total: result.data.total
+        });
+      }
+    }
 
-    const unsubscribeAttendance = onSnapshot(q, (snapshot) => {
-      let present = 0, late = 0, absent = 0
-      snapshot.forEach(doc => {
-        const data = doc.data()
-        const status = (data.status === true || data.status === 'present') ? 'present'
-          : (data.status === 'late') ? 'late'
-            : 'absent';
-        if (status === 'present') present++;
-        else if (status === 'late') late++;
-        else absent++;
-      })
-      setAttendanceStats({
-        present, late, absent,
-        total: snapshot.size
-      })
-    }, (error) => {
-      console.error("Error listening to attendance stats:", error)
-    })
-
-    return () => unsubscribeAttendance()
+    fetchAttendance();
   }, [user])
 
   useEffect(() => {

@@ -4,10 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Calendar as CalendarIcon, MapPin, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, addDays, subDays, isSameDay } from 'date-fns'
-import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { cn } from '@/lib/utils'
+import { getAttendanceByDate } from '@/app/actions/attendanceActions'
 
 interface ClassSession {
     id: string
@@ -37,47 +36,37 @@ export default function MyClasses() {
     useEffect(() => {
         if (!user) return
 
-        // Reset state when date changes to prevent showing stale data
         setLoading(true)
         setClassSession(null)
         setUserStatus(null)
 
         const dateStr = format(date, 'yyyy-MM-dd')
 
-        // 1. Listen to Class Session (Attendance Summary)
-        const summaryRef = doc(db, 'attendance_summaries', dateStr)
-        const unsubscribeSummary = onSnapshot(summaryRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setClassSession({ id: docSnap.id, ...docSnap.data() } as ClassSession)
-            } else {
-                setClassSession(null)
+        const fetchData = async () => {
+            const result = await getAttendanceByDate(dateStr);
+            if (result.success && result.data) {
+                const doc = result.data;
+                setClassSession({
+                    id: doc._id,
+                    dateStr: doc.date,
+                    subject: doc.subject,
+                    timeRange: doc.timeRange,
+                    location: doc.location,
+                    type: doc.type
+                });
+
+                // Find user's record in this class
+                if (doc.records) {
+                    const record = doc.records.find((r: any) => r.studentId === user.uid);
+                    if (record) {
+                        setUserStatus(record.status);
+                    }
+                }
             }
             setLoading(false)
-        }, (error) => {
-            console.error("Error fetching class summary:", error)
-            setLoading(false)
-        })
-
-        // 2. Listen to User's Attendance Status
-        // We need to find the record for this user and this date.
-        // ID format in AttendanceMarker: `${dateStr}_${student.id}`
-        const recordId = `${dateStr}_${user.uid}`
-        const attendanceRef = doc(db, 'attendance', recordId)
-
-        const unsubscribeAttendance = onSnapshot(attendanceRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setUserStatus(docSnap.data().status as AttendanceRecord['status'])
-            } else {
-                setUserStatus(null)
-            }
-        }, (error) => {
-            console.error("Error fetching attendance status:", error)
-        })
-
-        return () => {
-            unsubscribeSummary()
-            unsubscribeAttendance()
         }
+
+        fetchData();
     }, [date, user])
 
     const getStatusColor = (status: string | null) => {

@@ -147,6 +147,52 @@ export async function getAttendanceStats() {
     }
 }
 
+// 5b. Get student-specific attendance stats
+export async function getStudentAttendanceStats(studentId: string) {
+    try {
+        await dbConnect();
+
+        const stats = await Attendance.aggregate([
+            { $match: { type: 'regular' } },
+            { $unwind: '$records' },
+            { $match: { 'records.studentId': studentId } },
+            {
+                $group: {
+                    _id: '$records.studentId',
+                    present: {
+                        $sum: {
+                            $cond: [{ $in: ['$records.status', ['present', 'late']] }, 1, 0]
+                        }
+                    },
+                    late: {
+                        $sum: {
+                            $cond: [{ $eq: ['$records.status', 'late'] }, 1, 0]
+                        }
+                    },
+                    absent: {
+                        $sum: {
+                            $cond: [{ $eq: ['$records.status', 'absent'] }, 1, 0]
+                        }
+                    },
+                    total: { $sum: 1 }
+                }
+            }
+        ]);
+
+        if (!stats || stats.length === 0) {
+            return {
+                success: true,
+                data: { present: 0, late: 0, absent: 0, total: 0 }
+            };
+        }
+
+        return { success: true, data: stats[0] };
+    } catch (error: any) {
+        console.error('Error fetching student stats:', error);
+        return { success: false, error: error.message };
+    }
+}
+
 // 6. Get Attendance Summaries (for History Table)
 export async function getAttendanceSummaries() {
     try {
