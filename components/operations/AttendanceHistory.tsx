@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { collection, getDocs, query, orderBy, where, Timestamp } from "firebase/firestore"
-import { db } from "@/lib/firebase"
 import {
     Table,
     TableBody,
@@ -12,18 +10,20 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Loader2, Download, FileSpreadsheet } from "lucide-react"
-import { format } from "date-fns"
+import { Loader2, Download } from "lucide-react"
+import { format, parseISO } from "date-fns"
 import { expandCSV, downloadCSV } from "@/lib/excel-utils"
 import { toast } from "sonner"
+import { getAttendanceSummaries, getAttendanceDetailsByDate } from "@/app/actions/attendanceActions"
 
 interface AttendanceSummary {
     id: string
     dateStr: string
-    date: Timestamp
+    date: { toDate: () => Date }
     totalStudents: number
     totalPresent: number
     totalAbsent: number
+    type?: 'regular' | 'holiday'
 }
 
 export function AttendanceHistory() {
@@ -35,17 +35,17 @@ export function AttendanceHistory() {
         const fetchHistory = async () => {
             try {
                 setLoading(true)
-                // Order by date descending
-                const q = query(
-                    collection(db, "attendance_summaries"),
-                    orderBy("dateStr", "desc")
-                )
-                const snapshot = await getDocs(q)
-                const data: AttendanceSummary[] = []
-                snapshot.forEach(doc => {
-                    data.push({ id: doc.id, ...doc.data() } as AttendanceSummary)
-                })
-                setSummaries(data)
+                const result = await getAttendanceSummaries()
+                if (result.success && result.data) {
+                    // Re-instantiate the toDate method since serialization loses it
+                    const formattedData = result.data.map((item: any) => ({
+                        ...item,
+                        date: { toDate: () => parseISO(item.dateStr) }
+                    }))
+                    setSummaries(formattedData)
+                } else {
+                    toast.error(result.error || "Failed to fetch history")
+                }
             } catch (error) {
                 console.error("Error fetching history:", error)
             } finally {
@@ -58,31 +58,43 @@ export function AttendanceHistory() {
     const handleDownload = async (dateStr: string) => {
         try {
             setDownloading(dateStr)
-            // Fetch detailed records for this date
-            const q = query(
-                collection(db, "attendance"),
-                where("dateStr", "==", dateStr)
-            )
-            const snapshot = await getDocs(q)
+            const result = await getAttendanceDetailsByDate(dateStr)
+
+            if (!result.success || !result.data) {
+                toast.error(result.error || "No detailed records found.")
+                return
+            }
+
+            const data = result.data
             const records: any[] = []
-            snapshot.forEach(doc => {
-                const d = doc.data()
+
+            if (data.type === 'holiday') {
                 records.push({
-                    Date: d.dateStr,
-                    StudentID: d.studentUniqueId,
-                    Name: d.studentName,
-                    Status: d.status,
-                    MarkedTime: d.timestamp?.toDate()?.toLocaleTimeString()
+                    Date: data.date,
+                    Status: 'Holiday',
+                    Note: 'Public Holiday / No Class'
                 })
-            })
+            } else {
+                data.records.forEach((r: any) => {
+                    records.push({
+                        Date: data.date,
+                        StudentID: r.studentUniqueId,
+                        Name: r.studentName,
+                        Status: r.status,
+                        MarkedTime: r.timestamp ? new Date(r.timestamp).toLocaleTimeString() : 'N/A'
+                    })
+                })
+            }
 
             if (records.length === 0) {
                 toast.error("No detailed records found.")
                 return
             }
 
-            // Sort by name
-            records.sort((a, b) => a.Name.localeCompare(b.Name))
+            // Sort by name if alphabetical
+            if (data.type !== 'holiday') {
+                records.sort((a, b) => a.Name.localeCompare(b.Name))
+            }
 
             const csvContent = expandCSV(records)
             downloadCSV(csvContent, `attendance_${dateStr}.csv`)
@@ -102,6 +114,7 @@ export function AttendanceHistory() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Date</TableHead>
+                            <TableHead>Type</TableHead>
                             <TableHead>Total Students</TableHead>
                             <TableHead className="text-green-600">Present</TableHead>
                             <TableHead className="text-red-600">Absent</TableHead>
@@ -111,22 +124,23 @@ export function AttendanceHistory() {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center">
+                                <TableCell colSpan={6} className="h-24 text-center">
                                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                                 </TableCell>
                             </TableRow>
                         ) : summaries.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                                    No attendance records found.
+                                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                    No attendance records found in MongoDB.
                                 </TableCell>
                             </TableRow>
                         ) : (
                             summaries.map((item) => (
-                                <TableRow key={item.id}>
+                                <TableRow key={item.id} className={item.type === 'holiday' ? "opacity-60 bg-muted/30" : ""}>
                                     <TableCell className="font-medium">
                                         {format(item.date.toDate(), "PPP")}
                                     </TableCell>
+                                    <TableCell className="capitalize">{item.type || 'regular'}</TableCell>
                                     <TableCell>{item.totalStudents}</TableCell>
                                     <TableCell className="text-green-600 font-medium">{item.totalPresent}</TableCell>
                                     <TableCell className="text-red-600 font-medium">{item.totalAbsent}</TableCell>

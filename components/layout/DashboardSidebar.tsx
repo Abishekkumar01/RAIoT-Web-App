@@ -59,6 +59,7 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
       label: "Manage Attendance",
       icon: ClipboardList,
     },
+    { href: "/operations/history", label: "Attendance History", icon: Archive },
     { href: "/admin/users", label: "Manage Users", icon: Users },
 
     { href: "/admin/trainees", label: "Manage Trainees", icon: Users },
@@ -79,21 +80,24 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     { href: "/contact", label: "Contact", icon: User },
   ];
 
+  const isAdminRole = ["admin", "superadmin", "president", "vice_president"].includes(user?.role || "");
+  const isOperationsRole = ["student_coordinator", "public_relation_head", "operations_head", "management_head", "operations", "technical_head"].includes(user?.role || "");
+
   const operationsLinks = [
     { href: "/", label: "Home", icon: Home },
     { href: "/operations", label: "Operations Dashboard", icon: BarChart3 },
     { href: "/operations/my-events", label: "Events & Teams", icon: Calendar },
     { href: "/dashboard/inventory", label: "Resources", icon: Box },
-    ...(user?.role === 'management_head' || user?.role === 'admin' || user?.role === 'superadmin' ? [
+    ...(user?.role === 'management_head' || isAdminRole ? [
       { href: "/operations/inventory", label: "Manage Inventory", icon: Box },
     ] : []),
     { href: "/dashboard", label: "Club Dashboard", icon: Home },
-    ...(user?.role === 'student_coordinator' || user?.role === 'admin' || user?.role === 'superadmin' ? [
+    ...(user?.role === 'student_coordinator' || user?.role === 'operations' || isAdminRole ? [
       { href: "/operations/attendance", label: "Mark Attendance", icon: ClipboardList },
       { href: "/operations/history", label: "Attendance History", icon: Archive },
       { href: "/operations/manage-trainee", label: "Manage Trainee", icon: Users },
     ] : []),
-    ...(user?.role === 'public_relation_head' || user?.role === 'admin' || user?.role === 'superadmin' ? [
+    ...(user?.role === 'public_relation_head' || isAdminRole ? [
       { href: "/operations/events", label: "Manage Events", icon: Calendar },
       { href: "/operations/gallery", label: "Manage Gallery", icon: ImageIcon },
     ] : []),
@@ -102,14 +106,14 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
 
   let links = memberLinks;
 
-  if (user?.role === "admin" || user?.role === "superadmin" || user?.role === "president" || user?.role === "vice_president") {
+  if (isAdminRole) {
     links = [
       { href: "/admin", label: "Admin Dashboard", icon: BarChart3 },
       { href: "/dashboard", label: "Club Dashboard", icon: Home },
       ...adminLinks.slice(1),
       { href: "/dashboard/profile", label: "My Profile", icon: User }
     ];
-  } else if (["student_coordinator", "public_relation_head", "operations_head", "management_head"].includes(user?.role || "")) {
+  } else if (isOperationsRole) {
     links = operationsLinks;
   }
 

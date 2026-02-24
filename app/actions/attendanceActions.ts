@@ -146,3 +146,39 @@ export async function getAttendanceStats() {
         return { success: false, error: error.message };
     }
 }
+
+// 6. Get Attendance Summaries (for History Table)
+export async function getAttendanceSummaries() {
+    try {
+        await dbConnect();
+        const docs = await Attendance.find({}).sort({ date: -1 });
+
+        const summaries = docs.map(doc => ({
+            id: doc._id.toString(),
+            dateStr: doc.date,
+            totalStudents: doc.records.length,
+            totalPresent: doc.records.filter((r: any) => r.status === 'present' || r.status === 'late').length,
+            totalAbsent: doc.records.filter((r: any) => r.status === 'absent').length,
+            type: doc.type || 'regular'
+        }));
+
+        return { success: true, data: serialize(summaries) };
+    } catch (error: any) {
+        console.error('Error fetching attendance summaries:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// 7. Get Detailed Records for a specific date
+export async function getAttendanceDetailsByDate(dateStr: string) {
+    try {
+        await dbConnect();
+        const doc = await Attendance.findOne({ date: dateStr });
+        if (!doc) return { success: false, error: "Record not found" };
+
+        return { success: true, data: serialize(doc) };
+    } catch (error: any) {
+        console.error('Error fetching attendance details:', error);
+        return { success: false, error: error.message };
+    }
+}
