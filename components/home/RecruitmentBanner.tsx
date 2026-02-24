@@ -70,11 +70,11 @@ export default function RecruitmentBanner() {
                                 <div className="relative h-12 md:h-20 w-36 md:w-72 bg-white/95 -skew-x-12 border-r-4 border-cyan-500/50 shadow-[0_0_20px_rgba(255,255,255,0.2)] flex items-center justify-center overflow-hidden">
                                     <div className="relative w-full h-full skew-x-12 flex items-center justify-center p-0">
                                         <Image
-                                            src="/amity transperent logo.png"
+                                            src="/Amity_logo-removebg-preview.png"
                                             alt="Amity University"
-                                            width={300}
-                                            height={120}
-                                            className="object-contain max-h-full w-auto scale-[2.0] md:scale-[2.5]"
+                                            width={400}
+                                            height={150}
+                                            className="object-contain max-h-[85%] w-auto hover:scale-105 transition-transform duration-500"
                                         />
                                     </div>
                                 </div>
