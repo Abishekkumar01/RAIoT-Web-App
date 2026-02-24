@@ -65,13 +65,11 @@ export default function RootLayout({
                 <TechScrollbar orientation="horizontal" />
                 <RoutePrefetcher />
                 <Footer />
-              </MaintenanceGuard>
 
-              {/* Elements that should stay 1:1 (Outside Zoom) */}
-              <div>
+                {/* Elements that should stay 1:1 (Inside Guard for consistent hydration) */}
                 <Toaster />
                 <SonnerToaster position="bottom-right" richColors />
-              </div>
+              </MaintenanceGuard>
             </LoaderProvider>
           </AuthProvider>
         </ThemeProvider>
