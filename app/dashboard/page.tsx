@@ -151,16 +151,16 @@ export default function DashboardPage() {
           <Link href="/dashboard/attendance" className="absolute inset-0 z-10" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {/* Show "My Attendance" for junior/senior developers, "Total Classes" for operations roles */}
-              {user?.role === 'junior_developer' || user?.role === 'senior_developer'
+              {/* Show "My Attendance" for developers and members, "Total Classes" for operations roles */}
+              {user?.role === 'junior_developer' || user?.role === 'senior_developer' || user?.role === 'member'
                 ? 'My Attendance'
                 : 'Total Classes'}
             </CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {user?.role === 'junior_developer' || user?.role === 'senior_developer' ? (
-              // Developers see their attendance stats
+            {user?.role === 'junior_developer' || user?.role === 'senior_developer' || user?.role === 'member' ? (
+              // Developers/Members see their attendance stats
               <>
                 <div className="text-2xl font-bold">
                   {attendanceStats.present + attendanceStats.late}/{attendanceStats.total}
