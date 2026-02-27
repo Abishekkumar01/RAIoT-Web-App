@@ -19,7 +19,6 @@ import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 
 import ImageUpload from "@/components/ui/ImageUpload"
-import { InventorySection } from "./InventorySection"
 import { ReorderableList } from "./ReorderableList"
 
 export default function ProfilePage() {
@@ -881,9 +880,6 @@ export default function ProfilePage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Inventory Section - New Addition */}
-        <InventorySection />
 
         {/* Achievements & Contributions */}
         <div className="grid md:grid-cols-2 gap-6 md:col-span-2">
