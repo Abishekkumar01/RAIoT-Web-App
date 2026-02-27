@@ -5,9 +5,10 @@ import { useAuth } from "@/lib/contexts/AuthContext"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, MapPin, TrendingUp, CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react"
-import { collection, query, where, getDocs, orderBy, onSnapshot } from "firebase/firestore"
+import { collection, getDocs, getCountFromServer } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { AttendanceChart } from "./AttendanceChart"
+import { getStudentAttendanceRecords, getStudentAttendanceStats } from "@/app/actions/attendanceActions"
 
 interface AttendanceRecord {
   eventId: string
@@ -26,73 +27,40 @@ export default function AttendancePage() {
 
   useEffect(() => {
     const fetchAttendance = async () => {
-      if (!user?.displayName) return
+      if (!user?.uid) return
 
       try {
         setLoading(true)
 
-        // 1. Fetch all events to map dates to event names
-        const eventsColl = collection(db, "events")
-        const eventsSnapshot = await getDocs(eventsColl)
-        const eventsMap: Record<string, any> = {}
-        eventsSnapshot.forEach(doc => {
-          const data = doc.data()
-          if (data.date) {
-            eventsMap[data.date] = {
-              title: data.title,
-              location: data.location || "Campus",
-              type: data.type || "event",
-              time: data.time || "All Day"
-            }
-          }
-        })
+        // Fetch detailed records
+        const recordsResult = await getStudentAttendanceRecords(user.uid);
+        if (recordsResult.success && recordsResult.data) {
+          const records: AttendanceRecord[] = recordsResult.data.map((r: any) => ({
+            eventId: r.eventId,
+            eventName: r.eventName || "Daily Session",
+            date: r.date,
+            time: r.time || "N/A",
+            location: r.location || "Campus",
+            status: r.status,
+            type: r.type || "general",
+          }));
+          setAttendanceRecords(records);
+        }
 
-        if (!user?.uid) return
-
-        // 2. Fetch attendance records for this user by UID (Real-time)
-        const attendanceColl = collection(db, "attendance")
-        const q = query(attendanceColl, where("studentId", "==", user.uid))
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          const records: AttendanceRecord[] = []
-          snapshot.forEach(doc => {
-            const data = doc.data()
-            const dateStr = data.dateStr
-            const eventInfo = eventsMap[dateStr]
-
-            records.push({
-              eventId: doc.id,
-              eventName: eventInfo ? eventInfo.title : "Daily Session",
-              date: dateStr,
-              time: eventInfo ? eventInfo.time : "N/A",
-              location: eventInfo ? eventInfo.location : "Campus",
-              status: (data.status === true || data.status === 'present') ? 'present'
-                : (data.status === 'late') ? 'late'
-                  : 'absent',
-              type: eventInfo ? eventInfo.type : "general",
-            })
-          })
-
-          // Sort by date desc
-          records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-
-          setAttendanceRecords(records)
-          setLoading(false)
-        }, (error) => {
-          console.error("Error fetching personal attendance:", error)
-          setLoading(false)
-        })
-
-        return () => unsubscribe()
+        // We can optionally fetch the aggregated stats here too if we want to ensure
+        // the chart perfectly matches the aggregation logic, but calculating it from
+        // the records array is also fine and saves a network request.
 
       } catch (error) {
-        console.error("Error setting up attendance listener:", error)
-        setLoading(false) // Stop main loading state if setup fails
+        console.error("Error fetching attendance details:", error)
+      } finally {
+        setLoading(false)
       }
     }
 
     fetchAttendance()
   }, [user])
+
 
   const totalEvents = attendanceRecords.length
   const presentCount = attendanceRecords.filter((record) => record.status === "present").length
@@ -133,6 +101,7 @@ export default function AttendancePage() {
   const isOperationsRole = user?.role && ![
     'junior_developer',
     'senior_developer',
+    'member',
     'guest'
   ].includes(user.role)
 

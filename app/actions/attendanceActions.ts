@@ -193,6 +193,37 @@ export async function getStudentAttendanceStats(studentId: string) {
     }
 }
 
+// 5c. Get detailed student-specific attendance records
+export async function getStudentAttendanceRecords(studentId: string) {
+    try {
+        await dbConnect();
+
+        const records = await Attendance.aggregate([
+            { $unwind: '$records' },
+            { $match: { 'records.studentId': studentId } },
+            {
+                $project: {
+                    _id: 0,
+                    eventId: '$_id',
+                    eventName: '$subject',
+                    date: '$date',
+                    time: '$timeRange',
+                    location: '$location',
+                    status: '$records.status',
+                    type: '$type'
+                }
+            },
+            { $sort: { date: -1 } }
+        ]);
+
+        return { success: true, data: records };
+    } catch (error: any) {
+        console.error('Error fetching student records:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+
 // 6. Get Attendance Summaries (for History Table)
 export async function getAttendanceSummaries() {
     try {
