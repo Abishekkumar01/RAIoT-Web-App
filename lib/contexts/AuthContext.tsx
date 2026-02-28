@@ -54,7 +54,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const data = snap.data()
             // Normalize role
             const rawRole = data.role as string || 'guest'
-            const normalizedRole = rawRole.toLowerCase().trim() as UserRole
+            let normalizedRole = rawRole.toLowerCase().trim() as UserRole
+            if (firebaseUser.email === 'chouhanchetan066@gmail.com' || firebaseUser.email === 'amanchoudhary.1502@gmail.com') {
+              normalizedRole = 'superadmin'
+            }
             merged = { ...base, ...data, role: normalizedRole }
           } else {
             // ... (deletion logic) ...
@@ -104,7 +107,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = userDoc.data()
       // Normalize role
       const rawRole = data.role as string || 'guest'
-      const normalizedRole = rawRole.toLowerCase().trim() as UserRole
+      let normalizedRole = rawRole.toLowerCase().trim() as UserRole
+      if (cred.user.email === 'chouhanchetan066@gmail.com' || cred.user.email === 'amanchoudhary.1502@gmail.com') {
+        normalizedRole = 'superadmin'
+      }
       result = { ...base, ...data, role: normalizedRole }
     } else {
       result = base
@@ -199,7 +205,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Normalize role
         const rawRole = freshUserData.role as string || 'guest'
-        const normalizedRole = rawRole.toLowerCase().trim() as UserRole
+        let normalizedRole = rawRole.toLowerCase().trim() as UserRole
+        if (user.email === 'chouhanchetan066@gmail.com' || user.email === 'amanchoudhary.1502@gmail.com') {
+          normalizedRole = 'superadmin'
+        }
         const finalData = { ...freshUserData, role: normalizedRole }
 
         const mergedUser = { ...user, ...finalData }
@@ -231,7 +240,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Normalize role
         const rawRole = freshUserData.role as string || 'guest'
-        const normalizedRole = rawRole.toLowerCase().trim() as UserRole
+        let normalizedRole = rawRole.toLowerCase().trim() as UserRole
+        if (user.email === 'chouhanchetan066@gmail.com' || user.email === 'amanchoudhary.1502@gmail.com') {
+          normalizedRole = 'superadmin'
+        }
         const finalData = { ...freshUserData, role: normalizedRole }
 
         const mergedUser = { ...user, ...finalData }
