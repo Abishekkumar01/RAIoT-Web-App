@@ -44,9 +44,10 @@ export interface User {
       description: string;
       link: string;
       imageUrl: string;
-    }>
-    achievements?: string[]
-    contributions?: string[]
+      achievements?: string[]
+      contributions?: string[]
+      isInventoryManager?: boolean
+    }>;
   }
   attendance?: AttendanceRecord[]
   createdAt: Date

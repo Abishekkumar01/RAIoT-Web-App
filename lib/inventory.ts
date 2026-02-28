@@ -1,4 +1,4 @@
-import { db } from "@/lib/firebase"; // Assuming standard firebase export
+import { db } from "@/lib/firebase";
 import {
     collection,
     doc,
@@ -10,16 +10,15 @@ import {
     query,
     where,
     orderBy,
-    serverTimestamp,
-    Timestamp,
     increment,
-    setDoc
+    serverTimestamp,
+    runTransaction
 } from "firebase/firestore";
-import { IComponent, IIssuance, IssuanceStatus, IBill, IDamagedLog } from "@/types/inventory";
+import { IComponent, IInventoryRequest, RequestStatus, IDamagedLog, IBill } from "@/types/inventory";
 
-const INVENTORY_COLLECTION = "inventory";
-const ISSUANCE_COLLECTION = "issuances";
-const DAMAGED_COLLECTION = "damaged_logs";
+const INVENTORY_COLLECTION = "inventory_components";
+const REQUESTS_COLLECTION = "inventory_requests";
+const DAMAGED_COLLECTION = "inventory_damaged";
 const BILLS_COLLECTION = "bills";
 
 // --- Inventory CRUD ---
@@ -53,15 +52,16 @@ export const addComponent = async (component: Omit<IComponent, "id" | "createdAt
     try {
         const newComponent = {
             ...component,
+            quantity: Math.floor(component.quantity), // Enforce whole numbers
+            availableQuantity: Math.floor(component.availableQuantity),
             arrivalDates: [{
                 date: component.arrivalDate || new Date().toISOString(),
-                quantity: component.quantity
+                quantity: Math.floor(component.quantity)
             }],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
 
-        // Sanitize object to remove undefined values
         const sanitizedComponent = Object.fromEntries(
             Object.entries(newComponent).filter(([_, v]) => v !== undefined)
         );
@@ -77,37 +77,15 @@ export const addComponent = async (component: Omit<IComponent, "id" | "createdAt
 export const updateComponent = async (id: string, updates: Partial<IComponent>): Promise<void> => {
     try {
         const docRef = doc(db, INVENTORY_COLLECTION, id);
+        if (updates.quantity !== undefined) updates.quantity = Math.floor(updates.quantity);
+        if (updates.availableQuantity !== undefined) updates.availableQuantity = Math.floor(updates.availableQuantity);
+
         await updateDoc(docRef, {
             ...updates,
             updatedAt: new Date().toISOString()
         });
     } catch (error) {
         console.error("Error updating component:", error);
-        throw error;
-    }
-};
-
-export const restockComponent = async (id: string, quantityToAdd: number): Promise<void> => {
-    try {
-        const docRef = doc(db, INVENTORY_COLLECTION, id);
-        const docSnap = await getDoc(docRef);
-
-        if (!docSnap.exists()) throw new Error("Component not found");
-
-        const currentData = docSnap.data() as IComponent;
-        const newArrivalDates = [
-            ...(currentData.arrivalDates || []),
-            { date: new Date().toISOString(), quantity: quantityToAdd }
-        ];
-
-        await updateDoc(docRef, {
-            quantity: increment(quantityToAdd),
-            availableQuantity: increment(quantityToAdd),
-            arrivalDates: newArrivalDates,
-            updatedAt: new Date().toISOString()
-        });
-    } catch (error) {
-        console.error("Error restocking component:", error);
         throw error;
     }
 };
@@ -121,143 +99,201 @@ export const deleteComponent = async (id: string): Promise<void> => {
     }
 };
 
-// --- Issuance / Requests ---
+// --- Requests (Cart Issuance) ---
 
-export const requestComponent = async (issuanceCount: Omit<IIssuance, "id" | "status" | "issueDate" | "returnDate">): Promise<string> => {
+export const submitInventoryRequest = async (requestData: Omit<IInventoryRequest, "id" | "status" | "createdAt" | "issueDate" | "dueDate">): Promise<string> => {
     try {
-        // 1. Check availability
-        const componentRef = doc(db, INVENTORY_COLLECTION, issuanceCount.componentId);
-        const componentSnap = await getDoc(componentRef);
+        // Enforce max 7 days limit
+        const days = Math.min(Math.max(1, Math.floor(requestData.daysRequested)), 7);
 
-        if (!componentSnap.exists()) throw new Error("Component not found");
-        const componentData = componentSnap.data() as IComponent;
+        // Calculate Future Due Date
+        const issueDate = new Date();
+        const dueDate = new Date(issueDate);
+        dueDate.setDate(dueDate.getDate() + days);
 
-        if (componentData.availableQuantity < issuanceCount.quantity) {
-            throw new Error("Insufficient quantity available");
-        }
+        // Transaction to ensure stock is available for all items before creating the request
+        return await runTransaction(db, async (transaction) => {
+            // First read all components to ensure sufficient quantity
+            const itemDocs = [];
+            for (const item of requestData.items) {
+                const componentRef = doc(db, INVENTORY_COLLECTION, item.componentId);
+                const componentSnap = await transaction.get(componentRef);
 
-        // 2. Reduce Available Quantity IMMEDIATELY (or reserve it)
-        // For simplicity, we reduce it on request. If rejected, we add it back.
-        await updateDoc(componentRef, {
-            availableQuantity: increment(-issuanceCount.quantity)
+                if (!componentSnap.exists()) throw new Error(`Component ${item.componentName} not found`);
+                const data = componentSnap.data() as IComponent;
+
+                if (data.availableQuantity < item.quantity) {
+                    throw new Error(`Insufficient quantity for ${item.componentName}. Only ${data.availableQuantity} available.`);
+                }
+                itemDocs.push({ ref: componentRef, quantity: item.quantity });
+            }
+
+            // If all available, update the available quantity for all items
+            for (const itemDoc of itemDocs) {
+                transaction.update(itemDoc.ref, {
+                    availableQuantity: increment(-Math.floor(itemDoc.quantity))
+                });
+            }
+
+            // Create the request document
+            const newRequestRef = doc(collection(db, REQUESTS_COLLECTION));
+            const newRequest: Omit<IInventoryRequest, "id"> = {
+                ...requestData,
+                daysRequested: days,
+                status: 'pending',
+                issueDate: issueDate.toISOString(),
+                dueDate: dueDate.toISOString(),
+                createdAt: new Date().toISOString()
+            };
+
+            transaction.set(newRequestRef, newRequest);
+            return newRequestRef.id;
         });
 
-        // 3. Create Issuance Record
-        const newIssuance = {
-            ...issuanceCount,
-            status: 'pending' as IssuanceStatus,
-            issueDate: new Date().toISOString(),
-            createdAt: new Date().toISOString()
-        };
-
-        const docRef = await addDoc(collection(db, ISSUANCE_COLLECTION), newIssuance);
-        return docRef.id;
-
     } catch (error) {
-        console.error("Error requesting component:", error);
+        console.error("Error submitting inventory request:", error);
         throw error;
     }
 };
 
-export const updateIssuanceStatus = async (id: string, status: IssuanceStatus): Promise<void> => {
+export const updateRequestStatus = async (id: string, status: RequestStatus, rejectionReason?: string): Promise<void> => {
     try {
-        const issuanceRef = doc(db, ISSUANCE_COLLECTION, id);
-        const issuanceSnap = await getDoc(issuanceRef);
+        const requestRef = doc(db, REQUESTS_COLLECTION, id);
 
-        if (!issuanceSnap.exists()) throw new Error("Issuance not found");
-        const issuanceData = issuanceSnap.data() as IIssuance;
+        await runTransaction(db, async (transaction) => {
+            const requestSnap = await transaction.get(requestRef);
+            if (!requestSnap.exists()) throw new Error("Request not found");
 
-        // Handle Logic for Rejections/Returns
-        // If REJECTED or RETURNED, we must return the stock.
-        // NOTE: We already deducted stock on Request.
+            const requestData = requestSnap.data() as IInventoryRequest;
 
-        if (status === 'rejected' && issuanceData.status !== 'rejected') {
-            // Return stock
-            const componentRef = doc(db, INVENTORY_COLLECTION, issuanceData.componentId);
-            await updateDoc(componentRef, {
-                availableQuantity: increment(issuanceData.quantity)
-            });
-        }
+            // If Rejecting or Returning, we must restock the items
+            if ((status === 'rejected' || status === 'returned') &&
+                requestData.status !== 'rejected' && requestData.status !== 'returned') {
 
-        if (status === 'returned' && issuanceData.status !== 'returned') {
-            // Return stock
-            const componentRef = doc(db, INVENTORY_COLLECTION, issuanceData.componentId);
-            await updateDoc(componentRef, {
-                availableQuantity: increment(issuanceData.quantity)
-            });
-        }
+                for (const item of requestData.items) {
+                    const componentRef = doc(db, INVENTORY_COLLECTION, item.componentId);
+                    const componentSnap = await transaction.get(componentRef);
+                    // Only restock if the component still exists in the database
+                    if (componentSnap.exists()) {
+                        transaction.update(componentRef, {
+                            availableQuantity: increment(Math.floor(item.quantity))
+                        });
+                    } else {
+                        console.warn(`Attempted to restock deleted component: ${item.componentName}`);
+                    }
+                }
+            }
 
-        await updateDoc(issuanceRef, {
-            status,
-            ...(status === 'returned' ? { returnDate: new Date().toISOString() } : {}),
-            updatedAt: new Date().toISOString()
+            const updates: Partial<IInventoryRequest> = { status };
+            if (status === 'returned') updates.returnDate = new Date().toISOString();
+            if (rejectionReason) updates.rejectionReason = rejectionReason;
+
+            transaction.update(requestRef, updates);
         });
-
     } catch (error) {
-        console.error("Error updating issuance status:", error);
+        console.error("Error updating request status:", error);
         throw error;
     }
 };
 
-export const getUserIssuances = async (userId: string): Promise<IIssuance[]> => {
+export const extendIssuanceDays = async (id: string, daysToAdd: number): Promise<void> => {
     try {
+        const requestRef = doc(db, REQUESTS_COLLECTION, id);
+        const requestSnap = await getDoc(requestRef);
+        if (!requestSnap.exists()) throw new Error("Request not found");
+
+        const requestData = requestSnap.data() as IInventoryRequest;
+        const currentDueDate = new Date(requestData.dueDate);
+        currentDueDate.setDate(currentDueDate.getDate() + Math.floor(daysToAdd));
+
+        await updateDoc(requestRef, {
+            dueDate: currentDueDate.toISOString(),
+            daysRequested: increment(Math.floor(daysToAdd))
+        });
+    } catch (error) {
+        console.error("Error extending issuance days:", error);
+        throw error;
+    }
+}
+
+export const getUserRequests = async (userId: string): Promise<IInventoryRequest[]> => {
+    try {
+        const q = query(collection(db, REQUESTS_COLLECTION), where("userId", "==", userId));
+        const snapshot = await getDocs(q);
+        const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as IInventoryRequest));
+        return requests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (error) {
+        console.error("Error fetching user requests:", error);
+        throw error;
+    }
+};
+
+export const getAllRequests = async (): Promise<IInventoryRequest[]> => {
+    try {
+        const q = query(collection(db, REQUESTS_COLLECTION), orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as IInventoryRequest));
+    } catch (error) {
+        console.error("Error fetching all requests:", error);
+        throw error;
+    }
+};
+
+export const checkDailyRequestLimit = async (userId: string): Promise<number> => {
+    try {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
         const q = query(
-            collection(db, ISSUANCE_COLLECTION),
+            collection(db, REQUESTS_COLLECTION),
             where("userId", "==", userId)
-            // Removed orderBy("issueDate", "desc") to avoid composite index requirement
         );
         const snapshot = await getDocs(q);
-        const issuances = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as IIssuance));
 
-        // Sort in memory instead
-        return issuances.sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime());
-    } catch (error) {
-        console.error("Error fetching user issuances:", error);
-        throw error;
-    }
-};
+        // Filter in memory for today
+        const todaysRequests = snapshot.docs.filter(doc => {
+            const data = doc.data() as IInventoryRequest;
+            return new Date(data.createdAt) >= startOfDay;
+        });
 
-export const getAllIssuances = async (): Promise<IIssuance[]> => {
-    try {
-        const q = query(collection(db, ISSUANCE_COLLECTION), orderBy("issueDate", "desc"));
-        const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as IIssuance));
+        return todaysRequests.length;
     } catch (error) {
-        console.error("Error fetching all issuances:", error);
-        throw error;
+        console.error("Error checking daily limit:", error);
+        return 0; // Better safe than breaking the app
     }
-};
+}
 
 // --- Damaged Logs ---
 
 export const reportDamage = async (componentId: string, quantity: number, reason: string, reportedBy: string): Promise<void> => {
     try {
         const componentRef = doc(db, INVENTORY_COLLECTION, componentId);
-        const componentSnap = await getDoc(componentRef);
 
-        if (!componentSnap.exists()) throw new Error("Component not found");
-        const componentData = componentSnap.data() as IComponent;
+        await runTransaction(db, async (transaction) => {
+            const componentSnap = await transaction.get(componentRef);
+            if (!componentSnap.exists()) throw new Error("Component not found");
+            const componentData = componentSnap.data() as IComponent;
 
-        if (componentData.availableQuantity < quantity) {
-            throw new Error("Cannot report damage more than available quantity");
-        }
+            if (componentData.availableQuantity < quantity) {
+                throw new Error("Cannot report damage more than available quantity");
+            }
 
-        // 1. Reduce Stock
-        await updateDoc(componentRef, {
-            quantity: increment(-quantity),
-            availableQuantity: increment(-quantity),
-            updatedAt: new Date().toISOString()
+            transaction.update(componentRef, {
+                quantity: increment(-Math.floor(quantity)),
+                availableQuantity: increment(-Math.floor(quantity)),
+                updatedAt: new Date().toISOString()
+            });
+
+            const newLogRef = doc(collection(db, DAMAGED_COLLECTION));
+            transaction.set(newLogRef, {
+                componentId,
+                componentName: componentData.name,
+                quantity: Math.floor(quantity),
+                reason,
+                reportedBy,
+                date: new Date().toISOString()
+            } as IDamagedLog);
         });
-
-        // 2. Add Log
-        await addDoc(collection(db, DAMAGED_COLLECTION), {
-            componentId,
-            componentName: componentData.name,
-            quantity,
-            reason,
-            reportedBy,
-            date: new Date().toISOString()
-        } as IDamagedLog);
 
     } catch (error) {
         console.error("Error reporting damage:", error);

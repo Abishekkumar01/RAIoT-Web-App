@@ -42,11 +42,15 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     }
   };
 
+  const isInventoryAdmin = user?.email === 'chouhanchetan066@gmail.com' || user?.profileData?.isInventoryManager;
+  const isInventoryUser = user?.role && !['guest', 'public'].includes(user.role);
+
   const memberLinks = [
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/dashboard/profile", label: "Profile", icon: User },
     { href: "/dashboard/attendance", label: "Attendance", icon: ClipboardList },
     { href: "/dashboard/events", label: "Events", icon: Calendar },
+    ...(isInventoryUser ? [{ href: "/dashboard/inventory", label: "Resources", icon: Box }] : []),
   ];
 
   const adminLinks = [
@@ -64,6 +68,7 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     { href: "/admin/trainees", label: "Manage Trainees", icon: Users },
     { href: "/admin/leaders", label: "Manage Leaders", icon: Shield },
     { href: "/admin/gallery", label: "Manage Gallery", icon: ImageIcon },
+    ...(isInventoryAdmin ? [{ href: "/admin/inventory", label: "Manage Inventory", icon: Box }] : []),
     { href: "/admin/projects", label: "Manage Projects", icon: Rocket },
     { href: "/admin/contact", label: "Manage Contact", icon: Mail },
     { href: "/admin/audit-logs", label: "Audit Logs", icon: FileText },
@@ -85,6 +90,8 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     { href: "/", label: "Home", icon: Home },
     { href: "/operations", label: "Operations Dashboard", icon: BarChart3 },
     { href: "/operations/my-events", label: "Events & Teams", icon: Calendar },
+    ...(isInventoryUser ? [{ href: "/dashboard/inventory", label: "Resources", icon: Box }] : []),
+    ...(isInventoryAdmin ? [{ href: "/admin/inventory", label: "Manage Inventory", icon: Box }] : []),
     { href: "/dashboard", label: "Club Dashboard", icon: Home },
     ...(user?.role === 'student_coordinator' || user?.role === 'operations' || isAdminRole ? [
       { href: "/operations/attendance", label: "Mark Attendance", icon: ClipboardList },

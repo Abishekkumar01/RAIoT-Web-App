@@ -16,22 +16,29 @@ export interface IComponent {
     updatedAt?: string; // ISO String
 }
 
-export type IssuanceStatus = 'pending' | 'approved' | 'rejected' | 'issued' | 'returned' | 'overdue';
+export type RequestStatus = 'pending' | 'approved' | 'rejected' | 'returned';
 
-export interface IIssuance {
-    id: string;
+export interface IRequestItem {
     componentId: string;
-    componentName: string; // Denormalized for easier display
-    componentImage?: string;
+    componentName: string;
+    quantity: number;
+    imageUrl?: string;
+}
+
+export interface IInventoryRequest {
+    id: string;
     userId: string;
     userName: string;
     userEmail: string;
-    quantity: number;
+    items: IRequestItem[];
+    daysRequested: number;
+    status: RequestStatus;
     issueDate: string; // ISO
     dueDate: string; // ISO
     returnDate?: string; // ISO
-    status: IssuanceStatus;
-    purpose?: string;
+    rejectionReason?: string;
+    warningEmailSent?: boolean;
+    createdAt: string; // ISO
 }
 
 export interface IDamagedLog {

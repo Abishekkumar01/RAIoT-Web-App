@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react"
 import { doc, setDoc, deleteDoc, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 import { logFirebaseStatus } from '@/lib/firebase-test'
+import { useAuth } from '@/lib/contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,6 +23,7 @@ export default function AdminUsersPage() {
     logFirebaseStatus()
   }, [])
 
+  const { user: currentUser } = useAuth()
   const [users, setUsers] = useState<any[]>([])
 
   // Fetch real users from Firebase
@@ -892,7 +894,23 @@ export default function AdminUsersPage() {
                 </Select>
               </div>
 
-
+              {currentUser?.email === 'chouhanchetan066@gmail.com' && (
+                <div className="flex items-center space-x-2 mt-4 p-3 border border-zinc-700 rounded-md bg-zinc-800/30">
+                  <input
+                    type="checkbox"
+                    id="isInventoryManager"
+                    checked={editingUser.profileData?.isInventoryManager || false}
+                    onChange={(e) => setEditingUser({
+                      ...editingUser,
+                      profileData: { ...editingUser.profileData, isInventoryManager: e.target.checked }
+                    })}
+                    className="w-4 h-4 rounded border-zinc-500 text-blue-600 focus:ring-blue-500"
+                  />
+                  <Label htmlFor="isInventoryManager" className="font-medium cursor-pointer">
+                    👑 Grant 'Inventory Manager' Privilege
+                  </Label>
+                </div>
+              )}
 
               {/* Password Change Info */}
               {editingUser.passwordChangedAt && (
