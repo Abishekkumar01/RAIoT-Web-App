@@ -43,12 +43,13 @@ export function CloudinaryUpload({ onUploadSuccess, currentImageUrl }: Cloudinar
             // 2. Upload directly to Cloudinary from Client (Bypasses Next.js 1MB limit)
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('api_key', process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY || '459138652653136');
+            const apiKey = (process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY || '459138652653136').trim();
+            formData.append('api_key', apiKey);
             formData.append('timestamp', timestamp.toString());
             formData.append('signature', signature);
             formData.append('folder', 'raiot_inventory');
 
-            const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dp5daaegm';
+            const cloudName = (process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dp5daaegm').trim();
             const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
                 method: 'POST',
                 body: formData
