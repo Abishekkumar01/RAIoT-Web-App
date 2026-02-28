@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
-import { getAdminDb, getAdminAuth, getInitError } from '@/lib/firebase-admin';
+import { getAdminDb, getAdminAuth, getInitError, verifySuperAdmin } from '@/lib/firebase-admin';
 
 export async function PUT(request: Request) {
     try {
+        const authUser = await verifySuperAdmin(request);
+        if (!authUser) {
+            return NextResponse.json(
+                { error: 'Unauthorized: Superadmin access required' },
+                { status: 401 }
+            );
+        }
+
         const body = await request.json();
         const {
             uid,

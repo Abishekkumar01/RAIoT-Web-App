@@ -202,9 +202,15 @@ export default function AdminUsersPage() {
 
       console.log('Creating member account via API...')
 
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) throw new Error('You must be logged in to perform this action')
+
       const response = await fetch('/api/admin/users/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
@@ -276,11 +282,15 @@ export default function AdminUsersPage() {
     setError('')
 
     try {
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) throw new Error('You must be logged in to perform this action')
+
       // Call the API to update Auth and Firestore
       const response = await fetch('/api/admin/users/update', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           uid: editingUser.id,
@@ -324,10 +334,14 @@ export default function AdminUsersPage() {
     setSuccess('')
 
     try {
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) throw new Error('You must be logged in to perform this action')
+
       const response = await fetch('/api/admin/users/update', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           uid: userId,
@@ -381,11 +395,15 @@ export default function AdminUsersPage() {
           userUid = userData.uid || userId
         }
 
+        const token = await auth.currentUser?.getIdToken()
+        if (!token) throw new Error('You must be logged in to perform this action')
+
         // Call server API to delete from Auth and Firestore
         const response = await fetch('/api/admin/users/delete', {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ userId: userUid }),
         })

@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
-import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
+import { getAdminDb, getAdminAuth, verifySuperAdmin } from '@/lib/firebase-admin';
 
 export async function DELETE(request: Request) {
     try {
+        const authUser = await verifySuperAdmin(request);
+        if (!authUser) {
+            return NextResponse.json(
+                { error: 'Unauthorized: Superadmin access required' },
+                { status: 401 }
+            );
+        }
+
         const { userId } = await request.json();
 
         if (!userId) {

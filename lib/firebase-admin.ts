@@ -94,3 +94,38 @@ export const getAdminAuth = () => {
         return null
     }
 }
+
+export const verifySuperAdmin = async (request: Request): Promise<{ uid: string, email: string } | null> => {
+    try {
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+            console.log('Missing or invalid authorization header');
+            return null;
+        }
+
+        const token = authHeader.split('Bearer ')[1];
+        const adminAuth = getAdminAuth();
+        if (!adminAuth) {
+            console.error('Firebase Admin Auth not initialized for token verification');
+            return null;
+        }
+
+        const decodedToken = await adminAuth.verifyIdToken(token);
+        const email = decodedToken.email;
+
+        // Verify it's one of the superadmins
+        const SUPERADMIN_EMAILS = ['chouhanchetan066@gmail.com', 'amanchoudhary.1502@gmail.com'];
+        if (!email || !SUPERADMIN_EMAILS.includes(email.toLowerCase())) {
+            console.log(`Unauthorized attempt by ${email}`);
+            return null;
+        }
+
+        return {
+            uid: decodedToken.uid,
+            email: email
+        };
+    } catch (error) {
+        console.error('Token verification error:', error);
+        return null;
+    }
+}
