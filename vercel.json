@@ -2,6 +2,10 @@
     "version": 2,
     "env": {
         "SMTP_EMAIL": "theraiot.tech@gmail.com",
-        "SMTP_PASSWORD": "lwud akch hwkv lssr"
+        "SMTP_PASSWORD": "lwud akch hwkv lssr",
+        "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME": "dp5daaegm",
+        "NEXT_PUBLIC_CLOUDINARY_API_KEY": "459138652653136",
+        "CLOUDINARY_API_KEY": "459138652653136",
+        "CLOUDINARY_API_SECRET": "icVGPJKlpO14YRDY4dK9A5xk3LA"
     }
 }
