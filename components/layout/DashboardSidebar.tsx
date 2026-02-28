@@ -42,7 +42,10 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     }
   };
 
-  const isInventoryAdmin = user?.email === 'chouhanchetan066@gmail.com' || user?.profileData?.isInventoryManager;
+  const isInventoryAdmin =
+    user?.email === 'chouhanchetan066@gmail.com' ||
+    user?.email === 'amanchoudhary.1502@gmail.com' ||
+    user?.profileData?.isInventoryManager;
   const isInventoryUser = user?.role && !['guest', 'public'].includes(user.role);
 
   const memberLinks = [

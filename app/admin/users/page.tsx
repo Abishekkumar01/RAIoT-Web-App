@@ -894,7 +894,7 @@ export default function AdminUsersPage() {
                 </Select>
               </div>
 
-              {currentUser?.email === 'chouhanchetan066@gmail.com' && (
+              {(currentUser?.email === 'chouhanchetan066@gmail.com' || currentUser?.email === 'amanchoudhary.1502@gmail.com') && (
                 <div className="flex items-center space-x-2 mt-4 p-3 border border-zinc-700 rounded-md bg-zinc-800/30">
                   <input
                     type="checkbox"
