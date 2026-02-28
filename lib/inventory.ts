@@ -111,10 +111,9 @@ export const submitInventoryRequest = async (requestData: Omit<IInventoryRequest
         const dueDate = new Date(issueDate);
         dueDate.setDate(dueDate.getDate() + days);
 
-        // Transaction to ensure stock is available for all items before creating the request
         return await runTransaction(db, async (transaction) => {
-            // First read all components to ensure sufficient quantity
-            const itemDocs = [];
+            // We no longer deduct stock here. 
+            // We only check if enough exists to prevent users from requesting more than available.
             for (const item of requestData.items) {
                 const componentRef = doc(db, INVENTORY_COLLECTION, item.componentId);
                 const componentSnap = await transaction.get(componentRef);
@@ -125,14 +124,6 @@ export const submitInventoryRequest = async (requestData: Omit<IInventoryRequest
                 if (data.availableQuantity < item.quantity) {
                     throw new Error(`Insufficient quantity for ${item.componentName}. Only ${data.availableQuantity} available.`);
                 }
-                itemDocs.push({ ref: componentRef, quantity: item.quantity });
-            }
-
-            // If all available, update the available quantity for all items
-            for (const itemDoc of itemDocs) {
-                transaction.update(itemDoc.ref, {
-                    availableQuantity: increment(-Math.floor(itemDoc.quantity))
-                });
             }
 
             // Create the request document
@@ -166,23 +157,38 @@ export const updateRequestStatus = async (id: string, status: RequestStatus, rej
 
             const requestData = requestSnap.data() as IInventoryRequest;
 
-            // If Rejecting or Returning, we must restock the items
-            if ((status === 'rejected' || status === 'returned') &&
-                requestData.status !== 'rejected' && requestData.status !== 'returned') {
-
+            // 1. If Approving: We must check stock again and DEDUCT it now
+            if (status === 'approved' && requestData.status === 'pending') {
                 for (const item of requestData.items) {
                     const componentRef = doc(db, INVENTORY_COLLECTION, item.componentId);
                     const componentSnap = await transaction.get(componentRef);
-                    // Only restock if the component still exists in the database
+                    if (!componentSnap.exists()) throw new Error(`Component ${item.componentName} was deleted.`);
+
+                    const compData = componentSnap.data() as IComponent;
+                    if (compData.availableQuantity < item.quantity) {
+                        throw new Error(`Cannot approve. Only ${compData.availableQuantity} of ${item.componentName} remains available.`);
+                    }
+
+                    transaction.update(componentRef, {
+                        availableQuantity: increment(-Math.floor(item.quantity))
+                    });
+                }
+            }
+
+            // 2. If Returning: We must RESTORE the items (only if they were actually issued/approved)
+            if (status === 'returned' && requestData.status === 'approved') {
+                for (const item of requestData.items) {
+                    const componentRef = doc(db, INVENTORY_COLLECTION, item.componentId);
+                    const componentSnap = await transaction.get(componentRef);
                     if (componentSnap.exists()) {
                         transaction.update(componentRef, {
                             availableQuantity: increment(Math.floor(item.quantity))
                         });
-                    } else {
-                        console.warn(`Attempted to restock deleted component: ${item.componentName}`);
                     }
                 }
             }
+
+            // Note: If status is 'rejected', we do nothing to stock because it was never deducted while pending.
 
             const updates: Partial<IInventoryRequest> = { status };
             if (status === 'returned') updates.returnDate = new Date().toISOString();
