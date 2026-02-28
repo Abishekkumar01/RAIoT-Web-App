@@ -14,7 +14,7 @@ interface ClassSession {
     subject?: string
     timeRange?: string
     location?: string
-    type: 'regular' | 'holiday'
+    type: 'regular' | 'holiday' | 'bonus'
 }
 
 interface AttendanceRecord {
@@ -87,7 +87,7 @@ export default function MyClasses() {
             case 'late': return 'Late'
             case 'absent': return 'Absent'
             case 'leave': return 'On Leave'
-            default: return 'Not Marked'
+            default: return classSession.type === 'bonus' ? 'Not Marked (Bonus)' : 'Not Marked'
         }
     }
 
@@ -151,8 +151,13 @@ export default function MyClasses() {
 
                             {/* Details */}
                             <div className="flex-1">
-                                <h4 className="font-semibold text-base text-foreground">
-                                    {classSession.subject || "Untitled Class"}
+                                <h4 className="font-semibold text-base text-foreground flex items-center gap-2">
+                                    {classSession.subject || (classSession.type === 'bonus' ? "Bonus Session" : "Untitled Class")}
+                                    {classSession.type === 'bonus' && (
+                                        <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                            Bonus
+                                        </span>
+                                    )}
                                 </h4>
                                 {classSession.location && (
                                     <div className="flex items-center text-xs text-muted-foreground mt-1">

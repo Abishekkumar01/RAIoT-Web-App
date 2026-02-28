@@ -60,6 +60,8 @@ export function AttendanceMarker() {
     const [attendanceState, setAttendanceState] = useState<Record<string, 'present' | 'absent' | 'late' | 'leave'>>({})
     const [existingAttendance, setExistingAttendance] = useState<boolean>(false)
     const [isHoliday, setIsHoliday] = useState(false)
+    const [classType, setClassType] = useState<'regular' | 'holiday' | 'bonus'>('regular')
+    const [publishTimeRange, setPublishTimeRange] = useState("17:15 - 19:15")
 
     // (Class Details State removed per request)
     const [classDetails, setClassDetails] = useState({
@@ -144,15 +146,18 @@ export function AttendanceMarker() {
                     // Set Holiday
                     if (data.type === 'holiday') {
                         setIsHoliday(true);
+                        setClassType('holiday');
                         setAttendanceState(defaults); // Default state behind holiday
                     } else {
                         setIsHoliday(false);
+                        setClassType(data.type || 'regular');
                         // Set Class Details
                         setClassDetails({
                             subject: data.subject || '',
                             timeRange: data.timeRange || '',
                             location: data.location || ''
                         });
+                        if (data.timeRange) setPublishTimeRange(data.timeRange);
 
                         // Set Student Statuses
                         const existing: Record<string, any> = {};
@@ -167,6 +172,8 @@ export function AttendanceMarker() {
                     console.log("No MongoDB record for", dateStr);
                     setExistingAttendance(false);
                     setIsHoliday(false);
+                    setClassType('regular');
+                    setPublishTimeRange("17:15 - 19:15");
                     setClassDetails({ subject: '', timeRange: '', location: '' });
                     setAttendanceState(defaults);
                 }
@@ -216,9 +223,9 @@ export function AttendanceMarker() {
                 date: dateStr,
                 records: isHoliday ? [] : records, // If holiday, we might not need records, or empty
                 subject: classDetails.subject,
-                timeRange: classDetails.timeRange,
+                timeRange: publishTimeRange,
                 location: classDetails.location,
-                type: isHoliday ? 'holiday' : 'regular' as 'holiday' | 'regular',
+                type: isHoliday ? 'holiday' : classType,
                 markedBy: user.uid
             };
 
@@ -239,12 +246,40 @@ export function AttendanceMarker() {
         }
     }
 
-    const handlePublishClass = async () => {
-        // In MongoDB model, class details are part of the 'Attendance' document.
-        // So basically we just trigger a submit with the current details.
-        /* REMOVED UI for class details as per user request to simplify workflow, 
-           but kept this function just in case we need it back */
-        handleSubmit();
+    const handlePublishClass = async (type: 'regular' | 'bonus') => {
+        if (!date || !user) return;
+        try {
+            setSubmitting(true);
+            const dateStr = format(date, 'yyyy-MM-dd');
+
+            // Collect any current marked statuses, but if empty, it just initializes an empty array (which works as a placeholder)
+            // But actually we probably just want to initialize with empty records so members see it but no attendance is enforced yet.
+            const payload = {
+                date: dateStr,
+                records: [],
+                subject: classDetails.subject,
+                timeRange: publishTimeRange,
+                location: classDetails.location,
+                type: type,
+                markedBy: user.uid
+            };
+
+            const result = await saveAttendance(payload);
+
+            if (result.success) {
+                toast.success(`Published ${type === 'bonus' ? 'Bonus Session' : 'Class'} successfully!`);
+                setExistingAttendance(true);
+                setClassType(type);
+                setIsHoliday(false);
+            } else {
+                toast.error("Failed to publish: " + result.error);
+            }
+        } catch (error: any) {
+            console.error("Error publishing:", error);
+            toast.error(`Failed to publish: ${error.message || "Unknown error"}`);
+        } finally {
+            setSubmitting(false);
+        }
     }
 
     // MODIFIED EXPORT FUNCTION (No Clear)
@@ -362,6 +397,65 @@ export function AttendanceMarker() {
                         {isHoliday ? "Unmark Holiday" : "Mark as Holiday"}
                     </Button>
 
+                    <div className="hidden sm:flex items-center gap-2 ml-4">
+                        <Label className="text-sm font-medium text-muted-foreground">Time:</Label>
+                        <Input
+                            value={publishTimeRange}
+                            onChange={(e) => setPublishTimeRange(e.target.value)}
+                            className="w-[110px] h-9"
+                            placeholder="17:15 - 19:15"
+                            disabled={isHoliday}
+                        />
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-9"
+                            onClick={() => handlePublishClass('regular')}
+                            disabled={isHoliday || submitting || loading}
+                        >
+                            Publish Class
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-9 bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
+                            onClick={() => handlePublishClass('bonus')}
+                            disabled={isHoliday || submitting || loading}
+                        >
+                            Publish Bonus
+                        </Button>
+                    </div>
+
+                </div>
+
+                {/* Mobile Publish UI */}
+                <div className="flex sm:hidden items-center gap-2 w-full mt-2">
+                    <Label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Time:</Label>
+                    <Input
+                        value={publishTimeRange}
+                        onChange={(e) => setPublishTimeRange(e.target.value)}
+                        className="w-[100px] h-9"
+                        placeholder="17:15 - 19:15"
+                        disabled={isHoliday}
+                    />
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        className="h-9 px-2 text-xs"
+                        onClick={() => handlePublishClass('regular')}
+                        disabled={isHoliday || submitting || loading}
+                    >
+                        Class
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        className="h-9 px-2 text-xs bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        onClick={() => handlePublishClass('bonus')}
+                        disabled={isHoliday || submitting || loading}
+                    >
+                        Bonus
+                    </Button>
                 </div>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">

@@ -29,7 +29,7 @@ export async function saveAttendance(data: {
     subject?: string;
     timeRange?: string;
     location?: string;
-    type: 'regular' | 'holiday';
+    type: 'regular' | 'holiday' | 'bonus';
     markedBy: string;
 }) {
     try {
@@ -111,7 +111,7 @@ export async function getAttendanceStats() {
         await dbConnect();
 
         const stats = await Attendance.aggregate([
-            { $match: { type: 'regular' } }, // Only count regular sessions
+            { $match: { type: { $in: ['regular', 'bonus'] } } }, // count both regular & bonus sessions
             { $unwind: '$records' },
             {
                 $group: {
@@ -153,7 +153,7 @@ export async function getStudentAttendanceStats(studentId: string) {
         await dbConnect();
 
         const stats = await Attendance.aggregate([
-            { $match: { type: 'regular' } },
+            { $match: { type: { $in: ['regular', 'bonus'] } } },
             { $unwind: '$records' },
             { $match: { 'records.studentId': studentId } },
             {

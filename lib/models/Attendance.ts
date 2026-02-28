@@ -15,7 +15,7 @@ export interface IAttendance extends Document {
     subject?: string;
     timeRange?: string;
     location?: string;
-    type: 'regular' | 'holiday';
+    type: 'regular' | 'holiday' | 'bonus';
     markedBy: string; // User ID of the admin who marked it
     createdAt: Date;
     updatedAt: Date;
@@ -36,7 +36,7 @@ const attendanceSchema: Schema<IAttendance> = new Schema({
     subject: { type: String },
     timeRange: { type: String },
     location: { type: String },
-    type: { type: String, enum: ['regular', 'holiday'], default: 'regular' },
+    type: { type: String, enum: ['regular', 'holiday', 'bonus'], default: 'regular' },
     markedBy: { type: String, required: true },
 }, { timestamps: true });
 
