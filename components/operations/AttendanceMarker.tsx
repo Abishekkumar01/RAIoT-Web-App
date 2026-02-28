@@ -29,7 +29,7 @@ import { toast } from "sonner"
 import { getAttendanceByDate, saveAttendance, getAllAttendanceRecords, getAttendanceStats } from '@/app/actions/attendanceActions';
 import { testConnection } from '@/app/actions/testConnection';
 import * as XLSX from 'xlsx';
-import { getDatabaseStats } from '@/app/actions/storageActions';
+
 
 interface Student {
     id: string
@@ -68,27 +68,7 @@ export function AttendanceMarker() {
         location: ''
     })
 
-    // Storage Stats State
-    const [storageStats, setStorageStats] = useState({
-        usagePercentage: 0,
-        estimatedBytes: 0,
-        maxBytes: 512 * 1024 * 1024 // 512MB
-    });
 
-    // Fetch Storage Stats
-    useEffect(() => {
-        const fetchStats = async () => {
-            const stats = await getDatabaseStats();
-            if (stats.success && stats.data) {
-                setStorageStats({
-                    usagePercentage: parseFloat(stats.data.usagePercentage),
-                    estimatedBytes: stats.data.estimatedBytes,
-                    maxBytes: stats.data.maxBytes
-                });
-            }
-        };
-        fetchStats();
-    }, [date, submitting]); // Refresh when date changes or after submit
 
 
     const fetchStudents = async () => {
@@ -290,14 +270,7 @@ export function AttendanceMarker() {
         }
     }
 
-    // Format bytes helper
-    const formatBytes = (bytes: number) => {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    };
+
 
     const filteredStudents = students.filter(s =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -307,31 +280,7 @@ export function AttendanceMarker() {
     return (
         <div className="space-y-6">
 
-            {/* STORAGE BAR (Windows Style) */}
-            <div className="bg-card border rounded-lg p-4 shadow-sm">
-                <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <Database className="h-4 w-4" />
-                        Database Storage (Estimated)
-                    </h3>
-                    <span className="text-xs font-mono text-muted-foreground">
-                        {formatBytes(storageStats.estimatedBytes)} used of {formatBytes(storageStats.maxBytes)}
-                    </span>
-                </div>
-                <div className="h-4 w-full bg-secondary rounded-full overflow-hidden border border-secondary">
-                    <div
-                        className={cn(
-                            "h-full transition-all duration-500",
-                            storageStats.usagePercentage > 90 ? "bg-red-500" :
-                                storageStats.usagePercentage > 70 ? "bg-yellow-500" : "bg-blue-600"
-                        )}
-                        style={{ width: `${Math.max(storageStats.usagePercentage, 1)}%` }} // Min 1% visibility
-                    />
-                </div>
-                <p className="text-[10px] text-muted-foreground mt-1 text-right">
-                    ~{storageStats.usagePercentage.toFixed(4)}% Used (Free Tier Limit)
-                </p>
-            </div>
+
 
             {/* Top Bar with Export */}
             <div className="flex justify-end mb-4 gap-2">
