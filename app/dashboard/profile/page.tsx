@@ -617,11 +617,11 @@ export default function ProfilePage() {
               <Input
                 id="rollNumber"
                 name="rollNumber"
-                value={formData.rollNumber}
-                onChange={handleChange}
-                disabled={!isEditing}
-                placeholder="CS21001"
+                value={user?.profileData?.rollNumber || ""}
+                disabled
+                className="bg-muted"
               />
+              <p className="text-xs text-muted-foreground">Roll number cannot be changed</p>
             </div>
 
             <div className="space-y-2">
