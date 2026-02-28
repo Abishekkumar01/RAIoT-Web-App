@@ -324,10 +324,22 @@ export default function AdminUsersPage() {
     setSuccess('')
 
     try {
-      await setDoc(doc(db, 'users', userId), {
-        role: newRole,
-        updatedAt: new Date()
-      }, { merge: true })
+      const response = await fetch('/api/admin/users/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uid: userId,
+          role: newRole
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update user role')
+      }
 
       // Show toast notification in bottom corner
       toast({
