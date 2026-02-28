@@ -100,8 +100,9 @@ export default function UserInventoryPage() {
         setIsSubmitting(true)
         try {
             // 1. Check daily limit
-            const isManagerOrAdmin = user.email === 'chouhanchetan066@gmail.com' || user.profileData?.isInventoryManager;
-            if (!isManagerOrAdmin) {
+            // Limits are only for users with regular 'member' privileges
+            const isLimitedUser = user.role === 'member';
+            if (isLimitedUser) {
                 const todaysRequests = await checkDailyRequestLimit(user.uid)
                 if (todaysRequests >= 3) {
                     throw new Error("You have reached your daily limit of 3 component requests.")
