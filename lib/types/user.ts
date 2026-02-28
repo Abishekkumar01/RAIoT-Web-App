@@ -46,8 +46,8 @@ export interface User {
       imageUrl: string;
       achievements?: string[]
       contributions?: string[]
-      isInventoryManager?: boolean
     }>;
+    isInventoryManager?: boolean
   }
   attendance?: AttendanceRecord[]
   createdAt: Date
