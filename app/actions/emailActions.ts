@@ -22,9 +22,15 @@ interface EmailOptions {
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     try {
         if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
+            console.error("CRITICAL SMTP ERROR: Missing Credentials in Production Environment.", {
+                email: !!process.env.SMTP_EMAIL,
+                password: !!process.env.SMTP_PASSWORD
+            });
             console.warn("⚠️ SMTP credentials not set. Simulated email sending:", options.subject, "to", options.to);
             return true; // Simulate success if credentials are missing during dev
         }
+
+        console.log("Attempting to send real email to:", options.to, "Subject:", options.subject);
 
         const info = await transporter.sendMail({
             from: `"RAIoT Dashboard" <${process.env.SMTP_EMAIL}>`,
@@ -34,8 +40,8 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
         console.log("Email sent: %s", info.messageId);
         return true;
     } catch (error) {
-        console.error("Error sending email: ", error);
-        return false;
+        console.error("FATAL ERROR IN TRANSPORTER: ", error);
+        throw error; // Throwing so it surfaces to the frontend toast
     }
 };
 
