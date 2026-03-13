@@ -21,7 +21,8 @@ import {
   Award,
   Image as ImageIcon,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  FileText
 } from "lucide-react"
 import Link from "next/link"
 import { collection, getCountFromServer, query, where, getDocs, orderBy, limit } from "firebase/firestore"
@@ -398,7 +399,18 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </Link>
-
+            <Link href="/admin/resources">
+              <Card className="h-full relative overflow-hidden border-muted-foreground/20 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 group bg-card/50 backdrop-blur-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Manage Resources</CardTitle>
+                  <FileText className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">Resources</div>
+                  <p className="text-xs text-muted-foreground">Member files & results</p>
+                </CardContent>
+              </Card>
+            </Link>
           <Link href="/admin/contact">
             <Card className="h-full relative overflow-hidden border-muted-foreground/20 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 group bg-card/50 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

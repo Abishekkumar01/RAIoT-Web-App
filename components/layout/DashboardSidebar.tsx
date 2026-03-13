@@ -51,9 +51,10 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
   const memberLinks = [
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/dashboard/profile", label: "Profile", icon: User },
+    { href: "/dashboard/my-resources", label: "My Resources", icon: FileText },
     { href: "/dashboard/attendance", label: "Attendance", icon: ClipboardList },
     { href: "/dashboard/events", label: "Events", icon: Calendar },
-    ...(isInventoryUser ? [{ href: "/dashboard/inventory", label: "Resources", icon: Box }] : []),
+    ...(isInventoryUser ? [{ href: "/dashboard/inventory", label: "Hardware Inventory", icon: Box }] : []),
   ];
 
   const adminLinks = [
@@ -67,6 +68,7 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     },
     { href: "/operations/history", label: "Attendance History", icon: Archive },
     { href: "/admin/users", label: "Manage Users", icon: Users },
+    { href: "/admin/resources", label: "Manage Resources", icon: FileText },
 
     { href: "/admin/trainees", label: "Manage Trainees", icon: Users },
     { href: "/admin/leaders", label: "Manage Leaders", icon: Shield },
@@ -93,9 +95,10 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     { href: "/", label: "Home", icon: Home },
     { href: "/operations", label: "Operations Dashboard", icon: BarChart3 },
     { href: "/operations/my-events", label: "Events & Teams", icon: Calendar },
-    ...(isInventoryUser ? [{ href: "/dashboard/inventory", label: "Resources", icon: Box }] : []),
+    ...(isInventoryUser ? [{ href: "/dashboard/inventory", label: "Hardware Inventory", icon: Box }] : []),
     ...(isInventoryAdmin ? [{ href: "/admin/inventory", label: "Manage Inventory", icon: Box }] : []),
     { href: "/dashboard", label: "Club Dashboard", icon: Home },
+    { href: "/dashboard/my-resources", label: "My Resources", icon: FileText },
     ...(user?.role === 'student_coordinator' || user?.role === 'operations' || isAdminRole ? [
       { href: "/operations/attendance", label: "Mark Attendance", icon: ClipboardList },
       { href: "/operations/history", label: "Attendance History", icon: Archive },

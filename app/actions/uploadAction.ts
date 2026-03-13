@@ -8,13 +8,13 @@ cloudinary.config({
     api_secret: '2_90TlHyRGKq6MTj-yBkReyBm_Q',
 });
 
-export async function getCloudinarySignature() {
+export async function getCloudinarySignature(folderName: string = 'raiot_inventory') {
     const timestamp = Math.round(new Date().getTime() / 1000);
 
     // You can add more parameters like folder, tags here if needed
     const paramsToSign = {
         timestamp: timestamp,
-        folder: 'raiot_inventory'
+        folder: folderName
     };
 
     const signature = cloudinary.utils.api_sign_request(
