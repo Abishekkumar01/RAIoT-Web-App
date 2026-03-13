@@ -178,13 +178,11 @@ service cloud.firestore {
       // Anyone logged in can view components
       allow read: if request.auth != null;
       // Only Admins / Superadmins or Inventory Managers can modify the actual component objects
-      allow write: if isAdmin() || (
-        request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileData.isInventoryManager == true
-      );
+      allow write: if isAdmin() || isInventoryManager();
       // Wait, users need to update `availableQuantity` during cart request transactions!
       allow update: if request.auth != null && (
         isAdmin() || 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileData.isInventoryManager == true ||
+        isInventoryManager() ||
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['availableQuantity'])
       );
     }
@@ -194,20 +192,16 @@ service cloud.firestore {
       allow read: if request.auth != null && (
         resource.data.userId == request.auth.uid || 
         isAdmin() || 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileData.isInventoryManager == true
+        isInventoryManager()
       );
       // Users can create their own requests
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       // Admins/Managers update the status
-      allow update: if isAdmin() || (
-        request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileData.isInventoryManager == true
-      );
+      allow update: if isAdmin() || isInventoryManager();
     }
 
     match /inventory_damaged/{logId} {
-      allow read, write: if isAdmin() || (
-        request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileData.isInventoryManager == true
-      );
+      allow read, write: if isAdmin() || isInventoryManager();
     }
 
     // Bills:
@@ -230,12 +224,23 @@ service cloud.firestore {
 
     function isAdmin() {
       return request.auth != null && (
+        request.auth.token.email == 'chouhanchetan066@gmail.com' ||
+        request.auth.token.email == 'amanchoudhary.1502@gmail.com' ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin' ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'president' ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'vice_president'
       );
     } 
+
+    function isInventoryManager() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return request.auth != null && 
+             userDoc != null && 
+             userDoc.data.keys().hasAll(['profileData']) && 
+             userDoc.data.profileData.keys().hasAll(['isInventoryManager']) && 
+             userDoc.data.profileData.isInventoryManager == true;
+    }
 
     function isCoordinator() {
       return request.auth != null && (
