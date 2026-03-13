@@ -3,9 +3,9 @@
 import { v2 as cloudinary } from 'cloudinary';
 
 cloudinary.config({
-    cloud_name: (process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dp5daaegm').trim(),
-    api_key: (process.env.CLOUDINARY_API_KEY || '459138652653136').trim(),
-    api_secret: (process.env.CLOUDINARY_API_SECRET || 'icVGPJKlpO14YRDY4dK9A5xk3LA').trim(),
+    cloud_name: 'dvjvbonjb',
+    api_key: '789299399652629',
+    api_secret: '2_90TlHyRGKq6MTj-yBkReyBm_Q',
 });
 
 export async function getCloudinarySignature() {
@@ -19,7 +19,7 @@ export async function getCloudinarySignature() {
 
     const signature = cloudinary.utils.api_sign_request(
         paramsToSign,
-        (process.env.CLOUDINARY_API_SECRET || 'icVGPJKlpO14YRDY4dK9A5xk3LA').trim()
+        '2_90TlHyRGKq6MTj-yBkReyBm_Q'
     );
 
     return { timestamp, signature };

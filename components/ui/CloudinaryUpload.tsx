@@ -43,13 +43,13 @@ export function CloudinaryUpload({ onUploadSuccess, currentImageUrl }: Cloudinar
             // 2. Upload directly to Cloudinary from Client (Bypasses Next.js 1MB limit)
             const formData = new FormData();
             formData.append('file', file);
-            const apiKey = (process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY || '459138652653136').trim();
+            const apiKey = '789299399652629';
             formData.append('api_key', apiKey);
             formData.append('timestamp', timestamp.toString());
             formData.append('signature', signature);
             formData.append('folder', 'raiot_inventory');
 
-            const cloudName = (process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dp5daaegm').trim();
+            const cloudName = 'dvjvbonjb';
             const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
                 method: 'POST',
                 body: formData
@@ -66,12 +66,12 @@ export function CloudinaryUpload({ onUploadSuccess, currentImageUrl }: Cloudinar
                 title: "Upload Successful",
                 description: "Image uploaded to Cloudinary.",
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Cloudinary Upload Error:", error);
             setPreviewUrl(currentImageUrl || null); // Revert
             toast({
                 title: "Upload Failed",
-                description: "There was an error uploading the image.",
+                description: error.message || "There was an error uploading the image.",
                 variant: "destructive"
             });
         } finally {
