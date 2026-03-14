@@ -7,13 +7,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     try {
         const { id } = params;
         
-        await dbConnect();
-        const db = mongoose.connection.db;
-        const bucket = new mongoose.mongo.GridFSBucket(db!, {
+        const mongooseInstance = await dbConnect();
+        const db = mongooseInstance.connection.db;
+        const bucket = new mongooseInstance.mongo.GridFSBucket(db!, {
             bucketName: 'member_resources'
         });
 
-        const objectId = new mongoose.Types.ObjectId(id);
+        const objectId = new mongooseInstance.Types.ObjectId(id);
         const files = await bucket.find({ _id: objectId }).toArray();
 
         if (!files || files.length === 0) {

@@ -32,7 +32,8 @@ export default function MongoDocumentUpload({ userId, onUploadSuccess }: MongoDo
             });
 
             if (!response.ok) {
-                throw new Error('Upload failed');
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.details || errData.error || `Upload failed with status ${response.status}`);
             }
 
             const data = await response.json();
@@ -43,9 +44,9 @@ export default function MongoDocumentUpload({ userId, onUploadSuccess }: MongoDo
                 const fileUrl = `/api/resources/download/${data.fileId}`;
                 onUploadSuccess(fileUrl, data.fileId, file.name);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error uploading file:', error);
-            alert('Upload failed. Please try again.');
+            alert(`Upload failed: ${error.message || 'Please try again.'}`);
         } finally {
             setUploading(false);
         }

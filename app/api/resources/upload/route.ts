@@ -4,7 +4,7 @@ import dbConnect from '@/lib/mongodb';
 
 export async function POST(req: Request) {
     try {
-        await dbConnect();
+        const mongooseInstance = await dbConnect();
         
         const formData = await req.formData();
         const file = formData.get('file') as File;
@@ -16,8 +16,8 @@ export async function POST(req: Request) {
         
         const buffer = Buffer.from(await file.arrayBuffer());
         
-        const db = mongoose.connection.db;
-        const bucket = new mongoose.mongo.GridFSBucket(db!, {
+        const db = mongooseInstance.connection.db;
+        const bucket = new mongooseInstance.mongo.GridFSBucket(db!, {
             bucketName: 'member_resources'
         });
         
@@ -42,8 +42,12 @@ export async function POST(req: Request) {
             message: 'File uploaded to MongoDB via GridFS'
         });
         
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error uploading file to MongoDB:', error);
-        return NextResponse.json({ error: 'Error uploading file' }, { status: 500 });
+        return NextResponse.json({ 
+            error: 'Error uploading file', 
+            details: error.message || error.toString(),
+            stack: error.stack
+        }, { status: 500 });
     }
 }
