@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://raiotweb_user:utBgv6576jJbVzgZDlX8@140.238.225.254:27017/raiotweb?authSource=admin';
 
 
 
