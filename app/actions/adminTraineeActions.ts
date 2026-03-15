@@ -3,6 +3,7 @@
 import dbConnect from '@/lib/mongodb';
 import Trainee, { ITrainee } from '@/lib/models/Trainee';
 import { revalidatePath } from 'next/cache';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 
 // Helper to serialize Mongoose documents to plain objects
 function serializeTrainee(trainee: any) {
@@ -92,9 +93,45 @@ export async function deleteAllTrainees() {
 export async function addTrainee(data: any) {
     try {
         await dbConnect();
+        
+        let firebaseUid = data.userId || 'admin-added';
+
+        // Attempt to create auth identity if password is provided
+        if (data.password && data.email && data.name) {
+            const adminAuth = getAdminAuth();
+            const adminDb = getAdminDb();
+            
+            if (adminAuth && adminDb) {
+                try {
+                    // Create Firebase User
+                    const userRecord = await adminAuth.createUser({
+                        email: data.email,
+                        password: data.password,
+                        displayName: data.name
+                    });
+                    
+                    firebaseUid = userRecord.uid;
+                    
+                    // Add users collection record for RBAC
+                    await adminDb.collection('users').doc(firebaseUid).set({
+                        email: data.email,
+                        name: data.name,
+                        role: 'trainee',
+                        createdAt: new Date().toISOString(),
+                        source: 'admin-dashboard'
+                    });
+                } catch (fbError: any) {
+                    console.error("Failed to create Firebase Auth user:", fbError);
+                    return { success: false, error: `Firebase Error: ${fbError.message}` };
+                }
+            } else {
+                return { success: false, error: "Firebase Admin is not configured correctly on the server." };
+            }
+        }
+
         const newTrainee = new Trainee({
             ...data,
-            userId: data.userId || 'admin-added',
+            userId: firebaseUid,
             status: data.status || 'Pending',
             passportPhotoUrl: data.passportPhotoUrl || 'https://via.placeholder.com/150',
             hobby: data.hobby || 'N/A',
@@ -104,6 +141,7 @@ export async function addTrainee(data: any) {
             currentStatus: data.currentStatus || 'N/A',
             areasOfInterest: data.areasOfInterest && data.areasOfInterest.length > 0 ? data.areasOfInterest : ['None'],
         });
+        
         await newTrainee.save();
         revalidatePath('/admin/trainees');
         return { success: true, data: serializeTrainee(newTrainee) };
@@ -116,6 +154,64 @@ export async function addTrainee(data: any) {
 export async function updateTraineeDetails(id: string, data: any) {
     try {
         await dbConnect();
+
+        // Check if we need to update the Firebase password or email
+        if (data.password || data.email) {
+            const adminAuth = getAdminAuth();
+            const adminDb = getAdminDb();
+            
+            if (adminAuth && adminDb) {
+                // To update Firebase, we need the original email or userId
+                const existingTrainee = await Trainee.findById(id);
+                if (existingTrainee) {
+                    try {
+                        let uid = existingTrainee.userId;
+                        let userRecord = null;
+                        
+                        // Try to get user by UID, if it's "admin-added" try by email
+                        if (uid && uid !== 'admin-added') {
+                            try { userRecord = await adminAuth.getUser(uid); } catch (e) {}
+                        }
+                        if (!userRecord && existingTrainee.email) {
+                            try { userRecord = await adminAuth.getUserByEmail(existingTrainee.email); } catch (e) {}
+                        }
+                        
+                        // If user doesn't exist but a password is provided now, we should create them!
+                        if (!userRecord && data.password && data.email) {
+                            userRecord = await adminAuth.createUser({
+                                email: data.email,
+                                password: data.password,
+                                displayName: data.name || existingTrainee.name
+                            });
+                            // Store the real UID now
+                            data.userId = userRecord.uid;
+                            
+                            await adminDb.collection('users').doc(userRecord.uid).set({
+                                email: data.email,
+                                name: data.name || existingTrainee.name,
+                                role: 'trainee',
+                                createdAt: new Date().toISOString()
+                            }, { merge: true });
+                            
+                        } else if (userRecord && data.password) {
+                            // Just update existing password
+                            await adminAuth.updateUser(userRecord.uid, {
+                                password: data.password
+                            });
+                        }
+                    } catch (fbError: any) {
+                        console.error('Firebase Auth update failed:', fbError);
+                        return { success: false, error: `Firebase Error: ${fbError.message}` };
+                    }
+                }
+            }
+        }
+        
+        // Remove password from data so we don't save it to MongoDB accidentally
+        if (data.password) {
+            delete data.password;
+        }
+
         const trainee = await Trainee.findByIdAndUpdate(
             id,
             { $set: data },

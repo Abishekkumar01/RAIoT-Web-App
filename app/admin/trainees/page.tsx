@@ -42,6 +42,7 @@ interface Trainee {
     id: string;
     name: string;
     email: string;
+    password?: string;
     phoneWhatsApp: string;
     phoneCall: string;
     dob?: string;
@@ -703,6 +704,11 @@ export default function AdminManageTraineePage() {
                                 <Label>Email *</Label>
                                 <Input type="email" required value={editingTrainee?.email || ''} onChange={e => setEditingTrainee(prev => prev ? { ...prev, email: e.target.value } : null)} />
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>{editingTrainee?.id ? "New Password (leave blank to keep current)" : "Password *"}</Label>
+                            <Input type="password" placeholder="Enter trainee account password" required={!editingTrainee?.id} value={editingTrainee?.password || ''} onChange={e => setEditingTrainee(prev => prev ? { ...prev, password: e.target.value } : null)} />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
