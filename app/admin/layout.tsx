@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { DashboardSidebar } from '@/components/layout/DashboardSidebar'
@@ -11,9 +12,11 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const requiredRole = pathname?.startsWith('/admin/trainees') ? 'student_coordinator' : 'vice_president';
 
   return (
-    <ProtectedRoute requiredRole="vice_president">
+    <ProtectedRoute requiredRole={requiredRole}>
       <div className="flex h-screen bg-background relative overflow-hidden">
         {/* Mobile Toggle Button */}
         <button
