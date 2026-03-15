@@ -31,53 +31,47 @@ export default function AdminUsersPage() {
     if (!db) return
 
     const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const safeDateString = (dateVal: any, fallbackToToday = true) => {
+        try {
+          if (!dateVal) return fallbackToToday ? new Date().toLocaleDateString() : 'N/A'
+
+          // Firestore Timestamp-like object
+          if (typeof dateVal === 'object' && typeof dateVal.seconds === 'number') {
+            const d = new Date(dateVal.seconds * 1000)
+            return isNaN(d.getTime()) ? (fallbackToToday ? new Date().toLocaleDateString() : 'N/A') : d.toLocaleDateString()
+          }
+
+          // JS Date / ISO string / epoch number
+          const d = new Date(dateVal)
+          return isNaN(d.getTime()) ? (fallbackToToday ? new Date().toLocaleDateString() : 'N/A') : d.toLocaleDateString()
+        } catch {
+          return fallbackToToday ? new Date().toLocaleDateString() : 'N/A'
+        }
+      }
+
       const firebaseUsers = snapshot.docs.map(doc => {
         const data = doc.data()
         return {
           id: doc.id,
-          displayName: data.displayName || data.email,
-          email: data.email,
+          displayName: data.displayName || data.name || data.email || 'Unknown User',
+          email: data.email || 'N/A',
           role: data.role || 'member',
-          rawJoiningDate: data.joiningDate || (data.createdAt ? new Date(data.createdAt.seconds * 1000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
-          joiningDate: data.joiningDate || (data.createdAt ? new Date(data.createdAt.seconds * 1000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
-          joinDate: (() => {
-            const dateVal = data.joiningDate || data.createdAt;
-            if (!dateVal) return new Date().toLocaleDateString();
-            try {
-              // Handle Firestore Timestamp
-              if (typeof dateVal === 'object' && dateVal.seconds) {
-                return new Date(dateVal.seconds * 1000).toLocaleDateString();
-              }
-              // Handle standard Date object or String
-              const d = new Date(dateVal);
-              if (isNaN(d.getTime())) return "N/A";
-              return d.toLocaleDateString();
-            } catch (e) {
-              return "N/A";
-            }
-          })(),
-          lastActive: (() => {
-            const dateVal = data.updatedAt;
-            if (!dateVal) return new Date().toLocaleDateString();
-            try {
-              if (typeof dateVal === 'object' && dateVal.seconds) {
-                return new Date(dateVal.seconds * 1000).toLocaleDateString();
-              }
-              const d = new Date(dateVal);
-              if (isNaN(d.getTime())) return "N/A";
-              return d.toLocaleDateString();
-            } catch (e) {
-              return new Date().toLocaleDateString();
-            }
-          })(),
+          rawJoiningDate: safeDateString(data.joiningDate || data.createdAt),
+          joiningDate: safeDateString(data.joiningDate || data.createdAt),
+          joinDate: safeDateString(data.joiningDate || data.createdAt, false),
+          lastActive: safeDateString(data.updatedAt),
           attendanceRate: data.attendance ? data.attendance.length * 10 : 0,
-          passwordChangedAt: data.passwordChangedAt ? new Date(data.passwordChangedAt.seconds * 1000) : null,
+          passwordChangedAt: data.passwordChangedAt
+            ? (typeof data.passwordChangedAt === 'object' && typeof data.passwordChangedAt.seconds === 'number'
+              ? new Date(data.passwordChangedAt.seconds * 1000)
+              : new Date(data.passwordChangedAt))
+            : null,
           passwordChangedBy: data.passwordChangedBy || null,
           initialPassword: data.initialPassword || null, // Stored password for admin reference
           profileData: {
             year: data.profileData?.year || 'N/A',
-            branch: data.profileData?.branch || 'N/A',
-            rollNumber: data.profileData?.rollNumber || 'N/A',
+            branch: data.profileData?.branch || data.profileData?.department || 'N/A',
+            rollNumber: data.profileData?.rollNumber || data.uniqueId || 'N/A',
             phone: data.profileData?.phone || 'N/A'
           }
         }
