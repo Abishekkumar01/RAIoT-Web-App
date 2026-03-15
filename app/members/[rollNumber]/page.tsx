@@ -91,6 +91,9 @@ export default function MemberProfilePage() {
   }, [rollNumber])
 
   const defaultBanner = "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2670&auto=format&fit=crop"
+  const memberDisplayName = member?.displayName || (member as any)?.name || 'Member'
+  const memberPublicId = member?.profileData?.rollNumber || (member as any)?.uniqueId || member?.uid || 'N/A'
+  const memberDepartment = member?.profileData?.branch || member?.profileData?.department || 'N/A'
 
   if (loading) {
     return (
@@ -166,9 +169,9 @@ export default function MemberProfilePage() {
               <div className="absolute -inset-1 rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 blur-sm"></div>
 
               <Avatar className="w-24 h-24 md:w-36 md:h-36 border-4 border-zinc-900 bg-zinc-950 shadow-2xl relative z-10">
-                <AvatarImage src={member.profileData?.photoUrl} alt={member.displayName || 'Member'} className="object-cover" />
+                <AvatarImage src={member.profileData?.photoUrl} alt={memberDisplayName} className="object-cover" />
                 <AvatarFallback className="text-xl md:text-3xl font-bold bg-zinc-900 text-zinc-500">
-                  {(member.displayName || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                  {(memberDisplayName || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                 </AvatarFallback>
               </Avatar>
 
@@ -182,7 +185,7 @@ export default function MemberProfilePage() {
               <div>
                 <div className="flex flex-col xl:flex-row items-center md:items-start xl:items-end gap-2 md:gap-3 mb-1">
                   <h1 className="text-2xl md:text-5xl font-black tracking-tighter text-white uppercase font-sans leading-none break-words line-clamp-2">
-                    {member.displayName || 'Use Name Here'}
+                    {memberDisplayName}
                   </h1>
                   <div className="flex items-center gap-2 mt-1 xl:mt-0">
                     <div className="h-px w-8 bg-cyan-500/50 hidden xl:block"></div>
@@ -205,11 +208,11 @@ export default function MemberProfilePage() {
                 <div className="flex flex-wrap gap-2 md:gap-3">
                   <div className="flex items-center gap-2 bg-zinc-900/80 border border-zinc-700 px-3 py-1.5 rounded-sm">
                     <span className="text-[10px] text-zinc-500 uppercase font-mono">ID</span>
-                    <span className="text-xs md:text-sm font-mono text-white">{member.profileData?.rollNumber || "N/A"}</span>
+                    <span className="text-xs md:text-sm font-mono text-white">{memberPublicId}</span>
                   </div>
                   <div className="flex items-center gap-2 bg-zinc-900/80 border border-zinc-700 px-3 py-1.5 rounded-sm">
                     <span className="text-[10px] text-zinc-500 uppercase font-mono">DEPT</span>
-                    <span className="text-xs md:text-sm font-mono text-white">{member.profileData?.branch || "N/A"}</span>
+                    <span className="text-xs md:text-sm font-mono text-white">{memberDepartment}</span>
                   </div>
                 </div>
 
