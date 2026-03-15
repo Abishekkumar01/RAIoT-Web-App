@@ -116,6 +116,9 @@ export async function addTrainee(data: any) {
                     await adminDb.collection('users').doc(firebaseUid).set({
                         email: data.email,
                         name: data.name,
+                        displayName: data.name,
+                        uniqueId: data.enrollmentNo || null,
+                        ...(data.enrollmentNo ? { profileData: { rollNumber: data.enrollmentNo } } : {}),
                         role: 'trainee',
                         createdAt: new Date().toISOString(),
                         source: 'admin-dashboard'
@@ -189,6 +192,11 @@ export async function updateTraineeDetails(id: string, data: any) {
                             await adminDb.collection('users').doc(userRecord.uid).set({
                                 email: data.email,
                                 name: data.name || existingTrainee.name,
+                                displayName: data.name || existingTrainee.name,
+                                uniqueId: data.enrollmentNo || existingTrainee.enrollmentNo || null,
+                                ...((data.enrollmentNo || existingTrainee.enrollmentNo)
+                                    ? { profileData: { rollNumber: data.enrollmentNo || existingTrainee.enrollmentNo } }
+                                    : {}),
                                 role: 'trainee',
                                 createdAt: new Date().toISOString()
                             }, { merge: true });

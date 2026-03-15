@@ -39,7 +39,7 @@ export default function MembersListPage() {
 
                 const fetchedUsers: User[] = []
                 querySnapshot.forEach((doc) => {
-                    fetchedUsers.push(doc.data() as User)
+                    fetchedUsers.push({ ...(doc.data() as User), uid: doc.id } as User)
                 })
 
                 setUsers(fetchedUsers)
@@ -98,7 +98,7 @@ export default function MembersListPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredUsers.map((user) => {
                     const displayName = user.displayName || (user as any).name || 'Unknown User';
-                    const memberId = user.profileData?.rollNumber || (user as any).uniqueId;
+                    const memberId = user.profileData?.rollNumber || (user as any).uniqueId || user.uid;
                     
                     return (
                     <Link

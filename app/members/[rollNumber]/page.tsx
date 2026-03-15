@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { collection, query, where, getDocs } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { User } from '@/lib/types/user'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -36,7 +36,13 @@ export default function MemberProfilePage() {
         const upperRollNumber = rollNumber.toUpperCase()
 
         const q = query(usersRef, where('profileData.rollNumber', 'in', [normalizedRollNumber, upperRollNumber, rollNumber]))
-        const querySnapshot = await getDocs(q)
+        let querySnapshot = await getDocs(q)
+
+        // Fallback 1: Some accounts (especially trainees) store their ID as uniqueId
+        if (querySnapshot.empty) {
+          const uniqueIdQuery = query(usersRef, where('uniqueId', 'in', [normalizedRollNumber, upperRollNumber, rollNumber]))
+          querySnapshot = await getDocs(uniqueIdQuery)
+        }
 
         if (!querySnapshot.empty) {
           // Find the best match: prioritize profile with photoUrl or projects
@@ -61,8 +67,15 @@ export default function MemberProfilePage() {
 
           setMember(bestMatch)
         } else {
-          console.error(`Member not found with roll number: ${rollNumber}`)
-          setNotFound(true)
+          // Fallback 2: direct document UID lookup
+          const userDocRef = doc(db, 'users', rollNumber)
+          const userDoc = await getDoc(userDocRef)
+          if (userDoc.exists()) {
+            setMember({ ...(userDoc.data() as User), uid: userDoc.id })
+          } else {
+            console.error(`Member not found with roll number/uniqueId/uid: ${rollNumber}`)
+            setNotFound(true)
+          }
         }
       } catch (error) {
         console.error('Error fetching member:', error)
