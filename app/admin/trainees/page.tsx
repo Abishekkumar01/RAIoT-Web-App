@@ -8,7 +8,9 @@ import {
     getAllTrainees,
     updateTraineeStatus,
     deleteTrainee,
-    deleteAllTrainees // New action
+    deleteAllTrainees,
+    addTrainee,
+    updateTraineeDetails
 } from '@/app/actions/adminTraineeActions';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,8 +18,9 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle2, XCircle, Search, Calendar, Mail, Phone, BookOpen, User, Eye, Download, ExternalLink, Trash2, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Search, Calendar, Mail, Phone, BookOpen, User, Eye, Download, ExternalLink, Trash2, RotateCcw, AlertTriangle, Plus, Edit } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import * as XLSX from 'xlsx';
@@ -69,6 +72,11 @@ export default function AdminManageTraineePage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
     const [viewMode, setViewMode] = useState<'Active' | 'Trash'>('Active');
+
+    // Add / Edit State
+    const [isAddEditOpen, setIsAddEditOpen] = useState(false);
+    const [editingTrainee, setEditingTrainee] = useState<Partial<Trainee> | null>(null);
+    const [isSubmittingForm, setIsSubmittingForm] = useState(false);
 
     // For Delete All Confirmation
     const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
@@ -213,6 +221,41 @@ export default function AdminManageTraineePage() {
         }
     };
 
+    const handleSaveTrainee = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setIsSubmittingForm(true);
+        try {
+            if (editingTrainee?.id) {
+                // Update existing
+                const result = await updateTraineeDetails(editingTrainee.id, editingTrainee);
+                if (result.success && result.data) {
+                    toast.success("Trainee updated successfully");
+                    setTrainees(prev => prev.map(t => t.id === editingTrainee.id ? result.data as Trainee : t));
+                    setIsAddEditOpen(false);
+                    setEditingTrainee(null);
+                } else {
+                    toast.error(result.error || "Update failed");
+                }
+            } else {
+                // Add new
+                const result = await addTrainee(editingTrainee);
+                if (result.success && result.data) {
+                    toast.success("Trainee added successfully");
+                    setTrainees(prev => [result.data as Trainee, ...prev]);
+                    setIsAddEditOpen(false);
+                    setEditingTrainee(null);
+                } else {
+                    toast.error(result.error || "Add failed");
+                }
+            }
+        } catch (error) {
+            console.error("Error saving trainee:", error);
+            toast.error("An error occurred while saving.");
+        } finally {
+            setIsSubmittingForm(false);
+        }
+    };
+
     // Filter Logic
     const filteredTrainees = trainees.filter(t => {
         const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -290,6 +333,18 @@ export default function AdminManageTraineePage() {
                         </div>
 
                         <div className="flex items-center gap-2 flex-wrap justify-end">
+                            {/* ADD TRAINEE BUTTON */}
+                            <Button
+                                size="sm"
+                                className="h-8 gap-1 bg-primary text-primary-foreground"
+                                onClick={() => {
+                                    setEditingTrainee({ status: 'Pending', areasOfInterest: [] });
+                                    setIsAddEditOpen(true);
+                                }}
+                            >
+                                <Plus className="h-3 w-3" /> Add Trainee
+                            </Button>
+
                             {/* EXPORT BUTTONS */}
                             <Button
                                 variant="outline"
@@ -394,6 +449,20 @@ export default function AdminManageTraineePage() {
                                                     >
                                                         <Eye className="h-4 w-4" />
                                                         <span className="sr-only">View</span>
+                                                    </Button>
+
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="h-8 w-8 p-0 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                                                        onClick={() => {
+                                                            setEditingTrainee(trainee);
+                                                            setIsAddEditOpen(true);
+                                                        }}
+                                                        title="Edit Details"
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                        <span className="sr-only">Edit</span>
                                                     </Button>
 
                                                     {viewMode === 'Active' ? (
@@ -607,6 +676,96 @@ export default function AdminManageTraineePage() {
                             )}
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Add / Edit Trainee Dialog */}
+            <Dialog open={isAddEditOpen} onOpenChange={(open) => {
+                if (!open) {
+                    setIsAddEditOpen(false);
+                    setEditingTrainee(null);
+                }
+            }}>
+                <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>{editingTrainee?.id ? 'Edit Trainee' : 'Add New Trainee'}</DialogTitle>
+                        <DialogDescription>
+                            {editingTrainee?.id ? 'Update trainee information below.' : 'Fill in the details to manually register a new trainee.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSaveTrainee} className="space-y-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Full Name *</Label>
+                                <Input required value={editingTrainee?.name || ''} onChange={e => setEditingTrainee(prev => prev ? { ...prev, name: e.target.value } : null)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Email *</Label>
+                                <Input type="email" required value={editingTrainee?.email || ''} onChange={e => setEditingTrainee(prev => prev ? { ...prev, email: e.target.value } : null)} />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>WhatsApp No. *</Label>
+                                <Input required value={editingTrainee?.phoneWhatsApp || ''} onChange={e => setEditingTrainee(prev => prev ? { ...prev, phoneWhatsApp: e.target.value } : null)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Call No. *</Label>
+                                <Input required value={editingTrainee?.phoneCall || ''} onChange={e => setEditingTrainee(prev => prev ? { ...prev, phoneCall: e.target.value } : null)} />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Enrollment No.</Label>
+                                <Input value={editingTrainee?.enrollmentNo || ''} onChange={e => setEditingTrainee(prev => prev ? { ...prev, enrollmentNo: e.target.value } : null)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Course / Department *</Label>
+                                <Input required value={editingTrainee?.course || editingTrainee?.department || ''} onChange={e => setEditingTrainee(prev => prev ? { ...prev, course: e.target.value, department: e.target.value } : null)} />
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Date of Birth</Label>
+                                <Input type="date" value={editingTrainee?.dob || ''} onChange={e => setEditingTrainee(prev => prev ? { ...prev, dob: e.target.value } : null)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Current Status *</Label>
+                                <Input required value={editingTrainee?.currentStatus || ''} onChange={e => setEditingTrainee(prev => prev ? { ...prev, currentStatus: e.target.value } : null)} placeholder="e.g. 1st Year B.Tech" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Areas of Interest (Comma separated)</Label>
+                            <Input 
+                                value={editingTrainee?.areasOfInterest?.join(', ') || ''} 
+                                onChange={e => setEditingTrainee(prev => prev ? { ...prev, areasOfInterest: e.target.value.split(',').map(s => s.trim()).filter(Boolean) } : null)} 
+                                placeholder="Hardware, Software"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Skills</Label>
+                                <Input value={editingTrainee?.skills || ''} onChange={e => setEditingTrainee(prev => prev ? { ...prev, skills: e.target.value } : null)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Hobby</Label>
+                                <Input value={editingTrainee?.hobby || ''} onChange={e => setEditingTrainee(prev => prev ? { ...prev, hobby: e.target.value } : null)} />
+                            </div>
+                        </div>
+
+                        <DialogFooter className="pt-4">
+                            <Button type="button" variant="outline" onClick={() => setIsAddEditOpen(false)}>Cancel</Button>
+                            <Button type="submit" disabled={isSubmittingForm}>
+                                {isSubmittingForm ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                {editingTrainee?.id ? 'Save Changes' : 'Add Trainee'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
                 </DialogContent>
             </Dialog>
 
