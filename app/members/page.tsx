@@ -98,12 +98,13 @@ export default function MembersListPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredUsers.map((user) => {
                     const displayName = user.displayName || (user as any).name || 'Unknown User';
+                    const memberId = user.profileData?.rollNumber || (user as any).uniqueId;
                     
                     return (
                     <Link
                         key={user.uid}
-                        href={user.profileData?.rollNumber ? `/members/${user.profileData.rollNumber}` : '#'}
-                        className={!user.profileData?.rollNumber ? 'cursor-not-allowed opacity-70' : ''}
+                        href={memberId ? `/members/${memberId}` : '#'}
+                        className={!memberId ? 'cursor-not-allowed opacity-70' : ''}
                     >
                         <Card className="h-full hover:shadow-lg transition-all hover:border-primary/50 cursor-pointer group">
                             <CardContent className="p-4 flex items-center gap-4">
@@ -122,8 +123,8 @@ export default function MembersListPage() {
                                     </div>
                                     <div className="text-xs text-muted-foreground truncate flex items-center gap-2">
                                         <Badge variant="secondary" className="text-[10px] px-1 h-5">{user.role}</Badge>
-                                        {user.profileData?.rollNumber && (
-                                            <span className="font-mono">{user.profileData.rollNumber}</span>
+                                        {memberId && (
+                                            <span className="font-mono">{memberId}</span>
                                         )}
                                     </div>
                                     {user.profileData?.tagline && (
