@@ -28,6 +28,7 @@ import { collection, getDocs, query, where, Timestamp } from "firebase/firestore
 import { toast } from "sonner"
 import { getAttendanceByDate, saveAttendance, getAllAttendanceRecords, getAttendanceStats } from '@/app/actions/attendanceActions';
 import { testConnection } from '@/app/actions/testConnection';
+import { getAllTrainees } from '@/app/actions/adminTraineeActions';
 import * as XLSX from 'xlsx';
 
 
@@ -86,18 +87,34 @@ export function AttendanceMarker() {
             const statsResult = await getAttendanceStats();
             const statsMap = statsResult.success && statsResult.data ? statsResult.data : {};
 
+            // 3. Fetch Trainee Details to map their batch and uniqueId
+            const traineesResult = await getAllTrainees();
+            const traineesData = traineesResult.success && traineesResult.data ? traineesResult.data : [];
+            const traineesMap = new Map(traineesData.map((t: any) => [t.userId, t]));
+
             const fetched: Student[] = []
 
             snapshot.forEach((doc) => {
                 const data = doc.data()
                 const studentId = doc.id;
-                const studentStats = statsMap[studentId] || { present: 0, total: 0, rate: 0 };
+                
+                let studentStats = statsMap[studentId] || { present: 0, total: 0, rate: 0 };
+                
+                // For trainees, if they have no attendance logged yet, default to 1/1 as requested
+                if (data.role === 'trainee' && studentStats.total === 0) {
+                    studentStats = { present: 1, total: 1, rate: 100 };
+                }
+
+                // If user is trainee, try to augment their information from the trainees database
+                const traineeInfo = traineesMap.get(studentId);
+                const uniqueId = traineeInfo?.enrollmentNo || data.uniqueId || data.profileData?.rollNumber || 'N/A';
+                const courseInfo = traineeInfo?.course ? `Trainee - ${traineeInfo.course}` : 'General';
 
                 fetched.push({
                     id: studentId,
-                    uniqueId: data.uniqueId || data.profileData?.rollNumber || 'N/A',
-                    name: data.displayName || 'Unknown',
-                    batch: data.profileData?.year ? `${data.profileData.year} - ${data.profileData.branch || ''}` : 'General',
+                    uniqueId: uniqueId,
+                    name: data.displayName || data.name || traineeInfo?.name || 'Unknown',
+                    batch: data.role === 'trainee' ? courseInfo : (data.profileData?.year ? `${data.profileData.year} - ${data.profileData.branch || ''}` : 'General'),
                     attendanceRate: studentStats.rate,
                     presentCount: studentStats.present,
                     totalSessions: studentStats.total,
