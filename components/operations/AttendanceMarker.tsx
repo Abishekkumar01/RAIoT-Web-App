@@ -40,6 +40,7 @@ interface Student {
     attendanceRate?: number
     presentCount?: number
     totalSessions?: number
+    role?: string
 }
 
 export function AttendanceMarker() {
@@ -99,7 +100,8 @@ export function AttendanceMarker() {
                     batch: data.profileData?.year ? `${data.profileData.year} - ${data.profileData.branch || ''}` : 'General',
                     attendanceRate: studentStats.rate,
                     presentCount: studentStats.present,
-                    totalSessions: studentStats.total
+                    totalSessions: studentStats.total,
+                    role: data.role
                 })
             })
             setStudents(fetched)
@@ -515,7 +517,7 @@ export function AttendanceMarker() {
                                 </TableRow>
                             ) : (
                                 filteredStudents.map((student, index) => (
-                                    <TableRow key={student.id} className="hover:bg-muted/50 transition-colors">
+                                    <TableRow key={student.id} className={cn("hover:bg-muted/50 transition-colors", student.role === 'trainee' && "bg-blue-50/10 border-l-2 border-l-blue-500")}>
                                         <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                                         <TableCell className="min-w-[280px]">
                                             <RadioGroup
@@ -543,7 +545,16 @@ export function AttendanceMarker() {
                                             </RadioGroup>
                                         </TableCell>
                                         <TableCell className="font-medium text-xs">{student.uniqueId}</TableCell>
-                                        <TableCell className="text-sm font-medium">{student.name}</TableCell>
+                                        <TableCell className="text-sm font-medium">
+                                            <div className="flex items-center gap-2">
+                                                {student.name}
+                                                {student.role === 'trainee' && (
+                                                    <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-sm uppercase tracking-wider font-bold">
+                                                        Trainee
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </TableCell>
                                         <TableCell>
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex items-center gap-2">
