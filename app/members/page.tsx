@@ -56,12 +56,16 @@ export default function MembersListPage() {
 
     useEffect(() => {
         const term = searchTerm.toLowerCase()
-        const filtered = users.filter(user =>
-            user.displayName.toLowerCase().includes(term) ||
-            user.email.toLowerCase().includes(term) ||
-            user.profileData?.rollNumber?.toLowerCase().includes(term) ||
-            user.role.toLowerCase().includes(term)
-        )
+        const filtered = users.filter(user => {
+            const displayName = user.displayName || (user as any).name || 'Unknown User';
+            const email = user.email || '';
+            const role = user.role || '';
+            
+            return displayName.toLowerCase().includes(term) ||
+                email.toLowerCase().includes(term) ||
+                user.profileData?.rollNumber?.toLowerCase().includes(term) ||
+                role.toLowerCase().includes(term);
+        })
         setFilteredUsers(filtered)
     }, [searchTerm, users])
 
@@ -92,7 +96,10 @@ export default function MembersListPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredUsers.map((user) => (
+                {filteredUsers.map((user) => {
+                    const displayName = user.displayName || (user as any).name || 'Unknown User';
+                    
+                    return (
                     <Link
                         key={user.uid}
                         href={user.profileData?.rollNumber ? `/members/${user.profileData.rollNumber}` : '#'}
@@ -101,12 +108,12 @@ export default function MembersListPage() {
                         <Card className="h-full hover:shadow-lg transition-all hover:border-primary/50 cursor-pointer group">
                             <CardContent className="p-4 flex items-center gap-4">
                                 <Avatar className="h-12 w-12 border border-border group-hover:border-primary/50 transition-colors">
-                                    <AvatarImage src={user.profileData?.photoUrl} alt={user.displayName} />
-                                    <AvatarFallback>{user.displayName.charAt(0).toUpperCase()}</AvatarFallback>
+                                    <AvatarImage src={user.profileData?.photoUrl} alt={displayName} />
+                                    <AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="font-semibold truncate pr-2">{user.displayName}</h3>
+                                        <h3 className="font-semibold truncate pr-2">{displayName}</h3>
                                         {['admin', 'superadmin', 'president'].includes(user.role) ? (
                                             <Shield className="h-3 w-3 text-red-500" />
                                         ) : (
@@ -126,7 +133,7 @@ export default function MembersListPage() {
                             </CardContent>
                         </Card>
                     </Link>
-                ))}
+                )})}
 
                 {filteredUsers.length === 0 && (
                     <div className="col-span-full text-center py-12 text-muted-foreground">
