@@ -1,0 +1,131 @@
+"use client"
+
+import React, { useState, useRef } from 'react';
+import { Button } from "@/components/ui/button"
+import { Loader2, UploadCloud, X, FileText, CheckCircle } from "lucide-react"
+import { getRMSCloudinarySignature } from '@/app/actions/uploadAction'
+import { useToast } from "@/hooks/use-toast"
+
+interface CloudinaryRMSUploadProps {
+    userId: string;
+    onUploadSuccess: (url: string, id: string, name: string) => void;
+    currentFileUrl?: string;
+}
+
+export function CloudinaryRMSUpload({ userId, onUploadSuccess, currentFileUrl }: CloudinaryRMSUploadProps) {
+    const [isUploading, setIsUploading] = useState(false);
+    const [success, setSuccess] = useState(!!currentFileUrl);
+    const [fileName, setFileName] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const { toast } = useToast();
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 16 * 1024 * 1024) {
+            toast({
+                title: "File too large",
+                description: "Please select a file smaller than 16MB.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        setIsUploading(true);
+        setSuccess(false);
+        setFileName(file.name);
+
+        try {
+            // 1. Get Signature from Server using RMS-specific keys
+            const { signature, timestamp } = await getRMSCloudinarySignature('raiot_rms');
+
+            // 2. Upload directly to Cloudinary from Client (Bypasses Next.js limits)
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // New RMS API Key
+            const apiKey = '667167674852528';
+            formData.append('api_key', apiKey);
+            formData.append('timestamp', timestamp.toString());
+            formData.append('signature', signature);
+            formData.append('folder', 'raiot_rms');
+
+            // Cloud name is the same
+            const cloudName = 'dvjvbonjb';
+            const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error?.message || 'Upload failed');
+            }
+
+            setSuccess(true);
+            onUploadSuccess(data.secure_url, data.public_id, file.name);
+            toast({
+                title: "Upload Successful",
+                description: "Resource successfully pushed to cloud.",
+            });
+        } catch (error: any) {
+            console.error("Cloudinary RMS Upload Error:", error);
+            setSuccess(false);
+            toast({
+                title: "Upload Failed",
+                description: error.message || "There was an error uploading the resource.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
+    return (
+        <div className="w-full">
+            <label className={`
+                flex flex-col items-center justify-center w-full h-32 
+                border-2 border-dashed rounded-lg cursor-pointer 
+                transition-colors duration-200
+                ${success ? 'border-purple-500 bg-purple-500/10' : 'border-zinc-700 bg-zinc-900/50 hover:border-purple-500 hover:bg-zinc-800'}
+                ${isUploading ? 'opacity-50 pointer-events-none' : ''}
+            `}>
+                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
+                    {isUploading ? (
+                        <Loader2 className="w-8 h-8 mb-3 text-purple-500 animate-spin" />
+                    ) : success ? (
+                        <CheckCircle className="w-8 h-8 mb-3 text-purple-400" />
+                    ) : (
+                        <UploadCloud className="w-8 h-8 mb-3 text-zinc-400" />
+                    )}
+
+                    <p className="mb-2 text-sm text-zinc-400">
+                        {isUploading ? (
+                            <span className="font-semibold text-purple-400">Uploading {fileName}...</span>
+                        ) : success ? (
+                            <span className="font-semibold text-purple-400">Upload Complete! ({fileName})</span>
+                        ) : (
+                            <span className="font-semibold">Click to upload image or document</span>
+                        )}
+                    </p>
+                    {!isUploading && !success && (
+                        <p className="text-xs text-zinc-500">PDF, DOCX, ZIP, PNG, JPG (Max 16MB)</p>
+                    )}
+                </div>
+                <input 
+                    type="file" 
+                    className="hidden" 
+                    onChange={handleFileChange}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.png,.jpg,.jpeg"
+                    ref={fileInputRef}
+                    disabled={isUploading}
+                />
+            </label>
+        </div>
+    );
+}

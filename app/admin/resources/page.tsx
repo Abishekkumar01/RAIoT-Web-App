@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Trash2, FileText, Search } from "lucide-react"
-import MongoDocumentUpload from "@/components/ui/MongoDocumentUpload"
+import { CloudinaryRMSUpload } from "@/components/ui/CloudinaryRMSUpload"
 import { MemberResource } from "@/lib/types/resource"
 
 export default function AdminResourcesPage() {
@@ -184,7 +184,7 @@ export default function AdminResourcesPage() {
 
               <div className="space-y-2 pt-2">
                 <Label>Resource File *</Label>
-                <MongoDocumentUpload onUploadSuccess={handleUploadSuccess} userId={selectedUserId} />
+                <CloudinaryRMSUpload onUploadSuccess={handleUploadSuccess} userId={selectedUserId} currentFileUrl={fileUrl} />
               </div>
 
               <Button 
