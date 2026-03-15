@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Shield, ClipboardList, Users, LogOut, Hexagon } from "lucide-react";
+import { User, Shield, ClipboardList, Users, LogOut, Hexagon, GraduationCap } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -161,6 +161,7 @@ export const MobileTechLogin = () => {
                                             { href: "/auth/login?type=member", label: "Member Login", icon: User },
                                             { href: "/auth/login?type=admin", label: "Admin Login", icon: Shield },
                                             { href: "/auth/login?type=operations", label: "Operations Login", icon: ClipboardList },
+                                            { href: "/auth/login?type=trainee", label: "Trainee Login", icon: GraduationCap },
                                             { href: "/auth/login?type=guest", label: "Guest Access", icon: Users },
                                         ].map((item, idx) => (
                                             <motion.div key={item.href} variants={itemVariants} custom={idx}>

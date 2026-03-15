@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, User, Shield, Users, Mail, ChevronRight, Hexagon, Terminal, Lock, Key, ClipboardList, ArrowLeft } from "lucide-react"
+import { Loader2, User, Shield, Users, Mail, ChevronRight, Hexagon, Terminal, Lock, Key, ClipboardList, ArrowLeft, GraduationCap } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
 function LoginContent() {
@@ -20,7 +20,7 @@ function LoginContent() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const [loginType, setLoginType] = useState<'member' | 'admin' | 'guest' | 'operations'>('member')
+  const [loginType, setLoginType] = useState<'member' | 'admin' | 'guest' | 'operations' | 'trainee'>('member')
   const [resetEmail, setResetEmail] = useState("")
   const [resetError, setResetError] = useState("")
   const [resetSuccess, setResetSuccess] = useState(false)
@@ -33,10 +33,8 @@ function LoginContent() {
 
   useEffect(() => {
     const type = searchParams.get('type')
-    if (type === 'admin' || type === 'guest' || type === 'operations') {
-      setLoginType(type as 'admin' | 'guest' | 'operations')
-    }
-  }, [searchParams])
+    if (type === 'admin' || type === 'guest' || type === 'operations' || type === 'member' || type === 'trainee') {
+      setLoginType(type as 'admin' | 'guest' | 'operations' | 'member' | 'trainee')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -96,6 +94,8 @@ function LoginContent() {
               'president',
               'vice_president'
             ]
+            
+            const allowedTraineeRoles = ['trainee']
 
             console.log("Role Check -- Raw:", rawRole, "Normalized:", userRole)
             console.log("Is Allowed Member?", allowedMemberRoles.includes(userRole))
@@ -146,6 +146,13 @@ function LoginContent() {
                 throw new Error(`Access Denied: Your role [${rawRole}] is not authorized for Guest Access. Please use your designated login portal.`)
               }
             }
+            else if (loginType === 'trainee') {
+              // ONLY allow trainees
+              if (!allowedTraineeRoles.includes(userRole)) {
+                await logout()
+                throw new Error(`Access Denied: Your role [${rawRole}] is not authorized for Trainee Access.`)
+              }
+            }
 
             // Routing Logic after successful check
             if (allowedAdminRoles.includes(userRole)) {
@@ -160,6 +167,9 @@ function LoginContent() {
               // If they are Ops, they are BLOCKED from member login above.
               // So if they are here, and role is Ops, they MUST have used Ops login.
               router.push('/operations')
+              return
+            } else if (allowedTraineeRoles.includes(userRole)) {
+              router.push('/dashboard')
               return
             } else if (userRole === 'guest') {
               router.push('/')
@@ -303,6 +313,7 @@ function LoginContent() {
               {loginType === 'guest' && <Users className="h-3 w-3" />}
               {loginType === 'member' && <User className="h-3 w-3" />}
               {loginType === 'operations' && <ClipboardList className="h-3 w-3" />}
+              {loginType === 'trainee' && <GraduationCap className="h-3 w-3" />}
               STATUS: {loginType}_ACCESS_POINT
             </div>
 

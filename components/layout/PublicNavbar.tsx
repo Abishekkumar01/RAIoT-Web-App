@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Menu, X, Info, ChevronDown, User, Shield, Users, ClipboardList } from "lucide-react";
+import { Menu, X, Info, ChevronDown, User, Shield, Users, ClipboardList, GraduationCap } from "lucide-react";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -139,6 +139,7 @@ export const PublicNavbar = () => {
                         <DropdownMenuItem asChild><Link href="/auth/login?type=member"><User className="h-4 w-4 mr-2" />Member Login</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link href="/auth/login?type=admin"><Shield className="h-4 w-4 mr-2" />Admin Login</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link href="/auth/login?type=operations"><ClipboardList className="h-4 w-4 mr-2" />Operations Login</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link href="/auth/login?type=trainee"><GraduationCap className="h-4 w-4 mr-2" />Trainee Login</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link href="/auth/login?type=guest"><Users className="h-4 w-4 mr-2" />Guest Access</Link></DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">Sign Up</div>
