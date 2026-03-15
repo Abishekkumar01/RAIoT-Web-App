@@ -233,8 +233,8 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4">
-        {/* My Classes Section for Members */}
-        {(user?.role === 'junior_developer' || user?.role === 'senior_developer' || user?.role === 'member') && (
+        {/* My Classes Section for Members and Trainees */}
+        {(user?.role === 'trainee' || user?.role === 'junior_developer' || user?.role === 'senior_developer' || user?.role === 'member') && (
           <MyClasses />
         )}
 
