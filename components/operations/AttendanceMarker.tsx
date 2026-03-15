@@ -78,7 +78,7 @@ export function AttendanceMarker() {
             setLoading(true)
 
             // 1. Fetch Users from Firebase
-            const q = query(collection(db, "users"), where("role", "in", ["member", "junior_developer", "senior_developer"]))
+            const q = query(collection(db, "users"), where("role", "in", ["trainee", "member", "junior_developer", "senior_developer"]))
             const snapshot = await getDocs(q)
 
             // 2. Fetch Attendance Stats from MongoDB
