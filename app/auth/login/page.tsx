@@ -35,6 +35,8 @@ function LoginContent() {
     const type = searchParams.get('type')
     if (type === 'admin' || type === 'guest' || type === 'operations' || type === 'member' || type === 'trainee') {
       setLoginType(type as 'admin' | 'guest' | 'operations' | 'member' | 'trainee')
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
