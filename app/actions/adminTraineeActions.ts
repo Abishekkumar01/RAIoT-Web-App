@@ -9,6 +9,7 @@ import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 function serializeTrainee(trainee: any) {
     return {
         id: trainee._id.toString(),
+        userId: trainee.userId,
         name: trainee.name,
         email: trainee.email,
         phoneWhatsApp: trainee.phoneWhatsApp,
@@ -36,7 +37,30 @@ export async function getAllTrainees() {
     try {
         await dbConnect();
         const trainees = await Trainee.find({}).sort({ createdAt: -1 });
-        return { success: true, data: trainees.map(serializeTrainee) };
+
+        // Hide orphaned trainee records whose linked Firebase user was deleted.
+        // Keep records that are pure applications (no linked user yet).
+        const adminDb = getAdminDb();
+        let filtered = trainees;
+        if (adminDb) {
+            const linkedUids = trainees
+                .map((t: any) => t.userId)
+                .filter((uid: string) => !!uid && uid !== 'admin-added');
+
+            if (linkedUids.length > 0) {
+                const existenceChecks = await Promise.all(
+                    linkedUids.map(async (uid: string) => {
+                        const userDoc = await adminDb.collection('users').doc(uid).get();
+                        return { uid, exists: userDoc.exists };
+                    })
+                );
+
+                const existingUidSet = new Set(existenceChecks.filter(r => r.exists).map(r => r.uid));
+                filtered = trainees.filter((t: any) => !t.userId || t.userId === 'admin-added' || existingUidSet.has(t.userId));
+            }
+        }
+
+        return { success: true, data: filtered.map(serializeTrainee) };
     } catch (error: any) {
         console.error('Error fetching trainees:', error);
         return { success: false, error: error.message };
