@@ -46,7 +46,13 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     user?.email === 'chouhanchetan066@gmail.com' ||
     user?.email === 'amanchoudhary.1502@gmail.com' ||
     user?.profileData?.isInventoryManager;
-  const isInventoryUser = user?.role && !['guest', 'public'].includes(user.role);
+  const isInventoryUser = user?.role && !['guest', 'public', 'trainee'].includes(user.role);
+
+  const traineeLinks = [
+    { href: "/dashboard", label: "Dashboard", icon: Home },
+    { href: "/dashboard/profile", label: "Profile", icon: User },
+    // Minimal view: Dashboard and Profile only
+  ];
 
   const memberLinks = [
     { href: "/dashboard", label: "Dashboard", icon: Home },
@@ -113,7 +119,9 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
 
   let links = memberLinks;
 
-  if (isAdminRole) {
+  if (user?.role === 'trainee') {
+    links = traineeLinks;
+  } else if (isAdminRole) {
     links = [
       { href: "/admin", label: "Admin Dashboard", icon: BarChart3 },
       { href: "/dashboard", label: "Club Dashboard", icon: Home },

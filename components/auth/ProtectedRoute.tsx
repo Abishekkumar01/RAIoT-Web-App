@@ -12,9 +12,10 @@ interface ProtectedRouteProps {
   redirectTo?: string
 }
 
-const roleHierarchy: Record<UserRole, number> = {
+const roleHierarchy: Record<UserRole | string, number> = {
   public: 0,
   guest: 1,
+  trainee: 1.5,
   member: 2,
   junior_developer: 3,
   senior_developer: 4,
@@ -46,7 +47,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         return
       }
 
-      if (requiredRole && roleHierarchy[user.role] < roleHierarchy[requiredRole]) {
+      const userLevel = roleHierarchy[user.role] ?? 0;
+      const reqLevel = roleHierarchy[requiredRole] ?? 0;
+      
+      if (requiredRole && userLevel < reqLevel) {
         router.push('/unauthorized')
         return
       }
@@ -61,7 +65,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     )
   }
 
-  if (!user || (requiredRole && roleHierarchy[user.role] < roleHierarchy[requiredRole])) {
+  const userLevel = roleHierarchy[user?.role || 'public'] ?? 0;
+  const reqLevel = roleHierarchy[requiredRole || 'public'] ?? 0;
+
+  if (!user || (requiredRole && userLevel < reqLevel)) {
     return null
   }
 

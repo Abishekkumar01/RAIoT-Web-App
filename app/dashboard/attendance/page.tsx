@@ -102,6 +102,7 @@ export default function AttendancePage() {
     'junior_developer',
     'senior_developer',
     'member',
+    'trainee',
     'guest'
   ].includes(user.role)
 

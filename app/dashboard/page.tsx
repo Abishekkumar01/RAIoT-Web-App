@@ -131,82 +131,88 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Events
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{globalStats.events}</div>
-            <p className="text-xs text-muted-foreground">
-              Total organized events
-            </p>
-          </CardContent>
-        </Card>
+        {user?.role !== 'trainee' && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Events
+              </CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{globalStats.events}</div>
+              <p className="text-xs text-muted-foreground">
+                Total organized events
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Attendance/Classes Card - changes based on user role */}
-        <Card className="overflow-hidden relative">
-          <Link href="/dashboard/attendance" className="absolute inset-0 z-10" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {/* Show "My Attendance" for developers and members, "Total Classes" for operations roles */}
-              {user?.role === 'junior_developer' || user?.role === 'senior_developer' || user?.role === 'member'
-                ? 'My Attendance'
-                : 'Total Classes'}
-            </CardTitle>
-            <Trophy className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {user?.role === 'junior_developer' || user?.role === 'senior_developer' || user?.role === 'member' ? (
-              // Developers/Members see their attendance stats
-              <>
-                <div className="text-2xl font-bold">
-                  {attendanceStats.present + attendanceStats.late}/{attendanceStats.total}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Events Attended
-                </p>
-                <div className="flex gap-2 mt-3 text-[10px] text-muted-foreground">
-                  <span className="text-green-500">{attendanceStats.present} Present</span>
-                  <span>•</span>
-                  <span className="text-orange-500">{attendanceStats.late} Late</span>
-                  <span>•</span>
-                  <span className="text-red-500">{attendanceStats.absent} Absent</span>
-                </div>
-              </>
-            ) : (
-              // Operations/Leadership see total class count
-              <>
-                <div className="text-2xl font-bold">
-                  {uniqueClassDates}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Classes Conducted
-                </p>
-                <div className="flex gap-2 mt-3 text-[10px] text-muted-foreground">
-                  <span className="text-primary">View attendance records →</span>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        {user?.role !== 'trainee' && (
+          <Card className="overflow-hidden relative">
+            <Link href="/dashboard/attendance" className="absolute inset-0 z-10" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {/* Show "My Attendance" for developers and members, "Total Classes" for operations roles */}
+                {user?.role === 'junior_developer' || user?.role === 'senior_developer' || user?.role === 'member'
+                  ? 'My Attendance'
+                  : 'Total Classes'}
+              </CardTitle>
+              <Trophy className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {user?.role === 'junior_developer' || user?.role === 'senior_developer' || user?.role === 'member' ? (
+                // Developers/Members see their attendance stats
+                <>
+                  <div className="text-2xl font-bold">
+                    {attendanceStats.present + attendanceStats.late}/{attendanceStats.total}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Events Attended
+                  </p>
+                  <div className="flex gap-2 mt-3 text-[10px] text-muted-foreground">
+                    <span className="text-green-500">{attendanceStats.present} Present</span>
+                    <span>•</span>
+                    <span className="text-orange-500">{attendanceStats.late} Late</span>
+                    <span>•</span>
+                    <span className="text-red-500">{attendanceStats.absent} Absent</span>
+                  </div>
+                </>
+              ) : (
+                // Operations/Leadership see total class count
+                <>
+                  <div className="text-2xl font-bold">
+                    {uniqueClassDates}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Classes Conducted
+                  </p>
+                  <div className="flex gap-2 mt-3 text-[10px] text-muted-foreground">
+                    <span className="text-primary">View attendance records →</span>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Club Members
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{globalStats.students}</div>
-            <p className="text-xs text-muted-foreground">
-              Total active members
-            </p>
-          </CardContent>
-        </Card>
+        {user?.role !== 'trainee' && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Club Members
+              </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{globalStats.students}</div>
+              <p className="text-xs text-muted-foreground">
+                Total active members
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <div className="grid gap-4">

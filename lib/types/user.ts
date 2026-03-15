@@ -1,6 +1,7 @@
 export type UserRole =
   | 'public'
   | 'guest'
+  | 'trainee'
   | 'member'
   | 'admin'
   | 'superadmin'
