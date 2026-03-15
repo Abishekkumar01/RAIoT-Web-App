@@ -708,9 +708,7 @@ export default function AdminManageTraineePage() {
 
                         <div className="space-y-2">
                             <Label>{editingTrainee?.id ? "New Password (leave blank to keep current)" : "Password *"}</Label>
-                            <Input type="password" placeholder="Enter trainee account password" required={!editingTrainee?.id} value={editingTrainee?.password || ''} onChange={e => setEditingTrainee(prev => prev ? { ...prev, password: e.target.value } : null)} />
-                        </div>
-
+                                <Input type="password" minLength={6} placeholder="Enter trainee account password (min 6 chars)" required={!editingTrainee?.id} value={editingTrainee?.password || ''} onChange={e => setEditingTrainee(prev => prev ? { ...prev, password: e.target.value } : null)} />
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>WhatsApp No. *</Label>
