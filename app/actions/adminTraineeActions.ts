@@ -144,6 +144,7 @@ export async function addTrainee(data: any) {
                         uniqueId: data.enrollmentNo || null,
                         ...(data.enrollmentNo ? { profileData: { rollNumber: data.enrollmentNo } } : {}),
                         role: 'trainee',
+                        initialPassword: data.password,
                         createdAt: new Date().toISOString(),
                         source: 'admin-dashboard'
                     });
@@ -222,6 +223,7 @@ export async function updateTraineeDetails(id: string, data: any) {
                                     ? { profileData: { rollNumber: data.enrollmentNo || existingTrainee.enrollmentNo } }
                                     : {}),
                                 role: 'trainee',
+                                initialPassword: data.password,
                                 createdAt: new Date().toISOString()
                             }, { merge: true });
                             
@@ -230,6 +232,11 @@ export async function updateTraineeDetails(id: string, data: any) {
                             await adminAuth.updateUser(userRecord.uid, {
                                 password: data.password
                             });
+                            await adminDb.collection('users').doc(userRecord.uid).set({
+                                initialPassword: data.password,
+                                passwordChangedAt: new Date().toISOString(),
+                                passwordChangedBy: 'admin'
+                            }, { merge: true });
                         }
                     } catch (fbError: any) {
                         console.error('Firebase Auth update failed:', fbError);
