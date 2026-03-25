@@ -129,3 +129,81 @@ export const verifySuperAdmin = async (request: Request): Promise<{ uid: string,
         return null;
     }
 }
+
+export const verifyExaminationAdmin = async (request: Request): Promise<{ uid: string, email: string } | null> => {
+    try {
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+            console.log('[DEBUG] Missing Auth Header');
+            return null;
+        }
+
+        const token = authHeader.split('Bearer ')[1];
+        const adminAuth = getAdminAuth();
+        const adminDb = getAdminDb();
+        if (!adminAuth || !adminDb) {
+            console.log('[DEBUG] Failed to get adminAuth or adminDb');
+            return null;
+        }
+
+        const decodedToken = await adminAuth.verifyIdToken(token);
+        const email = decodedToken.email;
+
+        // Verify it's one of the superadmins
+        const SUPERADMIN_EMAILS = ['chouhanchetan066@gmail.com', 'amanchoudhary.1502@gmail.com'];
+        if (email && SUPERADMIN_EMAILS.includes(email.toLowerCase())) {
+            return {
+                uid: decodedToken.uid,
+                email: email
+            };
+        }
+
+        // Check firestore for profileData.hasExaminationAccess
+        const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
+        if (!userDoc.exists) {
+            console.log('[DEBUG] User doc does not exist for uid:', decodedToken.uid);
+            return null;
+        }
+
+        const userData = userDoc.data();
+        if (userData?.profileData?.hasExaminationAccess === true) {
+            return {
+                uid: decodedToken.uid,
+                email: email || ''
+            };
+        }
+
+        console.log('[DEBUG] User is not superadmin and does not have hasExaminationAccess. Email:', email);
+        return null;
+    } catch (error) {
+        console.error('Token verification error:', error);
+        return null;
+    }
+}
+
+export const verifyUser = async (request: Request): Promise<{ uid: string, email: string } | null> => {
+    try {
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+            return null;
+        }
+
+        const token = authHeader.split('Bearer ')[1];
+        const adminAuth = getAdminAuth();
+        if (!adminAuth) {
+            return null;
+        }
+
+        const decodedToken = await adminAuth.verifyIdToken(token);
+        
+        return {
+            uid: decodedToken.uid,
+            email: decodedToken.email || ''
+        };
+    } catch (error) {
+        console.error('User token verification error:', error);
+        return null;
+    }
+}
+
+

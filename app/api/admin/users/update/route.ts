@@ -87,10 +87,12 @@ export async function PUT(request: Request) {
         // BUT here we want to ensure specific sub-fields are set.
         // It's safer to merge.
         if (profileData) {
-            if (profileData.rollNumber) firestoreUpdates['profileData.rollNumber'] = profileData.rollNumber;
-            if (profileData.phone) firestoreUpdates['profileData.phone'] = profileData.phone;
-            if (profileData.branch) firestoreUpdates['profileData.branch'] = profileData.branch;
-            if (profileData.year) firestoreUpdates['profileData.year'] = profileData.year;
+            if (profileData.rollNumber !== undefined) firestoreUpdates['profileData.rollNumber'] = profileData.rollNumber;
+            if (profileData.phone !== undefined) firestoreUpdates['profileData.phone'] = profileData.phone;
+            if (profileData.branch !== undefined) firestoreUpdates['profileData.branch'] = profileData.branch;
+            if (profileData.year !== undefined) firestoreUpdates['profileData.year'] = profileData.year;
+            if (profileData.isInventoryManager !== undefined) firestoreUpdates['profileData.isInventoryManager'] = profileData.isInventoryManager;
+            if (profileData.hasExaminationAccess !== undefined) firestoreUpdates['profileData.hasExaminationAccess'] = profileData.hasExaminationAccess;
         }
 
         await adminDb.collection('users').doc(uid).update(firestoreUpdates);

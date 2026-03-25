@@ -921,21 +921,38 @@ export default function AdminUsersPage() {
               </div>
 
               {(currentUser?.email === 'chouhanchetan066@gmail.com' || currentUser?.email === 'amanchoudhary.1502@gmail.com') && (
-                <div className="flex items-center space-x-2 mt-4 p-3 border border-zinc-700 rounded-md bg-zinc-800/30">
-                  <input
-                    type="checkbox"
-                    id="isInventoryManager"
-                    checked={editingUser.profileData?.isInventoryManager || false}
-                    onChange={(e) => setEditingUser({
-                      ...editingUser,
-                      profileData: { ...editingUser.profileData, isInventoryManager: e.target.checked }
-                    })}
-                    className="w-4 h-4 rounded border-zinc-500 text-blue-600 focus:ring-blue-500"
-                  />
-                  <Label htmlFor="isInventoryManager" className="font-medium cursor-pointer">
-                    👑 Grant 'Inventory Manager' Privilege
-                  </Label>
-                </div>
+                <>
+                  <div className="flex items-center space-x-2 mt-4 p-3 border border-zinc-700 rounded-md bg-zinc-800/30">
+                    <input
+                      type="checkbox"
+                      id="isInventoryManager"
+                      checked={editingUser.profileData?.isInventoryManager || false}
+                      onChange={(e) => setEditingUser({
+                        ...editingUser,
+                        profileData: { ...editingUser.profileData, isInventoryManager: e.target.checked }
+                      })}
+                      className="w-4 h-4 rounded border-zinc-500 text-blue-600 focus:ring-blue-500"
+                    />
+                    <Label htmlFor="isInventoryManager" className="font-medium cursor-pointer">
+                      👑 Grant 'Inventory Manager' Privilege
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2 mt-2 p-3 border border-zinc-700 rounded-md bg-zinc-800/30">
+                    <input
+                      type="checkbox"
+                      id="hasExaminationAccess"
+                      checked={editingUser.profileData?.hasExaminationAccess || false}
+                      onChange={(e) => setEditingUser({
+                        ...editingUser,
+                        profileData: { ...editingUser.profileData, hasExaminationAccess: e.target.checked }
+                      })}
+                      className="w-4 h-4 rounded border-zinc-500 text-blue-600 focus:ring-blue-500"
+                    />
+                    <Label htmlFor="hasExaminationAccess" className="font-medium cursor-pointer">
+                      👑 Grant 'Examination Management' Privilege
+                    </Label>
+                  </div>
+                </>
               )}
 
               {/* Password Change Info */}

@@ -46,11 +46,17 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     user?.email === 'chouhanchetan066@gmail.com' ||
     user?.email === 'amanchoudhary.1502@gmail.com' ||
     user?.profileData?.isInventoryManager;
+  
+  const isExaminationAdmin =
+    user?.email === 'chouhanchetan066@gmail.com' ||
+    user?.email === 'amanchoudhary.1502@gmail.com' ||
+    user?.profileData?.hasExaminationAccess;
   const isInventoryUser = user?.role && !['guest', 'public', 'trainee'].includes(user.role);
 
   const traineeLinks = [
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/dashboard/profile", label: "Profile", icon: User },
+    { href: "/dashboard/tests", label: "Tests", icon: ClipboardList },
     // Minimal view: Dashboard and Profile only
   ];
 
@@ -60,6 +66,7 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     { href: "/dashboard/my-resources", label: "My Resources", icon: FileText },
     { href: "/dashboard/attendance", label: "Attendance", icon: ClipboardList },
     { href: "/dashboard/events", label: "Events", icon: Calendar },
+    { href: "/dashboard/tests", label: "Tests", icon: ClipboardList },
     ...(isInventoryUser ? [{ href: "/dashboard/inventory", label: "Hardware Inventory", icon: Box }] : []),
   ];
 
@@ -80,6 +87,7 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     { href: "/admin/leaders", label: "Manage Leaders", icon: Shield },
     { href: "/admin/gallery", label: "Manage Gallery", icon: ImageIcon },
     ...(isInventoryAdmin ? [{ href: "/admin/inventory", label: "Manage Inventory", icon: Box }] : []),
+    ...(isExaminationAdmin ? [{ href: "/admin/exams", label: "Manage Exams", icon: FileText }] : []),
     { href: "/admin/projects", label: "Manage Projects", icon: Rocket },
     { href: "/admin/contact", label: "Manage Contact", icon: Mail },
     { href: "/admin/audit-logs", label: "Audit Logs", icon: FileText },

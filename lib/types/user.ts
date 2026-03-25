@@ -49,6 +49,7 @@ export interface User {
       contributions?: string[]
     }>;
     isInventoryManager?: boolean
+    hasExaminationAccess?: boolean
   }
   attendance?: AttendanceRecord[]
   createdAt: Date
