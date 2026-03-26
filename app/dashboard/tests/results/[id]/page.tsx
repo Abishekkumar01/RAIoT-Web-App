@@ -24,14 +24,13 @@ export default function TestResultsPage() {
       const token = await auth.currentUser?.getIdToken();
       if (!token) return;
 
-      const res = await fetch('/api/tests', {
+      const res = await fetch(`/api/tests/results/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
       
-      if (res.ok && data.submissions) {
-        const sub = data.submissions.find((s: any) => s.testId === id);
-        if (sub) setSubmission(sub);
+      if (res.ok && data.submission) {
+        setSubmission(data.submission);
       }
     } catch (err) {
       console.error(err);

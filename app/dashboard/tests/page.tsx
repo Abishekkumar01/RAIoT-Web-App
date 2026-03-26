@@ -17,6 +17,9 @@ export default function TestsDashboard() {
 
   useEffect(() => {
     fetchTests();
+    // Re-fetch every 30s so tests automatically move to Live/Previous tabs
+    const interval = setInterval(fetchTests, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchTests = async () => {
@@ -87,6 +90,8 @@ export default function TestsDashboard() {
           <div className="space-y-2 text-sm text-muted-foreground">
             <div className="flex items-center"><Calendar className="w-4 h-4 mr-2" /> Reg. Start: {new Date(test.startTime!).toLocaleString()}</div>
             <div className="flex items-center"><Calendar className="w-4 h-4 mr-2" /> Reg. End: {new Date(test.endTime!).toLocaleString()}</div>
+            {test.examStartTime && <div className="flex items-center text-green-500"><Clock className="w-4 h-4 mr-2" /> Exam Opens: {new Date(test.examStartTime).toLocaleString()}</div>}
+            {test.examEndTime && <div className="flex items-center text-orange-400"><Clock className="w-4 h-4 mr-2" /> Last Time to Start: {new Date(test.examEndTime).toLocaleString()}</div>}
             <div className="flex items-center"><Clock className="w-4 h-4 mr-2" /> Duration: {test.durationMinutes} mins</div>
           </div>
         </CardContent>
@@ -110,7 +115,15 @@ export default function TestsDashboard() {
             )
           )}
           {actionType === 'previous' && (
-             <Button variant="secondary" className="w-full" onClick={() => window.location.href=`/dashboard/tests/results/${test.id}`}>View Results</Button>
+            submitted ? (
+              test.resultPublished ? (
+                <Button variant="secondary" className="w-full" onClick={() => window.location.href=`/dashboard/tests/results/${test.id}`}>View Results</Button>
+              ) : (
+                <Button variant="outline" className="w-full" disabled>Result Not Published Yet</Button>
+              )
+            ) : (
+              <Button variant="outline" className="w-full" disabled>Not Attempted</Button>
+            )
           )}
         </CardFooter>
       </Card>

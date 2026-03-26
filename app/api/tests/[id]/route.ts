@@ -26,13 +26,36 @@ export async function GET(request: Request, { params }: { params: { id: string }
             .where('testId', '==', testId)
             .get();
 
-        if (regSnapshot.empty && testData.status !== 'previous') {
+        // Check if already submitted
+        const subSnapshot = await adminDb.collection('examSubmissions')
+            .where('userId', '==', authUser.uid)
+            .where('testId', '==', testId)
+            .get();
+
+        if (!subSnapshot.empty) {
+            return NextResponse.json({ error: 'You have already submitted this test.' }, { status: 403 });
+        }
+
+        const now = new Date();
+        const examStart = testData.examStartTime ? new Date(testData.examStartTime) : null;
+        const examEnd = testData.examEndTime ? new Date(testData.examEndTime) : null;
+
+        // For backward-compat with old tests that don't have examStartTime
+        const effectiveStatus = examStart && examEnd
+            ? (now < examStart ? 'upcoming' : now <= examEnd ? 'live' : 'previous')
+            : testData.status;
+
+        if (regSnapshot.empty && effectiveStatus !== 'previous') {
              return NextResponse.json({ error: 'You are not registered for this test' }, { status: 403 });
         }
 
-        // If the test is live (or they are reviewing a previous test), return the questions
-        if (testData.status === 'upcoming') {
-            return NextResponse.json({ error: 'Test is not live yet' }, { status: 403 });
+        if (effectiveStatus === 'upcoming') {
+            return NextResponse.json({ error: 'The test has not started yet.' }, { status: 403 });
+        }
+
+        // If they are trying to START the test after the deadline, block them
+        if (effectiveStatus === 'live' && examEnd && now > examEnd) {
+            return NextResponse.json({ error: 'The deadline to start this test has passed.' }, { status: 403 });
         }
 
         // Remove correct answers when returning to the user

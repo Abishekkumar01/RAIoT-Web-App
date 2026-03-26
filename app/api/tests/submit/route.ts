@@ -25,9 +25,21 @@ export async function POST(request: Request) {
         }
 
         const testData = testDoc.data();
-        if (testData?.status !== 'live') {
-            return NextResponse.json({ error: 'Test is not currently live' }, { status: 400 });
+
+        // Compute real-time status from examStartTime/examEndTime
+        const now = new Date();
+        const examStart = testData?.examStartTime ? new Date(testData.examStartTime) : null;
+        const examEnd = testData?.examEndTime ? new Date(testData.examEndTime) : null;
+        const effectiveStatus = examStart && examEnd
+            ? (now < examStart ? 'upcoming' : now <= examEnd ? 'live' : 'previous')
+            : testData?.status;
+
+        // Block if not started yet
+        if (effectiveStatus === 'upcoming') {
+            return NextResponse.json({ error: 'Test has not started yet' }, { status: 400 });
         }
+        // Note: Allow submission even after examEndTime because a user who started
+        // before the deadline is entitled to their full duration window.
 
         // Check if already submitted
         const existingSub = await adminDb.collection('examSubmissions')

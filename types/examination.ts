@@ -17,8 +17,11 @@ export interface ExamTest {
   title: string;
   description: string;
   status: TestStatus;
-  startTime: string; // ISO String
-  endTime: string;   // ISO String
+  resultPublished?: boolean;
+  startTime: string;    // Registration window OPEN (ISO String)
+  endTime: string;      // Registration window CLOSE (ISO String)
+  examStartTime: string; // Test goes LIVE at this time (ISO String)
+  examEndTime: string;   // Test closes for submissions at this time (ISO String)
   durationMinutes: number;
   createdBy: string;
   createdAt: string;

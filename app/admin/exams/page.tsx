@@ -14,18 +14,27 @@ export default function AdminExamsPage() {
   const [exams, setExams] = useState<ExamTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [resultsLoadingByExam, setResultsLoadingByExam] = useState<Record<string, boolean>>({});
+  const [resultsByExam, setResultsByExam] = useState<Record<string, any[]>>({});
   
   // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [examStartTime, setExamStartTime] = useState("");
+  const [examEndTime, setExamEndTime] = useState("");
   const [duration, setDuration] = useState("60");
   const [questions, setQuestions] = useState<Question[]>([]);
 
   useEffect(() => {
     fetchExams();
   }, []);
+
+  useEffect(() => {
+    setIsSuperAdmin(user?.role === 'superadmin');
+  }, [user]);
 
   const fetchExams = async () => {
     try {
@@ -95,8 +104,8 @@ export default function AdminExamsPage() {
   };
 
   const submitExam = async () => {
-    if (!title || !description || !startTime || !endTime || !duration) {
-      alert("Please fill all test details (Title, Description, Dates, and Duration).");
+    if (!title || !description || !startTime || !endTime || !examStartTime || !examEndTime || !duration) {
+      alert("Please fill all test details (Title, Description, Registration Dates, Exam Dates, and Duration).");
       return;
     }
 
@@ -109,10 +118,12 @@ export default function AdminExamsPage() {
       
       const token = await auth.currentUser.getIdToken(true);
 
-      let stDate, enDate;
+      let stDate, enDate, exStDate, exEnDate;
       try {
         stDate = new Date(startTime).toISOString();
         enDate = new Date(endTime).toISOString();
+        exStDate = new Date(examStartTime).toISOString();
+        exEnDate = new Date(examEndTime).toISOString();
       } catch (e) {
         alert("Invalid Date format selected.");
         return;
@@ -128,6 +139,8 @@ export default function AdminExamsPage() {
         description,
         startTime: stDate,
         endTime: enDate,
+        examStartTime: exStDate,
+        examEndTime: exEnDate,
         durationMinutes: parseInt(duration),
         status: "upcoming",
         questions
@@ -148,7 +161,7 @@ export default function AdminExamsPage() {
         setIsCreating(false);
         fetchExams();
         // Reset form
-        setTitle(""); setDescription(""); setStartTime(""); setEndTime(""); setQuestions([]);
+        setTitle(""); setDescription(""); setStartTime(""); setEndTime(""); setExamStartTime(""); setExamEndTime(""); setQuestions([]);
       } else {
         alert(data.error || "Failed to create test.");
       }
@@ -170,6 +183,57 @@ export default function AdminExamsPage() {
       fetchExams();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const updateResultPublished = async (id: string, nextValue: boolean) => {
+    try {
+      const auth = (await import("@/lib/firebase")).auth;
+      const token = await auth.currentUser?.getIdToken(true);
+      const res = await fetch(`/api/admin/exams/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ resultPublished: nextValue })
+      });
+      if (res.ok) {
+        setExams(prev => prev.map(exam => exam.id === id ? { ...exam, resultPublished: nextValue } : exam));
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to update publish status");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const loadExamResults = async (examId: string) => {
+    if (resultsByExam[examId]) {
+      setResultsByExam(prev => {
+        const next = { ...prev };
+        delete next[examId];
+        return next;
+      });
+      return;
+    }
+
+    setResultsLoadingByExam(prev => ({ ...prev, [examId]: true }));
+    try {
+      const auth = (await import("@/lib/firebase")).auth;
+      const token = await auth.currentUser?.getIdToken(true);
+      const res = await fetch(`/api/admin/exams/${examId}/results`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setResultsByExam(prev => ({ ...prev, [examId]: data.submissions || [] }));
+      } else {
+        alert(data.error || 'Failed to fetch member results');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to fetch member results');
+    } finally {
+      setResultsLoadingByExam(prev => ({ ...prev, [examId]: false }));
     }
   };
 
@@ -206,6 +270,16 @@ export default function AdminExamsPage() {
               <div>
                 <label className="text-sm font-medium">Duration (mins)</label>
                 <Input type="number" value={duration} onChange={e => setDuration(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">📅 Exam Start Time (Test goes Live)</label>
+                <Input type="datetime-local" value={examStartTime} onChange={e => setExamStartTime(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-medium">📅 Exam End Time (Last time to Start the test)</label>
+                <Input type="datetime-local" value={examEndTime} onChange={e => setExamEndTime(e.target.value)} />
               </div>
             </div>
           </CardContent>
@@ -286,18 +360,60 @@ export default function AdminExamsPage() {
                 <div>
                   <h3 className="font-bold text-lg">{exam.title}</h3>
                   <div className="text-sm text-muted-foreground space-x-4">
-                    <span>Status: <span className="uppercase text-primary">{exam.status}</span></span>
                     <span>Qns: {exam.questions?.length || 0}</span>
-                    <span>Start: {new Date(exam.startTime).toLocaleString()}</span>
+                    <span>Reg. Start: {new Date(exam.startTime).toLocaleString()}</span>
+                    {exam.examStartTime && <span className="text-green-500">Exam: {new Date(exam.examStartTime).toLocaleString()}</span>}
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  {/* Status Toggle or Delete */}
+                <div className="flex items-center gap-3">
+                  {isSuperAdmin && (
+                    <Button
+                      variant={exam.resultPublished ? "secondary" : "default"}
+                      onClick={() => updateResultPublished(exam.id!, !exam.resultPublished)}
+                    >
+                      {exam.resultPublished ? 'Unpublish Result' : 'Publish Result'}
+                    </Button>
+                  )}
+                  {isSuperAdmin && (
+                    <Button variant="outline" onClick={() => loadExamResults(exam.id!)}>
+                      {resultsByExam[exam.id!] ? 'Hide Member Results' : 'View Member Results'}
+                    </Button>
+                  )}
                   <Button variant="destructive" size="icon" onClick={() => deleteExam(exam.id!)}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </CardContent>
+              {isSuperAdmin && (resultsLoadingByExam[exam.id!] || resultsByExam[exam.id!]) && (
+                <CardContent className="pt-0 pb-4">
+                  <div className="rounded-md border border-zinc-800 overflow-hidden">
+                    <div className="grid grid-cols-12 gap-2 p-3 bg-zinc-900 text-xs uppercase tracking-wide text-zinc-400">
+                      <div className="col-span-3">Member</div>
+                      <div className="col-span-3">Email</div>
+                      <div className="col-span-2">Role</div>
+                      <div className="col-span-2">Score</div>
+                      <div className="col-span-2">Submitted At</div>
+                    </div>
+                    {resultsLoadingByExam[exam.id!] && (
+                      <div className="p-4 text-sm text-muted-foreground flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Loading results...
+                      </div>
+                    )}
+                    {!resultsLoadingByExam[exam.id!] && resultsByExam[exam.id!].length === 0 && (
+                      <div className="p-4 text-sm text-muted-foreground">No member submissions yet.</div>
+                    )}
+                    {!resultsLoadingByExam[exam.id!] && resultsByExam[exam.id!].map((row: any) => (
+                      <div key={row.id} className="grid grid-cols-12 gap-2 p-3 border-t border-zinc-800 text-sm">
+                        <div className="col-span-3 truncate">{row.userName || 'Unknown User'}</div>
+                        <div className="col-span-3 truncate text-zinc-400">{row.userEmail || '-'}</div>
+                        <div className="col-span-2 capitalize text-zinc-400">{row.userRole || '-'}</div>
+                        <div className="col-span-2 font-semibold">{row.score === null || row.score === undefined ? 'Pending' : row.score}</div>
+                        <div className="col-span-2 text-zinc-400">{row.submittedAt ? new Date(row.submittedAt).toLocaleString() : '-'}</div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              )}
             </Card>
           ))
         )}

@@ -1,15 +1,23 @@
 import { NextResponse } from 'next/server';
-import { getAdminDb, verifyExaminationAdmin } from '@/lib/firebase-admin';
+import { getAdminDb, verifyExaminationAdmin, verifySuperAdmin } from '@/lib/firebase-admin';
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
     try {
-        const authUser = await verifyExaminationAdmin(request);
-        if (!authUser) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         const examId = params.id;
         const body = await request.json();
+
+        // resultPublished is a superadmin-only control.
+        if (Object.prototype.hasOwnProperty.call(body, 'resultPublished')) {
+            const superAdmin = await verifySuperAdmin(request);
+            if (!superAdmin) {
+                return NextResponse.json({ error: 'Unauthorized: Superadmin access required' }, { status: 401 });
+            }
+        } else {
+            const authUser = await verifyExaminationAdmin(request);
+            if (!authUser) {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            }
+        }
         
         const adminDb = getAdminDb();
         if (!adminDb) throw new Error('Database not initialized');
