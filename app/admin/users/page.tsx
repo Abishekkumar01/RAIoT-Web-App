@@ -25,6 +25,8 @@ export default function AdminUsersPage() {
 
   const { user: currentUser } = useAuth()
   const [users, setUsers] = useState<any[]>([])
+  const [previousMembers, setPreviousMembers] = useState<any[]>([])
+  const [activeView, setActiveView] = useState<'active' | 'previous'>('active')
 
   // Fetch real users from Firebase
   useEffect(() => {
@@ -78,6 +80,50 @@ export default function AdminUsersPage() {
       })
 
       setUsers(firebaseUsers)
+    })
+
+    return () => unsubscribe()
+  }, [db])
+
+  useEffect(() => {
+    if (!db) return
+
+    const unsubscribe = onSnapshot(collection(db, 'previousMembers'), (snapshot) => {
+      const safeDateString = (dateVal: any, fallbackToToday = false) => {
+        try {
+          if (!dateVal) return fallbackToToday ? new Date().toLocaleDateString() : 'N/A'
+
+          if (typeof dateVal === 'object' && typeof dateVal.seconds === 'number') {
+            const d = new Date(dateVal.seconds * 1000)
+            return isNaN(d.getTime()) ? (fallbackToToday ? new Date().toLocaleDateString() : 'N/A') : d.toLocaleDateString()
+          }
+
+          const d = new Date(dateVal)
+          return isNaN(d.getTime()) ? (fallbackToToday ? new Date().toLocaleDateString() : 'N/A') : d.toLocaleDateString()
+        } catch {
+          return fallbackToToday ? new Date().toLocaleDateString() : 'N/A'
+        }
+      }
+
+      const archivedUsers = snapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          displayName: data.displayName || data.name || data.email || 'Unknown User',
+          email: data.email || 'N/A',
+          role: data.role || 'member',
+          joinDate: safeDateString(data.joiningDate || data.createdAt),
+          archivedAt: safeDateString(data.archivedAt),
+          archivedByEmail: data.archivedBy?.email || 'N/A',
+          profileData: {
+            year: data.profileData?.year || 'N/A',
+            branch: data.profileData?.branch || data.profileData?.department || 'N/A',
+            rollNumber: data.profileData?.rollNumber || data.uniqueId || 'N/A'
+          }
+        }
+      })
+
+      setPreviousMembers(archivedUsers)
     })
 
     return () => unsubscribe()
@@ -368,7 +414,7 @@ export default function AdminUsersPage() {
   }
 
   async function handleDeleteUser(userId: string, userName: string) {
-    if (window.confirm(`⚠️ Are you sure you want to delete "${userName}"?\n\nThis action cannot be undone and will:\n• Remove user from Authentication\n• Delete all user data from Firestore`)) {
+    if (window.confirm(`⚠️ Are you sure you want to remove "${userName}" from active members?\n\nThis will:\n• Move user record to Previous Members\n• Revoke all portal/resource access\n• Remove login access`)) {
       setLoading(true)
       setError('')
 
@@ -415,8 +461,8 @@ export default function AdminUsersPage() {
 
         // Show toast notification
         toast({
-          title: "🗑️ User Deleted",
-          description: `${userName} has been successfully removed from the system.`,
+          title: "🗂️ Moved to Previous Members",
+          description: `${userName} has been archived and access has been revoked.`,
         })
 
       } catch (error: any) {
@@ -477,28 +523,45 @@ export default function AdminUsersPage() {
                 />
               </div>
             </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="junior_developer">Junior Developers</SelectItem>
-                <SelectItem value="senior_developer">Senior Developers</SelectItem>
-                <SelectItem value="student_coordinator">Student Coordinators</SelectItem>
-                <SelectItem value="inventory_head">Inventory Heads</SelectItem>
-                <SelectItem value="vice_president">Vice Presidents</SelectItem>
-                <SelectItem value="president">Presidents</SelectItem>
-                <SelectItem value="public_relation_head">Public Relation & Content Creation Head</SelectItem>
-                <SelectItem value="management_head">Management Heads</SelectItem>
-                <SelectItem value="technical_head">Technical Heads</SelectItem>
-              </SelectContent>
-            </Select>
+            {activeView === 'active' && (
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="junior_developer">Junior Developers</SelectItem>
+                  <SelectItem value="senior_developer">Senior Developers</SelectItem>
+                  <SelectItem value="student_coordinator">Student Coordinators</SelectItem>
+                  <SelectItem value="inventory_head">Inventory Heads</SelectItem>
+                  <SelectItem value="vice_president">Vice Presidents</SelectItem>
+                  <SelectItem value="president">Presidents</SelectItem>
+                  <SelectItem value="public_relation_head">Public Relation & Content Creation Head</SelectItem>
+                  <SelectItem value="management_head">Management Heads</SelectItem>
+                  <SelectItem value="technical_head">Technical Heads</SelectItem>
+                  <SelectItem value="trainee">Trainees</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <div className="mt-4 flex items-center gap-2">
+            <Button
+              variant={activeView === 'active' ? 'default' : 'outline'}
+              onClick={() => setActiveView('active')}
+            >
+              Active Users
+            </Button>
+            <Button
+              variant={activeView === 'previous' ? 'default' : 'outline'}
+              onClick={() => setActiveView('previous')}
+            >
+              Previous Members
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Users Table */}
+      {activeView === 'active' ? (
       <Card>
         <CardHeader>
           <CardTitle>Users ({filteredUsers.length})</CardTitle>
@@ -589,16 +652,14 @@ export default function AdminUsersPage() {
                       >
                         <Edit className="h-3 w-3" />
                       </Button>
-                      {user.role !== 'trainee' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteUser(user.id, user.displayName)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteUser(user.id, user.displayName)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -607,6 +668,63 @@ export default function AdminUsersPage() {
           </Table>
         </CardContent>
       </Card>
+      ) : (
+      <Card>
+        <CardHeader>
+          <CardTitle>Previous Members ({previousMembers.length})</CardTitle>
+          <CardDescription>Archived history of removed users with revoked access</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Academic Info</TableHead>
+                <TableHead>Joined</TableHead>
+                <TableHead>Archived</TableHead>
+                <TableHead>Archived By</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {previousMembers
+                .filter((member) =>
+                  member.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  member.email.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+                .map((member) => (
+                <TableRow key={member.id}>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">{member.displayName}</div>
+                      <div className="text-sm text-muted-foreground flex items-center">
+                        <Mail className="h-3 w-3 mr-1" />
+                        {member.email}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={`${getRoleColor(member.role)} text-white`}>
+                      {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      <div>{member.profileData.year}</div>
+                      <div className="text-muted-foreground">{member.profileData.branch}</div>
+                      <div className="text-muted-foreground">{member.profileData.rollNumber}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-zinc-300">{member.joinDate}</TableCell>
+                  <TableCell className="text-sm text-zinc-300">{member.archivedAt}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{member.archivedByEmail}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      )}
 
       {/* Invite User Modal */}
       <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
