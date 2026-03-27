@@ -27,6 +27,7 @@ export default function AdminExamsPage() {
   const [examEndTime, setExamEndTime] = useState("");
   const [duration, setDuration] = useState("60");
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [importingQuestions, setImportingQuestions] = useState(false);
 
   useEffect(() => {
     fetchExams();
@@ -101,6 +102,97 @@ export default function AdminExamsPage() {
 
   const removeQuestion = (index: number) => {
     setQuestions(questions.filter((_, i) => i !== index));
+  };
+
+  const splitCsvRow = (line: string) => {
+    const regex = /("(?:[^"]|"")*"|[^,]+)/g;
+    const matches = line.match(regex) || [];
+    return matches.map((part) => part.trim().replace(/^"|"$/g, "").replace(/""/g, '"'));
+  };
+
+  const normalizeQuestion = (raw: any, index: number): Question => {
+    const rawType = String(raw.type || raw.questionType || "mcq").toLowerCase().trim();
+    const type: QuestionType = rawType === "short_answer" || rawType === "long_answer" ? rawType : "mcq";
+    const text = String(raw.text || raw.question || "").trim();
+    if (!text) throw new Error(`Question ${index + 1}: text is required`);
+
+    let options: string[] | undefined = undefined;
+    if (type === "mcq") {
+      if (Array.isArray(raw.options)) options = raw.options.map((o: any) => String(o).trim()).filter(Boolean);
+      else if (typeof raw.options === "string") options = raw.options.split("|").map((o: string) => o.trim()).filter(Boolean);
+      if (!options || options.length < 2) throw new Error(`Question ${index + 1}: MCQ requires at least 2 options`);
+    }
+
+    const correctAnswer = raw.correctAnswer !== undefined && raw.correctAnswer !== null
+      ? String(raw.correctAnswer).trim()
+      : undefined;
+
+    const points = Number(raw.points ?? 1);
+    const negativePoints = Number(raw.negativePoints ?? 0);
+
+    return {
+      id: crypto.randomUUID(),
+      text,
+      type,
+      options,
+      correctAnswer,
+      points: Number.isFinite(points) ? points : 1,
+      negativePoints: Number.isFinite(negativePoints) ? negativePoints : 0,
+    };
+  };
+
+  const parseQuestionsFromFile = async (file: File): Promise<Question[]> => {
+    const content = await file.text();
+    const ext = file.name.split('.').pop()?.toLowerCase();
+
+    if (ext === "json") {
+      const parsed = JSON.parse(content);
+      const arr = Array.isArray(parsed) ? parsed : parsed.questions;
+      if (!Array.isArray(arr)) throw new Error("JSON must be an array or an object with a questions array");
+      return arr.map((q, idx) => normalizeQuestion(q, idx));
+    }
+
+    if (ext === "csv") {
+      const lines = content.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      if (lines.length < 2) throw new Error("CSV needs a header row and at least one question row");
+
+      const headers = splitCsvRow(lines[0]).map((h) => h.toLowerCase());
+      const rows = lines.slice(1).map(splitCsvRow);
+      const objects = rows.map((cols) => {
+        const obj: any = {};
+        headers.forEach((h, i) => {
+          obj[h] = cols[i] ?? "";
+        });
+        return {
+          text: obj.text || obj.question,
+          type: obj.type,
+          options: obj.options,
+          correctAnswer: obj.correctanswer,
+          points: obj.points,
+          negativePoints: obj.negativepoints,
+        };
+      });
+      return objects.map((q, idx) => normalizeQuestion(q, idx));
+    }
+
+    throw new Error("Unsupported file type. Use .json or .csv");
+  };
+
+  const handleQuestionFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImportingQuestions(true);
+    try {
+      const importedQuestions = await parseQuestionsFromFile(file);
+      setQuestions((prev) => [...prev, ...importedQuestions]);
+      alert(`Imported ${importedQuestions.length} questions successfully.`);
+    } catch (err: any) {
+      alert(err?.message || "Failed to import questions from file.");
+    } finally {
+      setImportingQuestions(false);
+      event.target.value = "";
+    }
   };
 
   const submitExam = async () => {
@@ -287,8 +379,59 @@ export default function AdminExamsPage() {
 
         <div className="flex justify-between items-center mt-8">
           <h2 className="text-xl font-bold">Questions ({questions.length})</h2>
-          <Button onClick={addQuestion}><Plus className="w-4 h-4 mr-2" /> Add Question</Button>
+          <div className="flex items-center gap-2">
+            <Input
+              type="file"
+              accept=".json,.csv"
+              onChange={handleQuestionFileUpload}
+              disabled={importingQuestions}
+              className="w-[240px]"
+            />
+            <Button onClick={addQuestion}><Plus className="w-4 h-4 mr-2" /> Add Question</Button>
+          </div>
         </div>
+        <p className="text-xs text-muted-foreground -mt-4">
+          Bulk import format: JSON array (or object with questions[]) or CSV with headers: text,type,options,correctAnswer,points,negativePoints.
+          For MCQ CSV, put options separated by | (example: A|B|C|D).
+        </p>
+
+        <Card className="border-zinc-800 bg-zinc-950/40">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Example Format</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-xs">
+            <div>
+              <p className="text-muted-foreground mb-1">JSON example</p>
+              <pre className="rounded-md border border-zinc-800 bg-zinc-950 p-3 overflow-x-auto text-zinc-200">
+{`[
+  {
+    "text": "What is 2 + 2?",
+    "type": "mcq",
+    "options": ["1", "2", "3", "4"],
+    "correctAnswer": "3",
+    "points": 1,
+    "negativePoints": 0
+  },
+  {
+    "text": "Define IoT in one line.",
+    "type": "short_answer",
+    "points": 2,
+    "negativePoints": 0
+  }
+]`}
+              </pre>
+            </div>
+
+            <div>
+              <p className="text-muted-foreground mb-1">CSV example</p>
+              <pre className="rounded-md border border-zinc-800 bg-zinc-950 p-3 overflow-x-auto text-zinc-200">
+{`text,type,options,correctAnswer,points,negativePoints
+What is 2 + 2?,mcq,1|2|3|4,3,1,0
+Define IoT in one line.,short_answer,, ,2,0`}
+              </pre>
+            </div>
+          </CardContent>
+        </Card>
 
         {questions.map((q, qIndex) => (
           <Card key={qIndex} className="relative">

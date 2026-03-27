@@ -130,17 +130,10 @@ export const verifySuperAdmin = async (request: Request): Promise<{ uid: string,
     }
 }
 
-import * as fs from 'fs';
-
 export const verifyExaminationAdmin = async (request: Request): Promise<{ uid: string, email: string } | null> => {
-    const log = (msg: string) => {
-        try { fs.appendFileSync('auth_debug_log.txt', `${new Date().toISOString()} - ${msg}\n`); } catch(e){}
-    };
-    
     try {
         const authHeader = request.headers.get('authorization');
         if (!authHeader?.startsWith('Bearer ')) {
-            log('[DEBUG] Missing Auth Header');
             return null;
         }
 
@@ -148,38 +141,32 @@ export const verifyExaminationAdmin = async (request: Request): Promise<{ uid: s
         const adminAuth = getAdminAuth();
         const adminDb = getAdminDb();
         if (!adminAuth || !adminDb) {
-            log('[DEBUG] Failed to get adminAuth or adminDb');
             return null;
         }
 
         const decodedToken = await adminAuth.verifyIdToken(token);
         const email = decodedToken.email;
-        log(`[DEBUG] Decoded token for email: ${email}`);
 
         // Verify it's one of the superadmins
         const SUPERADMIN_EMAILS = ['chouhanchetan066@gmail.com', 'amanchoudhary.1502@gmail.com'];
         if (email && SUPERADMIN_EMAILS.includes(email.toLowerCase())) {
-            log(`[DEBUG] Superadmin matched: ${email}`);
             return { uid: decodedToken.uid, email: email };
         }
 
         // Check firestore for profileData.hasExaminationAccess
         const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
         if (!userDoc.exists) {
-            log(`[DEBUG] User doc does not exist for uid: ${decodedToken.uid}`);
             return null;
         }
 
         const userData = userDoc.data();
         if (userData?.profileData?.hasExaminationAccess === true) {
-            log(`[DEBUG] User has examination access: ${email}`);
             return { uid: decodedToken.uid, email: email || '' };
         }
 
-        log(`[DEBUG] User is not superadmin and does not have access. Email: ${email}`);
         return null;
-    } catch (error: any) {
-        log(`[DEBUG] Token verification error: ${error?.message || error}`);
+    } catch (error) {
+        console.error('Examination admin token verification error:', error);
         return null;
     }
 }
