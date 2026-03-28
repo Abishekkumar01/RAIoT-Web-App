@@ -222,7 +222,12 @@ service cloud.firestore {
 
     // Member Resources System
     match /member_resources/{resourceId} {
-      allow read: if request.auth != null && (request.auth.uid == resource.data.userId || isAdmin() || isCoordinator());
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        resource.data.userId == 'all' ||
+        isAdmin() ||
+        isCoordinator()
+      );
       allow write: if isAdmin() || isCoordinator();
     }
 
