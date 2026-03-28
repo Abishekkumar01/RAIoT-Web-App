@@ -876,9 +876,14 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
 
         <div className="sticky bottom-4 z-20 pt-4">
           <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-950/95 backdrop-blur px-4 py-3">
-            <Button type="button" variant="outline" onClick={addQuestion}>
-              <Plus className="w-4 h-4 mr-2" /> Add Question
-            </Button>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs text-zinc-300">
+                Questions: {questions.length}
+              </span>
+              <Button type="button" variant="outline" onClick={addQuestion}>
+                <Plus className="w-4 h-4 mr-2" /> Add Question
+              </Button>
+            </div>
             <Button onClick={submitExam} size="lg"><Save className="w-4 h-4 mr-2" /> {isEditing ? 'Save Changes' : 'Save Test'}</Button>
           </div>
         </div>
