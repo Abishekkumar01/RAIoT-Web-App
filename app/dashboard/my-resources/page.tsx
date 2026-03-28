@@ -58,25 +58,50 @@ export default function MyResourcesPage() {
   useEffect(() => {
     if (!currentUser?.uid) return
 
-    const q = query(
+    const userResources = new Map<string, MemberResource>()
+    const globalResources = new Map<string, MemberResource>()
+
+    const renderMerged = () => {
+      const mergedMap = new Map<string, MemberResource>([
+        ...globalResources.entries(),
+        ...userResources.entries(),
+      ])
+      const merged = Array.from(mergedMap.values())
+      merged.sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0))
+      setResources(merged)
+      setLoading(false)
+    }
+
+    const userQuery = query(
       collection(db, "member_resources"),
-      where("userId", "in", [currentUser.uid, "all"])
+      where("userId", "==", currentUser.uid)
     )
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedResources = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as MemberResource[]
-      
-      // Sort by uploadedAt descending locally
-      fetchedResources.sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0))
-      
-      setResources(fetchedResources)
-      setLoading(false)
+    const globalQuery = query(
+      collection(db, "member_resources"),
+      where("userId", "==", "all")
+    )
+
+    const unsubscribeUser = onSnapshot(userQuery, (snapshot) => {
+      userResources.clear()
+      snapshot.docs.forEach((doc) => {
+        userResources.set(doc.id, { id: doc.id, ...doc.data() } as MemberResource)
+      })
+      renderMerged()
     })
 
-    return () => unsubscribe()
+    const unsubscribeGlobal = onSnapshot(globalQuery, (snapshot) => {
+      globalResources.clear()
+      snapshot.docs.forEach((doc) => {
+        globalResources.set(doc.id, { id: doc.id, ...doc.data() } as MemberResource)
+      })
+      renderMerged()
+    })
+
+    return () => {
+      unsubscribeUser()
+      unsubscribeGlobal()
+    }
   }, [currentUser])
 
   if (loading) {
