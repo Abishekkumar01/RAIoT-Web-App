@@ -39,6 +39,9 @@ export default function AdminResourcesPage() {
   const [description, setDescription] = useState("")
   const [fileUrl, setFileUrl] = useState("")
   const [fileName, setFileName] = useState("")
+  const [storageType, setStorageType] = useState<'cloudinary' | 'mongodb'>('cloudinary')
+  const [mongoFileId, setMongoFileId] = useState("")
+  const [mimeType, setMimeType] = useState("")
 
   // Fetch users
   useEffect(() => {
@@ -78,9 +81,60 @@ export default function AdminResourcesPage() {
     users.find(u => u.uid === res.userId)?.displayName.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleUploadSuccess = (url: string, id: string, name: string) => {
-    setFileUrl(url)
-    setFileName(name)
+  const handleUploadSuccess = (payload: {
+    fileUrl: string
+    fileName: string
+    storageType: 'cloudinary' | 'mongodb'
+    mongoFileId?: string
+    mimeType?: string
+  }) => {
+    setFileUrl(payload.fileUrl)
+    setFileName(payload.fileName)
+    setStorageType(payload.storageType)
+    setMongoFileId(payload.mongoFileId || "")
+    setMimeType(payload.mimeType || "")
+  }
+
+  const handleDownload = async (res: MemberResource) => {
+    try {
+      if ((res.storageType || 'cloudinary') === 'cloudinary') {
+        window.open(res.fileUrl, '_blank', 'noopener,noreferrer')
+        return
+      }
+
+      const token = await auth.currentUser?.getIdToken(true)
+      if (!token) {
+        toast({ title: "Error", description: "Authentication required to download file.", variant: "destructive" })
+        return
+      }
+
+      const fileId = res.mongoFileId || res.fileUrl.split('/').pop()
+      if (!fileId) {
+        toast({ title: "Error", description: "Missing MongoDB file id.", variant: "destructive" })
+        return
+      }
+
+      const response = await fetch(`/api/rms/files/${fileId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Download failed')
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = res.fileName || 'resource'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (error: any) {
+      toast({ title: "Download failed", description: error.message || "Unable to download resource.", variant: "destructive" })
+    }
   }
 
   const handleAddResource = async () => {
@@ -97,6 +151,9 @@ export default function AdminResourcesPage() {
         description,
         fileUrl,
         fileName,
+        storageType,
+        mongoFileId: storageType === 'mongodb' ? mongoFileId : null,
+        mimeType: mimeType || null,
         uploadedAt: Date.now(),
         uploadedBy: currentUser?.uid || "Admin"
       })
@@ -109,6 +166,9 @@ export default function AdminResourcesPage() {
       setDescription("")
       setFileUrl("")
       setFileName("")
+      setStorageType('cloudinary')
+      setMongoFileId("")
+      setMimeType("")
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" })
     } finally {
@@ -234,10 +294,14 @@ export default function AdminResourcesPage() {
                     {getUserName(res.userId)}
                   </TableCell>
                   <TableCell>
-                    <a href={res.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-400 hover:text-blue-300 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(res)}
+                      className="flex items-center text-blue-400 hover:text-blue-300 text-sm"
+                    >
                       <FileText className="h-4 w-4 mr-1" />
                       {res.fileName || "View File"}
-                    </a>
+                    </button>
                   </TableCell>
                   <TableCell className="text-zinc-400">
                     {res.uploadedAt ? new Date(res.uploadedAt).toLocaleDateString() : "N/A"}

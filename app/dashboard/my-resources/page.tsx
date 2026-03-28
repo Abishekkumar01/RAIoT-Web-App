@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { collection, onSnapshot, query, where } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { auth, db } from "@/lib/firebase"
 import { useAuth } from "@/lib/contexts/AuthContext"
 import { FileText, Download, Calendar } from "lucide-react"
 import { MemberResource } from "@/lib/types/resource"
@@ -12,6 +12,48 @@ export default function MyResourcesPage() {
   const { user: currentUser } = useAuth()
   const [resources, setResources] = useState<MemberResource[]>([])
   const [loading, setLoading] = useState(true)
+
+  const handleDownload = async (res: MemberResource) => {
+    try {
+      if ((res.storageType || 'cloudinary') === 'cloudinary') {
+        window.open(res.fileUrl, '_blank', 'noopener,noreferrer')
+        return
+      }
+
+      const token = await auth.currentUser?.getIdToken(true)
+      if (!token) {
+        alert('Authentication required to download this file.')
+        return
+      }
+
+      const fileId = res.mongoFileId || res.fileUrl.split('/').pop()
+      if (!fileId) {
+        alert('Missing file identifier for download.')
+        return
+      }
+
+      const response = await fetch(`/api/rms/files/${fileId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload.error || 'Download failed')
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = res.fileName || 'resource'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (error: any) {
+      alert(error.message || 'Unable to download file.')
+    }
+  }
 
   useEffect(() => {
     if (!currentUser?.uid) return
@@ -93,11 +135,13 @@ export default function MyResourcesPage() {
               </div>
               
               <div className="p-4 bg-zinc-950/50 border-t border-zinc-800 mt-auto">
-                <a href={res.fileUrl} target="_blank" rel="noopener noreferrer">
-                  <Button className="w-full bg-zinc-800 hover:bg-purple-600 text-white transition-colors" variant="secondary">
-                    <Download className="mr-2 h-4 w-4" /> Download File
-                  </Button>
-                </a>
+                <Button
+                  className="w-full bg-zinc-800 hover:bg-purple-600 text-white transition-colors"
+                  variant="secondary"
+                  onClick={() => handleDownload(res)}
+                >
+                  <Download className="mr-2 h-4 w-4" /> Download File
+                </Button>
               </div>
             </div>
           ))}

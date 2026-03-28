@@ -5,10 +5,17 @@ import { Button } from "@/components/ui/button"
 import { Loader2, UploadCloud, X, FileText, CheckCircle } from "lucide-react"
 import { getRMSCloudinarySignature } from '@/app/actions/uploadAction'
 import { useToast } from "@/hooks/use-toast"
+import { auth } from '@/lib/firebase';
 
 interface CloudinaryRMSUploadProps {
     userId: string;
-    onUploadSuccess: (url: string, id: string, name: string) => void;
+    onUploadSuccess: (payload: {
+        fileUrl: string;
+        fileName: string;
+        storageType: 'cloudinary' | 'mongodb';
+        mongoFileId?: string;
+        mimeType?: string;
+    }) => void;
     currentFileUrl?: string;
 }
 
@@ -37,38 +44,75 @@ export function CloudinaryRMSUpload({ userId, onUploadSuccess, currentFileUrl }:
         setFileName(file.name);
 
         try {
-            // 1. Get Signature from Server using RMS-specific keys
-            const { signature, timestamp } = await getRMSCloudinarySignature('raiot_rms');
+            if (file.type.startsWith('image/')) {
+                // Image files are stored on Cloudinary for fast public serving.
+                const { signature, timestamp } = await getRMSCloudinarySignature('raiot_rms');
 
-            // 2. Upload directly to Cloudinary from Client (Bypasses Next.js limits)
-            const formData = new FormData();
-            formData.append('file', file);
-            
-            // New RMS API Key
-            const apiKey = '667167674852528';
-            formData.append('api_key', apiKey);
-            formData.append('timestamp', timestamp.toString());
-            formData.append('signature', signature);
-            formData.append('folder', 'raiot_rms');
+                const formData = new FormData();
+                formData.append('file', file);
 
-            // Cloud name is the same
-            const cloudName = 'dvjvbonjb';
-            const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
-                method: 'POST',
-                body: formData
-            });
+                const apiKey = '667167674852528';
+                formData.append('api_key', apiKey);
+                formData.append('timestamp', timestamp.toString());
+                formData.append('signature', signature);
+                formData.append('folder', 'raiot_rms');
 
-            const data = await response.json();
+                const cloudName = 'dvjvbonjb';
+                const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
 
-            if (!response.ok) {
-                throw new Error(data.error?.message || 'Upload failed');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error?.message || 'Upload failed');
+                }
+
+                setSuccess(true);
+                onUploadSuccess({
+                    fileUrl: data.secure_url,
+                    fileName: file.name,
+                    storageType: 'cloudinary',
+                    mimeType: file.type || 'application/octet-stream',
+                });
+            } else {
+                // Non-image files are stored in MongoDB (GridFS) on Oracle-hosted instance.
+                const token = await auth.currentUser?.getIdToken(true);
+                if (!token) {
+                    throw new Error('Authentication required for document upload');
+                }
+
+                const formData = new FormData();
+                formData.append('file', file);
+                const response = await fetch('/api/rms/upload', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: formData,
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Document upload failed');
+                }
+
+                setSuccess(true);
+                onUploadSuccess({
+                    fileUrl: data.fileUrl,
+                    fileName: data.fileName || file.name,
+                    storageType: 'mongodb',
+                    mongoFileId: data.fileId,
+                    mimeType: data.mimeType || file.type || 'application/octet-stream',
+                });
             }
 
-            setSuccess(true);
-            onUploadSuccess(data.secure_url, data.public_id, file.name);
             toast({
                 title: "Upload Successful",
-                description: "Resource successfully pushed to cloud.",
+                description: file.type.startsWith('image/')
+                    ? "Image uploaded to Cloudinary."
+                    : "Document uploaded to MongoDB.",
             });
         } catch (error: any) {
             console.error("Cloudinary RMS Upload Error:", error);
