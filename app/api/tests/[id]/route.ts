@@ -60,7 +60,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
         // Remove correct answers when returning to the user
         const safeQuestions = (testData.questions || []).map(q => {
-            const { correctAnswer, ...safeQuestion } = q;
+            const { correctAnswer, keywords, keywordMatchMode, allowManualReview, ...safeQuestion } = q;
             return safeQuestion;
         });
 

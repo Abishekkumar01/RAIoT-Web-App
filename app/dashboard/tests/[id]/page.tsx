@@ -415,6 +415,15 @@ export default function TakeTestPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
+              {q.imageUrl && (
+                <div className="mb-4">
+                  <img
+                    src={q.imageUrl}
+                    alt={`Question ${index + 1} reference`}
+                    className="max-h-72 w-auto rounded-md border border-zinc-800 object-contain"
+                  />
+                </div>
+              )}
               {q.type === 'mcq' && q.options && (
                 <div className="space-y-3">
                   {q.options.map((opt, optIndex) => (

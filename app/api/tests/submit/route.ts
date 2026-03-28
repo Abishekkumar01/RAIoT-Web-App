@@ -24,6 +24,23 @@ const isAttemptedAnswer = (value: unknown): boolean => {
     return false;
 };
 
+const normalizeKeyword = (value: string): string => value.trim().toLowerCase();
+
+const evaluateKeywordAnswer = (
+    answerValue: unknown,
+    keywords: string[],
+    matchMode: 'any' | 'all'
+): boolean => {
+    const answer = String(answerValue ?? '').toLowerCase();
+    const expected = keywords.map(normalizeKeyword).filter(Boolean);
+    if (expected.length === 0) return false;
+
+    if (matchMode === 'all') {
+        return expected.every((kw) => answer.includes(kw));
+    }
+    return expected.some((kw) => answer.includes(kw));
+};
+
 export async function POST(request: Request) {
     try {
         const authUser = await verifyUser(request);
@@ -77,6 +94,12 @@ export async function POST(request: Request) {
         // Auto-grade MCQs
         let score = 0;
         let requiresManualGrading = false;
+        const manualReviewRequired: Array<{
+            questionId: string;
+            type: string;
+            answer: string | string[];
+            reason: string;
+        }> = [];
 
         const questions = testData?.questions || [];
         for (const q of questions) {
@@ -115,7 +138,41 @@ export async function POST(request: Request) {
                 continue;
             }
 
-            requiresManualGrading = true;
+            if (q.type === 'short_answer' || q.type === 'long_answer') {
+                const keywords = Array.isArray(q.keywords)
+                    ? q.keywords.map((v: any) => String(v).trim()).filter(Boolean)
+                    : [];
+                const matchMode: 'any' | 'all' = q.keywordMatchMode === 'all' ? 'all' : 'any';
+                const allowManualReview = q.allowManualReview !== false;
+
+                if (keywords.length > 0) {
+                    const isKeywordMatch = evaluateKeywordAnswer(userAnswer, keywords, matchMode);
+                    if (isKeywordMatch) {
+                        score += q.points || 0;
+                    } else if (allowManualReview) {
+                        requiresManualGrading = true;
+                        manualReviewRequired.push({
+                            questionId: q.id,
+                            type: q.type,
+                            answer: Array.isArray(userAnswer) ? userAnswer : String(userAnswer),
+                            reason: `Keyword check failed (${matchMode.toUpperCase()} match)`
+                        });
+                    } else {
+                        score -= q.negativePoints || 0;
+                    }
+                } else if (allowManualReview) {
+                    requiresManualGrading = true;
+                    manualReviewRequired.push({
+                        questionId: q.id,
+                        type: q.type,
+                        answer: Array.isArray(userAnswer) ? userAnswer : String(userAnswer),
+                        reason: 'No keywords configured; requires manual review'
+                    });
+                } else {
+                    score -= q.negativePoints || 0;
+                }
+                continue;
+            }
         }
 
         // Create submission
@@ -123,7 +180,10 @@ export async function POST(request: Request) {
             testId,
             userId: authUser.uid,
             answers,
+            autoScore: score,
             score: requiresManualGrading ? null : score,
+            requiresManualReview: requiresManualGrading,
+            manualReviewRequired,
             submittedAt: new Date().toISOString()
         });
 

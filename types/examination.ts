@@ -1,4 +1,5 @@
 export type QuestionType = 'mcq' | 'checkbox' | 'short_answer' | 'long_answer';
+export type KeywordMatchMode = 'any' | 'all';
 
 export interface Question {
   id: string;
@@ -6,6 +7,10 @@ export interface Question {
   type: QuestionType;
   options?: string[]; // Applicable for 'mcq' and 'checkbox'
   correctAnswer?: string | string[];
+  imageUrl?: string;
+  keywords?: string[]; // Applicable for short/long answer auto-evaluation
+  keywordMatchMode?: KeywordMatchMode;
+  allowManualReview?: boolean;
   points: number;
   negativePoints?: number;
 }

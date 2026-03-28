@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, Edit, Trash2, Save, X } from "lucide-react";
-import { ExamTest, Question, QuestionType } from "@/types/examination";
+import { ExamTest, KeywordMatchMode, Question, QuestionType } from "@/types/examination";
 
 export default function AdminExamsPage() {
   const { user } = useAuth();
@@ -83,6 +83,10 @@ export default function AdminExamsPage() {
           ? (q.options && q.options.length > 0 ? [...q.options] : ["", ""])
           : undefined,
         correctAnswer: Array.isArray(q.correctAnswer) ? q.correctAnswer.join(",") : (q.correctAnswer ?? ""),
+        keywords: Array.isArray(q.keywords) ? q.keywords : [],
+        keywordMatchMode: q.keywordMatchMode || "any",
+        allowManualReview: q.allowManualReview !== false,
+        imageUrl: q.imageUrl || "",
         negativePoints: q.negativePoints ?? 0,
       }))
     );
@@ -149,10 +153,15 @@ export default function AdminExamsPage() {
     if (type === "mcq" || type === "checkbox") {
       next.options = current.options && current.options.length > 0 ? [...current.options] : ["", "", "", ""];
       next.correctAnswer = type === "mcq" ? "" : "";
+      next.keywords = undefined;
+      next.keywordMatchMode = undefined;
+      next.allowManualReview = undefined;
     } else {
       next.options = undefined;
       next.correctAnswer = undefined;
-      next.negativePoints = 0;
+      next.keywords = current.keywords || [];
+      next.keywordMatchMode = current.keywordMatchMode || "any";
+      next.allowManualReview = current.allowManualReview !== false;
     }
 
     updated[qIndex] = next;
@@ -167,6 +176,28 @@ export default function AdminExamsPage() {
     if (checked) current.add(indexStr);
     else current.delete(indexStr);
     updated[qIndex] = { ...question, correctAnswer: Array.from(current).sort().join(",") };
+    setQuestions(updated);
+  };
+
+  const updateKeywords = (qIndex: number, value: string) => {
+    const updated = [...questions];
+    const keywords = value
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+    updated[qIndex] = { ...updated[qIndex], keywords };
+    setQuestions(updated);
+  };
+
+  const updateKeywordMatchMode = (qIndex: number, mode: KeywordMatchMode) => {
+    const updated = [...questions];
+    updated[qIndex] = { ...updated[qIndex], keywordMatchMode: mode };
+    setQuestions(updated);
+  };
+
+  const updateAllowManualReview = (qIndex: number, checked: boolean) => {
+    const updated = [...questions];
+    updated[qIndex] = { ...updated[qIndex], allowManualReview: checked };
     setQuestions(updated);
   };
 
@@ -241,6 +272,19 @@ export default function AdminExamsPage() {
       type,
       options,
       correctAnswer,
+      imageUrl: raw.imageUrl ? String(raw.imageUrl).trim() : undefined,
+      keywords: (type === "short_answer" || type === "long_answer")
+        ? (Array.isArray(raw.keywords)
+            ? raw.keywords.map((v: any) => String(v).trim()).filter(Boolean)
+            : String(raw.keywords ?? "")
+                .split(/[|,]/)
+                .map((v) => v.trim())
+                .filter(Boolean))
+        : undefined,
+      keywordMatchMode: raw.keywordMatchMode === "all" ? "all" : "any",
+      allowManualReview: raw.allowManualReview === undefined
+        ? true
+        : ["true", "1", "yes"].includes(String(raw.allowManualReview).toLowerCase()),
       points: Number.isFinite(points) ? points : 1,
       negativePoints: Number.isFinite(negativePoints) ? negativePoints : 0,
     };
@@ -273,6 +317,10 @@ export default function AdminExamsPage() {
           type: obj.type,
           options: obj.options,
           correctAnswer: obj.correctanswer,
+          imageUrl: obj.imageurl,
+          keywords: obj.keywords,
+          keywordMatchMode: obj.keywordmatchmode,
+          allowManualReview: obj.allowmanualreview,
           points: obj.points,
           negativePoints: obj.negativepoints,
         };
@@ -442,6 +490,41 @@ export default function AdminExamsPage() {
     }
   };
 
+  const setManualScore = async (examId: string, submissionId: string, currentScore: number | null | undefined) => {
+    const entered = prompt("Enter final manual score", currentScore === null || currentScore === undefined ? "0" : String(currentScore));
+    if (entered === null) return;
+    const score = Number(entered);
+    if (!Number.isFinite(score) || score < 0) {
+      alert("Please enter a valid non-negative number.");
+      return;
+    }
+
+    try {
+      const auth = (await import("@/lib/firebase")).auth;
+      const token = await auth.currentUser?.getIdToken(true);
+      const res = await fetch(`/api/admin/exams/${examId}/results/${submissionId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ score }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to update manual score");
+        return;
+      }
+      setResultsByExam((prev) => ({
+        ...prev,
+        [examId]: (prev[examId] || []).map((row: any) =>
+          row.id === submissionId ? { ...row, score, requiresManualReview: false } : row
+        ),
+      }));
+      alert("Manual score updated successfully.");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update manual score");
+    }
+  };
+
   if (loading) return <div className="p-8 flex items-center justify-center"><Loader2 className="animate-spin w-8 h-8" /></div>;
 
   if (isCreating) {
@@ -504,7 +587,7 @@ export default function AdminExamsPage() {
           </div>
         </div>
         <p className="text-xs text-muted-foreground -mt-4">
-          Bulk import format: JSON array (or object with questions[]) or CSV with headers: text,type,options,correctAnswer,points,negativePoints.
+          Bulk import format: JSON array (or object with questions[]) or CSV with headers: text,type,options,correctAnswer,imageUrl,keywords,keywordMatchMode,allowManualReview,points,negativePoints.
           For MCQ/Checkbox CSV, put options separated by | (example: A|B|C|D). For checkbox correctAnswer, use comma-separated indexes like 0,2.
         </p>
 
@@ -536,6 +619,9 @@ export default function AdminExamsPage() {
   {
     "text": "Define IoT in one line.",
     "type": "short_answer",
+    "keywords": ["internet", "things"],
+    "keywordMatchMode": "all",
+    "allowManualReview": true,
     "points": 2,
     "negativePoints": 0
   }
@@ -546,10 +632,10 @@ export default function AdminExamsPage() {
             <div>
               <p className="text-muted-foreground mb-1">CSV example</p>
               <pre className="rounded-md border border-zinc-800 bg-zinc-950 p-3 overflow-x-auto text-zinc-200">
-{`text,type,options,correctAnswer,points,negativePoints
-What is 2 + 2?,mcq,1|2|3|4,3,1,0
-Select all prime numbers below 10,checkbox,2|3|4|5,"0,1,3",2,0.5
-Define IoT in one line.,short_answer,, ,2,0`}
+{`text,type,options,correctAnswer,imageUrl,keywords,keywordMatchMode,allowManualReview,points,negativePoints
+What is 2 + 2?,mcq,1|2|3|4,3,,,,,1,0
+Select all prime numbers below 10,checkbox,2|3|4|5,"0,1,3",,,,2,0.5
+Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|things,all,true,2,0`}
               </pre>
             </div>
           </CardContent>
@@ -575,6 +661,14 @@ Define IoT in one line.,short_answer,, ,2,0`}
                 </Select>
                 <Input type="number" placeholder="Pts" className="w-16" value={q.points} onChange={e => updateQuestion(qIndex, 'points', Number(e.target.value))} title="Positive Marks" />
                 <Input type="number" placeholder="-Pts" className="w-16 text-red-500" value={q.negativePoints || 0} onChange={e => updateQuestion(qIndex, 'negativePoints', Number(e.target.value))} title="Negative Marks" />
+              </div>
+
+              <div className="pl-8">
+                <Input
+                  placeholder="Optional image URL for this question"
+                  value={q.imageUrl || ""}
+                  onChange={(e) => updateQuestion(qIndex, 'imageUrl', e.target.value)}
+                />
               </div>
 
               {(q.type === 'mcq' || q.type === 'checkbox') && q.options && (
@@ -609,6 +703,36 @@ Define IoT in one line.,short_answer,, ,2,0`}
                   <Button variant="outline" size="sm" onClick={() => addOption(qIndex)} className="mt-2 text-xs">
                     <Plus className="w-3 h-3 mr-1" /> Add Option
                   </Button>
+                </div>
+              )}
+
+              {(q.type === 'short_answer' || q.type === 'long_answer') && (
+                <div className="pl-8 space-y-3">
+                  <Input
+                    placeholder="Keywords (comma separated), e.g. internet, things"
+                    value={(q.keywords || []).join(', ')}
+                    onChange={(e) => updateKeywords(qIndex, e.target.value)}
+                  />
+                  <div className="flex items-center gap-3">
+                    <Select value={q.keywordMatchMode || 'any'} onValueChange={(val) => updateKeywordMatchMode(qIndex, val as KeywordMatchMode)}>
+                      <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="any">Match Any Keyword</SelectItem>
+                        <SelectItem value="all">Match All Keywords</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <label className="flex items-center gap-2 text-sm text-zinc-300">
+                      <input
+                        type="checkbox"
+                        checked={q.allowManualReview !== false}
+                        onChange={(e) => updateAllowManualReview(qIndex, e.target.checked)}
+                      />
+                      Allow manual marking when keyword check fails
+                    </label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    If keywords match, full points are auto-awarded. If they do not match and manual marking is enabled, submission stays pending for admin review.
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -671,12 +795,13 @@ Define IoT in one line.,short_answer,, ,2,0`}
               {isSuperAdmin && (resultsLoadingByExam[exam.id!] || resultsByExam[exam.id!]) && (
                 <CardContent className="pt-0 pb-4">
                   <div className="rounded-md border border-zinc-800 overflow-hidden">
-                    <div className="grid grid-cols-12 gap-2 p-3 bg-zinc-900 text-xs uppercase tracking-wide text-zinc-400">
+                    <div className="grid grid-cols-14 gap-2 p-3 bg-zinc-900 text-xs uppercase tracking-wide text-zinc-400">
                       <div className="col-span-3">Member</div>
                       <div className="col-span-3">Email</div>
                       <div className="col-span-2">Role</div>
                       <div className="col-span-2">Score</div>
                       <div className="col-span-2">Submitted At</div>
+                      <div className="col-span-2">Action</div>
                     </div>
                     {resultsLoadingByExam[exam.id!] && (
                       <div className="p-4 text-sm text-muted-foreground flex items-center gap-2">
@@ -687,12 +812,23 @@ Define IoT in one line.,short_answer,, ,2,0`}
                       <div className="p-4 text-sm text-muted-foreground">No member submissions yet.</div>
                     )}
                     {!resultsLoadingByExam[exam.id!] && resultsByExam[exam.id!].map((row: any) => (
-                      <div key={row.id} className="grid grid-cols-12 gap-2 p-3 border-t border-zinc-800 text-sm">
+                      <div key={row.id} className="grid grid-cols-14 gap-2 p-3 border-t border-zinc-800 text-sm">
                         <div className="col-span-3 truncate">{row.userName || 'Unknown User'}</div>
                         <div className="col-span-3 truncate text-zinc-400">{row.userEmail || '-'}</div>
                         <div className="col-span-2 capitalize text-zinc-400">{row.userRole || '-'}</div>
                         <div className="col-span-2 font-semibold">{row.score === null || row.score === undefined ? 'Pending' : row.score}</div>
                         <div className="col-span-2 text-zinc-400">{row.submittedAt ? new Date(row.submittedAt).toLocaleString() : '-'}</div>
+                        <div className="col-span-2">
+                          {(row.score === null || row.requiresManualReview) ? (
+                            <Button size="sm" variant="outline" onClick={() => setManualScore(exam.id!, row.id, row.score)}>
+                              Manual Score
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="ghost" onClick={() => setManualScore(exam.id!, row.id, row.score)}>
+                              Edit Score
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
