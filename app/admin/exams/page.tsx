@@ -618,6 +618,8 @@ export default function AdminExamsPage() {
     }
   };
 
+  const totalMarks = questions.reduce((sum, q) => sum + (Number.isFinite(Number(q.points)) ? Number(q.points) : 0), 0);
+
   if (loading) return <div className="p-8 flex items-center justify-center"><Loader2 className="animate-spin w-8 h-8" /></div>;
 
   if (isCreating) {
@@ -879,6 +881,9 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs text-zinc-300">
                 Questions: {questions.length}
+              </span>
+              <span className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs text-zinc-300">
+                Total Marks: {totalMarks}
               </span>
               <Button type="button" variant="outline" onClick={addQuestion}>
                 <Plus className="w-4 h-4 mr-2" /> Add Question
