@@ -1,6 +1,29 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb, verifyUser } from '@/lib/firebase-admin';
 
+const normalizeIndexAnswer = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+        return value
+            .map((item) => String(item).trim())
+            .filter(Boolean)
+            .sort();
+    }
+    if (typeof value === 'string') {
+        return value
+            .split(/[|,]/)
+            .map((item) => item.trim())
+            .filter(Boolean)
+            .sort();
+    }
+    return [];
+};
+
+const isAttemptedAnswer = (value: unknown): boolean => {
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'string') return value.trim().length > 0;
+    return false;
+};
+
 export async function POST(request: Request) {
     try {
         const authUser = await verifyUser(request);
@@ -58,17 +81,41 @@ export async function POST(request: Request) {
         const questions = testData?.questions || [];
         for (const q of questions) {
             const userAnswer = answers[q.id];
-            if (!userAnswer) continue;
+            const attempted = isAttemptedAnswer(userAnswer);
+
+            // Unattempted questions contribute zero marks by default.
+            if (!attempted) continue;
 
             if (q.type === 'mcq') {
-                if (q.correctAnswer && userAnswer === q.correctAnswer) {
+                const normalizedUserAnswer = String(userAnswer).trim();
+                const normalizedCorrect = String(q.correctAnswer ?? '').trim();
+                if (normalizedCorrect && normalizedUserAnswer === normalizedCorrect) {
                     score += q.points || 0;
-                } else if (q.correctAnswer && userAnswer !== q.correctAnswer) {
+                } else {
+                    // Negative marking only for attempted and incorrect answers.
                     score -= q.negativePoints || 0;
                 }
-            } else {
-                requiresManualGrading = true;
+                continue;
             }
+
+            if (q.type === 'checkbox') {
+                const selectedIndexes = normalizeIndexAnswer(userAnswer);
+                const correctIndexes = normalizeIndexAnswer(q.correctAnswer);
+                const isExactMatch =
+                    selectedIndexes.length > 0 &&
+                    selectedIndexes.length === correctIndexes.length &&
+                    selectedIndexes.every((value, idx) => value === correctIndexes[idx]);
+
+                if (isExactMatch) {
+                    score += q.points || 0;
+                } else {
+                    // Award marks only on exact option set match; otherwise apply negative marks.
+                    score -= q.negativePoints || 0;
+                }
+                continue;
+            }
+
+            requiresManualGrading = true;
         }
 
         // Create submission

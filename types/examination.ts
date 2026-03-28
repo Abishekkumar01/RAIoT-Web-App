@@ -1,11 +1,11 @@
-export type QuestionType = 'mcq' | 'short_answer' | 'long_answer';
+export type QuestionType = 'mcq' | 'checkbox' | 'short_answer' | 'long_answer';
 
 export interface Question {
   id: string;
   text: string;
   type: QuestionType;
-  options?: string[]; // Applicable only for 'mcq'
-  correctAnswer?: string;
+  options?: string[]; // Applicable for 'mcq' and 'checkbox'
+  correctAnswer?: string | string[];
   points: number;
   negativePoints?: number;
 }
@@ -40,7 +40,7 @@ export interface ExamSubmission {
   id?: string;
   testId: string;
   userId: string;
-  answers: Record<string, string>; // questionId -> user's answer
+  answers: Record<string, string | string[]>; // questionId -> user's answer
   score?: number; // Nullable if manual grading is required
   submittedAt: string;
 }

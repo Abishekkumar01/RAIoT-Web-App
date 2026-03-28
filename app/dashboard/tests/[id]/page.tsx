@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, ArrowLeft, Send, Clock } from "lucide-react";
 import { ExamTest, Question } from "@/types/examination";
 
+type AnswerValue = string | string[];
+
 // Fisher-Yates shuffle algorithm to randomize question order
 const shuffleQuestions = (questions: Question[]): Question[] => {
   const shuffled = [...questions];
@@ -27,7 +29,7 @@ export default function TakeTestPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [test, setTest] = useState<ExamTest | null>(null);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null); // seconds
   const [testStarted, setTestStarted] = useState(false);
@@ -216,12 +218,53 @@ export default function TakeTestPage() {
     }
   };
 
-  const handleAnswerChange = (questionId: string, value: string) => {
+  const handleAnswerChange = (questionId: string, value: AnswerValue) => {
     setAnswers(prev => {
       const updated = { ...prev, [questionId]: value };
       localStorage.setItem(`test_answers_${id}`, JSON.stringify(updated));
       return updated;
     });
+  };
+
+  const handleCheckboxAnswerChange = (questionId: string, optionIndex: string, checked: boolean) => {
+    setAnswers((prev) => {
+      const existing = prev[questionId];
+      const selected = Array.isArray(existing)
+        ? [...existing]
+        : (typeof existing === "string" && existing.trim()
+            ? existing.split(/[|,]/).map((v) => v.trim()).filter(Boolean)
+            : []);
+
+      const asSet = new Set(selected);
+      if (checked) asSet.add(optionIndex);
+      else asSet.delete(optionIndex);
+
+      const updated = { ...prev, [questionId]: Array.from(asSet).sort() };
+      localStorage.setItem(`test_answers_${id}`, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const getSelectedOptionIndexes = (value: AnswerValue | undefined) => {
+    if (Array.isArray(value)) return value.map((v) => String(v));
+    if (typeof value === "string" && value.trim()) {
+      return value.split(/[|,]/).map((v) => v.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
+  const isQuestionAnswered = (questionId: string) => {
+    const value = answers[questionId];
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === "string") return value.trim().length > 0;
+    return false;
+  };
+
+  const jumpToQuestion = (questionId: string) => {
+    const element = document.getElementById(`question-${questionId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
   if (loading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
@@ -240,6 +283,9 @@ export default function TakeTestPage() {
 
   const existingSession = typeof window !== 'undefined' && !!localStorage.getItem(`test_start_${id}`);
   const isWarning = timeLeft !== null && timeLeft <= 300; // last 5 mins
+  const totalQuestions = test.questions.length;
+  const attemptedQuestions = test.questions.filter((q) => isQuestionAnswered(q.id)).length;
+  const unattendedQuestions = totalQuestions - attemptedQuestions;
 
   return (
     <div id="exam-fullscreen-container" className={testStarted ? "fixed inset-0 z-[100] bg-zinc-950 overflow-y-auto" : "relative w-full"}>
@@ -323,14 +369,50 @@ export default function TakeTestPage() {
         </div>
       </div>
 
+      <Card className="border-zinc-800 bg-zinc-900/60">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Question Navigator</CardTitle>
+          <CardDescription>
+            Jump to any question. Green = answered, gray = unanswered.
+            Attempted: {attemptedQuestions}/{totalQuestions} | Unattempted: {unattendedQuestions}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2">
+            {test.questions.map((q, index) => {
+              const answered = isQuestionAnswered(q.id);
+              return (
+                <Button
+                  key={`nav-${q.id}`}
+                  type="button"
+                  variant={answered ? "default" : "secondary"}
+                  className="h-9 px-0"
+                  onClick={() => jumpToQuestion(q.id)}
+                >
+                  {index + 1}
+                </Button>
+              );
+            })}
+          </div>
+          <div className="mt-3 text-xs text-zinc-400">
+            Progress: {attemptedQuestions}/{totalQuestions} attempted, {unattendedQuestions} unattended.
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="space-y-6">
         {test.questions.map((q, index) => (
-          <Card key={q.id}>
+          <Card key={q.id} id={`question-${q.id}`}>
             <CardHeader className="bg-zinc-900 border-b border-zinc-800 pb-4">
               <CardTitle className="text-lg leading-relaxed">
                 <span className="mr-2 text-muted-foreground font-mono">{index + 1}.</span> {q.text}
               </CardTitle>
-              <CardDescription className="text-primary font-medium">{q.points} points</CardDescription>
+              <CardDescription className="text-primary font-medium flex items-center justify-between">
+                <span>{q.points} points</span>
+                <span className={isQuestionAnswered(q.id) ? "text-emerald-400" : "text-zinc-400"}>
+                  {isQuestionAnswered(q.id) ? "Answered" : "Unanswered"}
+                </span>
+              </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               {q.type === 'mcq' && q.options && (
@@ -341,7 +423,7 @@ export default function TakeTestPage() {
                         type="radio" 
                         name={`q-${q.id}`} 
                         value={optIndex.toString()} 
-                        checked={answers[q.id] === optIndex.toString()}
+                        checked={typeof answers[q.id] === "string" && answers[q.id] === optIndex.toString()}
                         onChange={() => handleAnswerChange(q.id, optIndex.toString())}
                         className="w-4 h-4 text-primary bg-zinc-900 border-zinc-700 focus:ring-primary focus:ring-offset-zinc-900"
                       />
@@ -350,10 +432,28 @@ export default function TakeTestPage() {
                   ))}
                 </div>
               )}
+              {q.type === 'checkbox' && q.options && (
+                <div className="space-y-3">
+                  {q.options.map((opt, optIndex) => {
+                    const selected = getSelectedOptionIndexes(answers[q.id]).includes(optIndex.toString());
+                    return (
+                      <label key={optIndex} className="flex items-center space-x-3 p-4 border border-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-800/50 transition-all">
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={(e) => handleCheckboxAnswerChange(q.id, optIndex.toString(), e.target.checked)}
+                          className="w-4 h-4 text-primary bg-zinc-900 border-zinc-700 focus:ring-primary focus:ring-offset-zinc-900"
+                        />
+                        <span className="font-medium">{opt}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
               {q.type === 'short_answer' && (
                 <Input 
                   placeholder="Your answer..." 
-                  value={answers[q.id] || ""}
+                  value={typeof answers[q.id] === "string" ? answers[q.id] : ""}
                   onChange={(e) => handleAnswerChange(q.id, e.target.value)}
                   className="bg-zinc-900"
                 />
@@ -362,7 +462,7 @@ export default function TakeTestPage() {
                 <Textarea 
                   placeholder="Your detailed answer..." 
                   className="min-h-[150px] bg-zinc-900 resize-y"
-                  value={answers[q.id] || ""}
+                  value={typeof answers[q.id] === "string" ? answers[q.id] : ""}
                   onChange={(e) => handleAnswerChange(q.id, e.target.value)}
                 />
               )}

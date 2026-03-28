@@ -79,8 +79,10 @@ export default function AdminExamsPage() {
       (exam.questions || []).map((q) => ({
         ...q,
         id: q.id || crypto.randomUUID(),
-        options: q.type === "mcq" ? (q.options && q.options.length > 0 ? [...q.options] : ["", ""]) : undefined,
-        correctAnswer: q.correctAnswer ?? "",
+        options: q.type === "mcq" || q.type === "checkbox"
+          ? (q.options && q.options.length > 0 ? [...q.options] : ["", ""])
+          : undefined,
+        correctAnswer: Array.isArray(q.correctAnswer) ? q.correctAnswer.join(",") : (q.correctAnswer ?? ""),
         negativePoints: q.negativePoints ?? 0,
       }))
     );
@@ -126,6 +128,48 @@ export default function AdminExamsPage() {
     setQuestions(updated);
   };
 
+  const parseSelectedIndexes = (value: Question["correctAnswer"]) => {
+    if (Array.isArray(value)) {
+      return value.map((v) => String(v).trim()).filter(Boolean);
+    }
+    if (typeof value === "string") {
+      return value.split(/[|,]/).map((v) => v.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
+  const handleQuestionTypeChange = (qIndex: number, type: QuestionType) => {
+    const updated = [...questions];
+    const current = updated[qIndex];
+    const next: Question = {
+      ...current,
+      type,
+    };
+
+    if (type === "mcq" || type === "checkbox") {
+      next.options = current.options && current.options.length > 0 ? [...current.options] : ["", "", "", ""];
+      next.correctAnswer = type === "mcq" ? "" : "";
+    } else {
+      next.options = undefined;
+      next.correctAnswer = undefined;
+      next.negativePoints = 0;
+    }
+
+    updated[qIndex] = next;
+    setQuestions(updated);
+  };
+
+  const toggleCheckboxCorrectOption = (qIndex: number, optIndex: number, checked: boolean) => {
+    const updated = [...questions];
+    const question = updated[qIndex];
+    const current = new Set(parseSelectedIndexes(question.correctAnswer));
+    const indexStr = String(optIndex);
+    if (checked) current.add(indexStr);
+    else current.delete(indexStr);
+    updated[qIndex] = { ...question, correctAnswer: Array.from(current).sort().join(",") };
+    setQuestions(updated);
+  };
+
   const updateOption = (qIndex: number, optIndex: number, value: string) => {
     const updated = [...questions];
     if (updated[qIndex].options) {
@@ -162,20 +206,31 @@ export default function AdminExamsPage() {
 
   const normalizeQuestion = (raw: any, index: number): Question => {
     const rawType = String(raw.type || raw.questionType || "mcq").toLowerCase().trim();
-    const type: QuestionType = rawType === "short_answer" || rawType === "long_answer" ? rawType : "mcq";
+    const type: QuestionType = rawType === "short_answer" || rawType === "long_answer" || rawType === "checkbox" ? rawType : "mcq";
     const text = String(raw.text || raw.question || "").trim();
     if (!text) throw new Error(`Question ${index + 1}: text is required`);
 
     let options: string[] | undefined = undefined;
-    if (type === "mcq") {
+    if (type === "mcq" || type === "checkbox") {
       if (Array.isArray(raw.options)) options = raw.options.map((o: any) => String(o).trim()).filter(Boolean);
       else if (typeof raw.options === "string") options = raw.options.split("|").map((o: string) => o.trim()).filter(Boolean);
-      if (!options || options.length < 2) throw new Error(`Question ${index + 1}: MCQ requires at least 2 options`);
+      if (!options || options.length < 2) throw new Error(`Question ${index + 1}: ${type === "mcq" ? "MCQ" : "Checkbox"} requires at least 2 options`);
     }
 
-    const correctAnswer = raw.correctAnswer !== undefined && raw.correctAnswer !== null
-      ? String(raw.correctAnswer).trim()
-      : undefined;
+    let correctAnswer: string | undefined;
+    if (type === "checkbox") {
+      const selected = Array.isArray(raw.correctAnswer)
+        ? raw.correctAnswer.map((v: any) => String(v).trim()).filter(Boolean)
+        : String(raw.correctAnswer ?? "")
+            .split(/[|,]/)
+            .map((v) => v.trim())
+            .filter(Boolean);
+      correctAnswer = selected.join(",");
+    } else {
+      correctAnswer = raw.correctAnswer !== undefined && raw.correctAnswer !== null
+        ? String(raw.correctAnswer).trim()
+        : undefined;
+    }
 
     const points = Number(raw.points ?? 1);
     const negativePoints = Number(raw.negativePoints ?? 0);
@@ -450,7 +505,7 @@ export default function AdminExamsPage() {
         </div>
         <p className="text-xs text-muted-foreground -mt-4">
           Bulk import format: JSON array (or object with questions[]) or CSV with headers: text,type,options,correctAnswer,points,negativePoints.
-          For MCQ CSV, put options separated by | (example: A|B|C|D).
+          For MCQ/Checkbox CSV, put options separated by | (example: A|B|C|D). For checkbox correctAnswer, use comma-separated indexes like 0,2.
         </p>
 
         <Card className="border-zinc-800 bg-zinc-950/40">
@@ -471,6 +526,14 @@ export default function AdminExamsPage() {
     "negativePoints": 0
   },
   {
+    "text": "Select all prime numbers below 10",
+    "type": "checkbox",
+    "options": ["2", "3", "4", "5"],
+    "correctAnswer": "0,1,3",
+    "points": 2,
+    "negativePoints": 0.5
+  },
+  {
     "text": "Define IoT in one line.",
     "type": "short_answer",
     "points": 2,
@@ -485,6 +548,7 @@ export default function AdminExamsPage() {
               <pre className="rounded-md border border-zinc-800 bg-zinc-950 p-3 overflow-x-auto text-zinc-200">
 {`text,type,options,correctAnswer,points,negativePoints
 What is 2 + 2?,mcq,1|2|3|4,3,1,0
+Select all prime numbers below 10,checkbox,2|3|4|5,"0,1,3",2,0.5
 Define IoT in one line.,short_answer,, ,2,0`}
               </pre>
             </div>
@@ -500,10 +564,11 @@ Define IoT in one line.,short_answer,, ,2,0`}
               <div className="flex items-center gap-4">
                 <span className="font-bold">Q{qIndex + 1}.</span>
                 <Input className="flex-1" placeholder="Question Text" value={q.text} onChange={e => updateQuestion(qIndex, 'text', e.target.value)} />
-                <Select value={q.type} onValueChange={(val) => updateQuestion(qIndex, 'type', val as QuestionType)}>
+                <Select value={q.type} onValueChange={(val) => handleQuestionTypeChange(qIndex, val as QuestionType)}>
                   <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="mcq">MCQ</SelectItem>
+                    <SelectItem value="checkbox">Checkbox</SelectItem>
                     <SelectItem value="short_answer">Short</SelectItem>
                     <SelectItem value="long_answer">Long</SelectItem>
                   </SelectContent>
@@ -512,22 +577,35 @@ Define IoT in one line.,short_answer,, ,2,0`}
                 <Input type="number" placeholder="-Pts" className="w-16 text-red-500" value={q.negativePoints || 0} onChange={e => updateQuestion(qIndex, 'negativePoints', Number(e.target.value))} title="Negative Marks" />
               </div>
 
-              {q.type === 'mcq' && q.options && (
+              {(q.type === 'mcq' || q.type === 'checkbox') && q.options && (
                 <div className="pl-8 space-y-2">
                   {q.options.map((opt, optIndex) => (
                     <div key={optIndex} className="flex items-center gap-2">
-                      <input 
-                        type="radio" 
-                        name={`correct-${qIndex}`} 
-                        checked={q.correctAnswer === String(optIndex)} 
-                        onChange={() => updateQuestion(qIndex, 'correctAnswer', String(optIndex))}
-                      />
+                      {q.type === 'mcq' ? (
+                        <input 
+                          type="radio" 
+                          name={`correct-${qIndex}`} 
+                          checked={q.correctAnswer === String(optIndex)} 
+                          onChange={() => updateQuestion(qIndex, 'correctAnswer', String(optIndex))}
+                        />
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={parseSelectedIndexes(q.correctAnswer).includes(String(optIndex))}
+                          onChange={(e) => toggleCheckboxCorrectOption(qIndex, optIndex, e.target.checked)}
+                        />
+                      )}
                       <Input placeholder={`Option ${optIndex + 1}`} value={opt} onChange={e => updateOption(qIndex, optIndex, e.target.value)} />
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 shrink-0" onClick={() => removeOption(qIndex, optIndex)} disabled={q.options!.length <= 2}>
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
                   ))}
+                  <p className="text-xs text-muted-foreground">
+                    {q.type === 'mcq'
+                      ? 'Select one correct option.'
+                      : 'Select all correct options. Exact match is required for full marks.'}
+                  </p>
                   <Button variant="outline" size="sm" onClick={() => addOption(qIndex)} className="mt-2 text-xs">
                     <Plus className="w-3 h-3 mr-1" /> Add Option
                   </Button>
