@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CloudinaryUpload } from "@/components/ui/CloudinaryUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, Edit, Trash2, Save, X } from "lucide-react";
 import { ExamTest, KeywordMatchMode, Question, QuestionType } from "@/types/examination";
@@ -181,10 +182,8 @@ export default function AdminExamsPage() {
 
   const updateKeywords = (qIndex: number, value: string) => {
     const updated = [...questions];
-    const keywords = value
-      .split(",")
-      .map((v) => v.trim())
-      .filter(Boolean);
+    // Keep raw typing experience (spaces/commas) and sanitize before save.
+    const keywords = value.split(",");
     updated[qIndex] = { ...updated[qIndex], keywords };
     setQuestions(updated);
   };
@@ -379,6 +378,12 @@ export default function AdminExamsPage() {
         return;
       }
 
+      const preparedQuestions = questions.map((q) => ({
+        ...q,
+        imageUrl: q.imageUrl?.trim() || undefined,
+        keywords: (q.keywords || []).map((kw) => kw.trim()).filter(Boolean),
+      }));
+
       const newExam = {
         title,
         description,
@@ -388,7 +393,7 @@ export default function AdminExamsPage() {
         examEndTime: exEnDate,
         durationMinutes: parseInt(duration),
         status: "upcoming",
-        questions
+        questions: preparedQuestions
       };
 
       const isUpdate = isEditing && !!editingExamId;
@@ -663,11 +668,12 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                 <Input type="number" placeholder="-Pts" className="w-16 text-red-500" value={q.negativePoints || 0} onChange={e => updateQuestion(qIndex, 'negativePoints', Number(e.target.value))} title="Negative Marks" />
               </div>
 
-              <div className="pl-8">
-                <Input
-                  placeholder="Optional image URL for this question"
-                  value={q.imageUrl || ""}
-                  onChange={(e) => updateQuestion(qIndex, 'imageUrl', e.target.value)}
+              <div className="pl-8 space-y-2">
+                <p className="text-xs text-muted-foreground">Question image upload (Cloudinary)</p>
+                <CloudinaryUpload
+                  folderName="raiot_exams"
+                  currentImageUrl={q.imageUrl}
+                  onUploadSuccess={(url) => updateQuestion(qIndex, 'imageUrl', url)}
                 />
               </div>
 

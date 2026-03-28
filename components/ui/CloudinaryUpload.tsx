@@ -9,9 +9,10 @@ import { useToast } from "@/hooks/use-toast"
 interface CloudinaryUploadProps {
     onUploadSuccess: (url: string) => void;
     currentImageUrl?: string;
+    folderName?: string;
 }
 
-export function CloudinaryUpload({ onUploadSuccess, currentImageUrl }: CloudinaryUploadProps) {
+export function CloudinaryUpload({ onUploadSuccess, currentImageUrl, folderName = 'raiot_inventory' }: CloudinaryUploadProps) {
     const [isUploading, setIsUploading] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl || null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -38,7 +39,7 @@ export function CloudinaryUpload({ onUploadSuccess, currentImageUrl }: Cloudinar
 
         try {
             // 1. Get Signature from Server
-            const { signature, timestamp } = await getCloudinarySignature('raiot_inventory');    
+            const { signature, timestamp } = await getCloudinarySignature(folderName);
 
             // 2. Upload directly to Cloudinary from Client (Bypasses Next.js 1MB limit)
             const formData = new FormData();
@@ -47,7 +48,7 @@ export function CloudinaryUpload({ onUploadSuccess, currentImageUrl }: Cloudinar
             formData.append('api_key', apiKey);
             formData.append('timestamp', timestamp.toString());
             formData.append('signature', signature);
-            formData.append('folder', 'raiot_inventory');
+            formData.append('folder', folderName);
 
             const cloudName = 'dvjvbonjb';
             const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
