@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,14 +13,19 @@ import { ExamTest, KeywordMatchMode, Question, QuestionType } from "@/types/exam
 
 export default function AdminExamsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [exams, setExams] = useState<ExamTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingExamId, setEditingExamId] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [resultsLoadingByExam, setResultsLoadingByExam] = useState<Record<string, boolean>>({});
   const [resultsByExam, setResultsByExam] = useState<Record<string, any[]>>({});
+  const [myRegistrations, setMyRegistrations] = useState<any[]>([]);
+  const [mySubmissions, setMySubmissions] = useState<any[]>([]);
+  const [takeActionLoadingByExam, setTakeActionLoadingByExam] = useState<Record<string, boolean>>({});
   
   // Form state
   const [title, setTitle] = useState("");
@@ -35,11 +41,26 @@ export default function AdminExamsPage() {
 
   useEffect(() => {
     fetchExams();
+    fetchMyTestState();
   }, []);
 
   useEffect(() => {
-    setIsSuperAdmin(user?.role === 'superadmin');
+    const role = (user?.role || '').toLowerCase();
+    setIsSuperAdmin(role === 'superadmin');
+    setIsAdminUser(role === 'superadmin' || role === 'admin');
   }, [user]);
+
+  const computeStatus = (exam: Partial<ExamTest>): 'upcoming' | 'live' | 'previous' => {
+    const now = new Date();
+    const examStart = exam.examStartTime ? new Date(exam.examStartTime) : null;
+    const examEnd = exam.examEndTime ? new Date(exam.examEndTime) : null;
+    if (examStart && examEnd) {
+      if (now < examStart) return 'upcoming';
+      if (now >= examStart && now <= examEnd) return 'live';
+      return 'previous';
+    }
+    return (exam.status as 'upcoming' | 'live' | 'previous') || 'upcoming';
+  };
 
   const toDateTimeLocal = (isoString?: string) => {
     if (!isoString) return "";
@@ -117,6 +138,99 @@ export default function AdminExamsPage() {
       console.error("Error fetching exams", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMyTestState = async () => {
+    try {
+      const auth = (await import("@/lib/firebase")).auth;
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return;
+
+      const res = await fetch('/api/tests', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMyRegistrations(data.registrations || []);
+        setMySubmissions(data.submissions || []);
+      }
+    } catch (err) {
+      console.error("Error fetching test state", err);
+    }
+  };
+
+  const isRegisteredForTest = (testId: string) => myRegistrations.some((r: any) => r.testId === testId);
+  const getSubmissionForTest = (testId: string) => mySubmissions.find((s: any) => s.testId === testId);
+
+  const registerForTest = async (testId: string) => {
+    const auth = (await import("@/lib/firebase")).auth;
+    const token = await auth.currentUser?.getIdToken(true);
+    const res = await fetch('/api/tests/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ testId }),
+    });
+    const data = await res.json();
+    return { ok: res.ok, data };
+  };
+
+  const handleAdminTakeTest = async (exam: ExamTest) => {
+    const examId = exam.id;
+    if (!examId) return;
+
+    setTakeActionLoadingByExam((prev) => ({ ...prev, [examId]: true }));
+    try {
+      const status = computeStatus(exam);
+      const registered = isRegisteredForTest(examId);
+      const submission = getSubmissionForTest(examId);
+
+      if (status === 'upcoming') {
+        if (!registered) {
+          const result = await registerForTest(examId);
+          if (!result.ok && !String(result.data?.error || '').toLowerCase().includes('already registered')) {
+            alert(result.data?.error || 'Failed to register for test.');
+            return;
+          }
+          await fetchMyTestState();
+        }
+        alert('Registered successfully. The test is not live yet.');
+        return;
+      }
+
+      if (status === 'live') {
+        if (!registered) {
+          const result = await registerForTest(examId);
+          if (!result.ok && !String(result.data?.error || '').toLowerCase().includes('already registered')) {
+            alert(result.data?.error || 'Failed to register for test.');
+            return;
+          }
+        }
+
+        if (submission) {
+          alert('You have already submitted this test.');
+          return;
+        }
+
+        router.push(`/dashboard/tests/${examId}`);
+        return;
+      }
+
+      if (submission && exam.resultPublished) {
+        router.push(`/dashboard/tests/results/${examId}`);
+      } else if (submission && !exam.resultPublished) {
+        alert('You already attempted this test. Result is not published yet.');
+      } else {
+        alert('Test is closed. You did not attempt it during the live window.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to process test action.');
+    } finally {
+      setTakeActionLoadingByExam((prev) => ({ ...prev, [examId]: false }));
     }
   };
 
@@ -919,6 +1033,18 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  {isAdminUser && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleAdminTakeTest(exam)}
+                      disabled={!!takeActionLoadingByExam[exam.id!]}
+                    >
+                      {takeActionLoadingByExam[exam.id!] ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : null}
+                      Take Test
+                    </Button>
+                  )}
                   {isSuperAdmin && (
                     <Button variant="outline" onClick={() => startEditExam(exam)}>
                       <Edit className="w-4 h-4 mr-2" /> Edit Test
