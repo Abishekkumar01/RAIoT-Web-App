@@ -189,15 +189,6 @@ export default function AdminExamsPage() {
       const submission = getSubmissionForTest(examId);
 
       if (isSuperAdmin) {
-        if (submission) {
-          if (exam.resultPublished) {
-            router.push(`/dashboard/tests/results/${examId}`);
-          } else {
-            alert('You already attempted this test. Result is not published yet.');
-          }
-          return;
-        }
-
         router.push(`/dashboard/tests/${examId}`);
         return;
       }
@@ -746,6 +737,32 @@ export default function AdminExamsPage() {
     }
   };
 
+  const deleteSubmissionData = async (examId: string, submissionId: string) => {
+    if (!confirm('Delete this submission data permanently?')) return;
+    try {
+      const auth = (await import("@/lib/firebase")).auth;
+      const token = await auth.currentUser?.getIdToken(true);
+      const res = await fetch(`/api/admin/exams/${examId}/results/${submissionId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Failed to delete submission data');
+        return;
+      }
+      setResultsByExam((prev) => ({
+        ...prev,
+        [examId]: (prev[examId] || []).filter((row: any) => row.id !== submissionId),
+      }));
+      alert('Submission data deleted successfully.');
+      await fetchMyTestState();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete submission data');
+    }
+  };
+
   const totalMarks = questions.reduce((sum, q) => sum + (Number.isFinite(Number(q.points)) ? Number(q.points) : 0), 0);
 
   if (loading) return <div className="p-8 flex items-center justify-center"><Loader2 className="animate-spin w-8 h-8" /></div>;
@@ -1109,15 +1126,20 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                         <div className="col-span-2 font-semibold">{row.score === null || row.score === undefined ? 'Pending' : row.score}</div>
                         <div className="col-span-2 text-zinc-400">{row.submittedAt ? new Date(row.submittedAt).toLocaleString() : '-'}</div>
                         <div className="col-span-2">
-                          {(row.score === null || row.requiresManualReview) ? (
-                            <Button size="sm" variant="outline" onClick={() => setManualScore(exam.id!, row.id, row.score)}>
-                              Manual Score
+                          <div className="flex items-center gap-2">
+                            {(row.score === null || row.requiresManualReview) ? (
+                              <Button size="sm" variant="outline" onClick={() => setManualScore(exam.id!, row.id, row.score)}>
+                                Manual Score
+                              </Button>
+                            ) : (
+                              <Button size="sm" variant="ghost" onClick={() => setManualScore(exam.id!, row.id, row.score)}>
+                                Edit Score
+                              </Button>
+                            )}
+                            <Button size="sm" variant="destructive" onClick={() => deleteSubmissionData(exam.id!, row.id)}>
+                              Delete Data
                             </Button>
-                          ) : (
-                            <Button size="sm" variant="ghost" onClick={() => setManualScore(exam.id!, row.id, row.score)}>
-                              Edit Score
-                            </Button>
-                          )}
+                          </div>
                         </div>
                       </div>
                     ))}

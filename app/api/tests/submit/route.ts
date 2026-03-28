@@ -95,7 +95,7 @@ export async function POST(request: Request) {
             .where('testId', '==', testId)
             .get();
 
-        if (!existingSub.empty) {
+        if (!isSuperAdmin && !existingSub.empty) {
             return NextResponse.json({ error: 'Already submitted this test' }, { status: 400 });
         }
 

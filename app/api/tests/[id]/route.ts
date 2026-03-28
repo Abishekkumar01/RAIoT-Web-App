@@ -40,7 +40,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
             .where('testId', '==', testId)
             .get();
 
-        if (!subSnapshot.empty) {
+        if (!isSuperAdmin && !subSnapshot.empty) {
             return NextResponse.json({ error: 'You have already submitted this test.' }, { status: 403 });
         }
 

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ArrowLeft, Send, Clock } from "lucide-react";
+import { Loader2, ArrowLeft, Send, Clock, ChevronLeft, ChevronRight, Eraser } from "lucide-react";
 import { ExamTest, Question } from "@/types/examination";
 
 type AnswerValue = string | string[];
@@ -29,6 +29,7 @@ export default function TakeTestPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [test, setTest] = useState<ExamTest | null>(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null); // seconds
@@ -209,6 +210,7 @@ export default function TakeTestPage() {
           ...data.test,
           questions: shuffledQuestions
         });
+        setCurrentQuestionIndex(0);
       }
     } catch (err) {
       console.error(err);
@@ -260,11 +262,17 @@ export default function TakeTestPage() {
     return false;
   };
 
-  const jumpToQuestion = (questionId: string) => {
-    const element = document.getElementById(`question-${questionId}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+  const jumpToQuestion = (index: number) => {
+    setCurrentQuestionIndex(index);
+  };
+
+  const clearAnswer = (questionId: string) => {
+    setAnswers((prev) => {
+      const updated = { ...prev };
+      delete updated[questionId];
+      localStorage.setItem(`test_answers_${id}`, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   if (loading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
@@ -286,6 +294,7 @@ export default function TakeTestPage() {
   const totalQuestions = test.questions.length;
   const attemptedQuestions = test.questions.filter((q) => isQuestionAnswered(q.id)).length;
   const unattendedQuestions = totalQuestions - attemptedQuestions;
+  const currentQuestion = test.questions[currentQuestionIndex];
 
   return (
     <div id="exam-fullscreen-container" className={testStarted ? "fixed inset-0 z-[100] bg-zinc-950 overflow-y-auto" : "relative w-full"}>
@@ -387,7 +396,7 @@ export default function TakeTestPage() {
                   type="button"
                   variant={answered ? "default" : "secondary"}
                   className="h-9 px-0"
-                  onClick={() => jumpToQuestion(q.id)}
+                  onClick={() => jumpToQuestion(index)}
                 >
                   {index + 1}
                 </Button>
@@ -401,45 +410,45 @@ export default function TakeTestPage() {
       </Card>
 
       <div className="space-y-6">
-        {test.questions.map((q, index) => (
-          <Card key={q.id} id={`question-${q.id}`}>
+        {currentQuestion && (
+          <Card key={currentQuestion.id} id={`question-${currentQuestion.id}`}>
             <CardHeader className="bg-zinc-900 border-b border-zinc-800 pb-4">
               <CardTitle className="text-lg leading-relaxed">
-                <span className="mr-2 text-muted-foreground font-mono">{index + 1}.</span> {q.text}
+                <span className="mr-2 text-muted-foreground font-mono">{currentQuestionIndex + 1}.</span> {currentQuestion.text}
               </CardTitle>
               <CardDescription className="text-primary font-medium flex items-center justify-between">
-                <span>{q.points} points</span>
-                <span className={isQuestionAnswered(q.id) ? "text-emerald-400" : "text-zinc-400"}>
-                  {isQuestionAnswered(q.id) ? "Answered" : "Unanswered"}
+                <span>{currentQuestion.points} points</span>
+                <span className={isQuestionAnswered(currentQuestion.id) ? "text-emerald-400" : "text-zinc-400"}>
+                  {isQuestionAnswered(currentQuestion.id) ? "Answered" : "Unanswered"}
                 </span>
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-              {q.imageUrl && (
+              {currentQuestion.imageUrl && (
                 <div className="mb-4">
                   <img
-                    src={q.imageUrl}
-                    alt={`Question ${index + 1} reference`}
+                    src={currentQuestion.imageUrl}
+                    alt={`Question ${currentQuestionIndex + 1} reference`}
                     className="max-h-72 w-auto rounded-md border border-zinc-800 object-contain"
                   />
                 </div>
               )}
-              {q.type === 'mcq' && q.options && (
+              {currentQuestion.type === 'mcq' && currentQuestion.options && (
                 <div className="space-y-3">
-                  {q.options.map((opt, optIndex) => (
+                  {currentQuestion.options.map((opt, optIndex) => (
                     <label key={optIndex} className="flex items-center space-x-3 p-4 border border-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-800/50 transition-all">
                       <input 
                         type="radio" 
-                        name={`q-${q.id}`} 
+                        name={`q-${currentQuestion.id}`} 
                         value={optIndex.toString()} 
-                        checked={typeof answers[q.id] === "string" && answers[q.id] === optIndex.toString()}
-                        onChange={() => handleAnswerChange(q.id, optIndex.toString())}
+                        checked={typeof answers[currentQuestion.id] === "string" && answers[currentQuestion.id] === optIndex.toString()}
+                        onChange={() => handleAnswerChange(currentQuestion.id, optIndex.toString())}
                         className="w-4 h-4 text-primary bg-zinc-900 border-zinc-700 focus:ring-primary focus:ring-offset-zinc-900"
                       />
                       <div className="space-y-2">
-                        {q.optionsAreImages && q.optionImageUrls?.[optIndex] ? (
+                        {currentQuestion.optionsAreImages && currentQuestion.optionImageUrls?.[optIndex] ? (
                           <img
-                            src={q.optionImageUrls[optIndex]}
+                            src={currentQuestion.optionImageUrls[optIndex]}
                             alt={`Option ${optIndex + 1}`}
                             className="max-h-40 w-auto rounded-md border border-zinc-800 object-contain"
                           />
@@ -450,22 +459,22 @@ export default function TakeTestPage() {
                   ))}
                 </div>
               )}
-              {q.type === 'checkbox' && q.options && (
+              {currentQuestion.type === 'checkbox' && currentQuestion.options && (
                 <div className="space-y-3">
-                  {q.options.map((opt, optIndex) => {
-                    const selected = getSelectedOptionIndexes(answers[q.id]).includes(optIndex.toString());
+                  {currentQuestion.options.map((opt, optIndex) => {
+                    const selected = getSelectedOptionIndexes(answers[currentQuestion.id]).includes(optIndex.toString());
                     return (
                       <label key={optIndex} className="flex items-center space-x-3 p-4 border border-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-800/50 transition-all">
                         <input
                           type="checkbox"
                           checked={selected}
-                          onChange={(e) => handleCheckboxAnswerChange(q.id, optIndex.toString(), e.target.checked)}
+                          onChange={(e) => handleCheckboxAnswerChange(currentQuestion.id, optIndex.toString(), e.target.checked)}
                           className="w-4 h-4 text-primary bg-zinc-900 border-zinc-700 focus:ring-primary focus:ring-offset-zinc-900"
                         />
                         <div className="space-y-2">
-                          {q.optionsAreImages && q.optionImageUrls?.[optIndex] ? (
+                          {currentQuestion.optionsAreImages && currentQuestion.optionImageUrls?.[optIndex] ? (
                             <img
-                              src={q.optionImageUrls[optIndex]}
+                              src={currentQuestion.optionImageUrls[optIndex]}
                               alt={`Option ${optIndex + 1}`}
                               className="max-h-40 w-auto rounded-md border border-zinc-800 object-contain"
                             />
@@ -477,25 +486,48 @@ export default function TakeTestPage() {
                   })}
                 </div>
               )}
-              {q.type === 'short_answer' && (
+              {currentQuestion.type === 'short_answer' && (
                 <Input 
                   placeholder="Your answer..." 
-                  value={typeof answers[q.id] === "string" ? answers[q.id] : ""}
-                  onChange={(e) => handleAnswerChange(q.id, e.target.value)}
-                  className="bg-zinc-900"
+                  value={typeof answers[currentQuestion.id] === "string" ? answers[currentQuestion.id] : ""}
+                  onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                  className="bg-zinc-900 text-zinc-100 caret-zinc-100 placeholder:text-zinc-500"
                 />
               )}
-              {q.type === 'long_answer' && (
+              {currentQuestion.type === 'long_answer' && (
                 <Textarea 
                   placeholder="Your detailed answer..." 
-                  className="min-h-[150px] bg-zinc-900 resize-y"
-                  value={typeof answers[q.id] === "string" ? answers[q.id] : ""}
-                  onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                  className="min-h-[150px] bg-zinc-900 resize-y text-zinc-100 caret-zinc-100 placeholder:text-zinc-500"
+                  value={typeof answers[currentQuestion.id] === "string" ? answers[currentQuestion.id] : ""}
+                  onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
                 />
               )}
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
+                    disabled={currentQuestionIndex === 0}
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setCurrentQuestionIndex((prev) => Math.min(totalQuestions - 1, prev + 1))}
+                    disabled={currentQuestionIndex === totalQuestions - 1}
+                  >
+                    Next <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+                <Button type="button" variant="ghost" onClick={() => clearAnswer(currentQuestion.id)}>
+                  <Eraser className="w-4 h-4 mr-2" /> Clear Answer
+                </Button>
+              </div>
             </CardContent>
           </Card>
-        ))}
+        )}
       </div>
 
       <div className="flex justify-end pt-4 sticky bottom-8">
