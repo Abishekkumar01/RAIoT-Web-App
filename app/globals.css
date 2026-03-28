@@ -93,3 +93,23 @@
         opacity: 1;
     }
 }
+
+/* Force visible cursor in fullscreen exam mode to avoid hidden-pointer effects. */
+.exam-fullscreen-cursor,
+.exam-fullscreen-cursor * {
+    cursor: default !important;
+}
+
+.exam-fullscreen-cursor button,
+.exam-fullscreen-cursor [role="button"],
+.exam-fullscreen-cursor a,
+.exam-fullscreen-cursor label,
+.exam-fullscreen-cursor input[type="radio"],
+.exam-fullscreen-cursor input[type="checkbox"] {
+    cursor: pointer !important;
+}
+
+.exam-fullscreen-cursor input,
+.exam-fullscreen-cursor textarea {
+    cursor: text !important;
+}

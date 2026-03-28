@@ -108,6 +108,11 @@ export default function TakeTestPage() {
         e.preventDefault();
         setViolationWarning("Refreshing the page is not allowed during the test!");
       }
+      // Best-effort prevention for F11 fullscreen toggle.
+      if (e.key === 'F11') {
+        e.preventDefault();
+        setViolationWarning('F11 fullscreen toggle is disabled during the test.');
+      }
       // Best-effort prevention for Alt+Tab; browsers cannot fully block OS-level shortcuts.
       if (e.altKey && e.key.toLowerCase() === 'tab') {
         e.preventDefault();
@@ -147,6 +152,11 @@ export default function TakeTestPage() {
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement) {
         setIsFullscreen(false);
+        if (!hasAutoSubmitted.current) {
+          setViolationWarning('Fullscreen exit detected. Submitting test automatically.');
+          alert('Fullscreen exit detected. Your test will be submitted automatically.');
+          submitTest(true);
+        }
       } else {
         setIsFullscreen(true);
       }
@@ -316,7 +326,7 @@ export default function TakeTestPage() {
   const currentQuestion = test.questions[currentQuestionIndex];
 
   return (
-    <div id="exam-fullscreen-container" className={testStarted ? "fixed inset-0 z-[100] bg-zinc-950 overflow-y-auto" : "relative w-full"}>
+    <div id="exam-fullscreen-container" className={testStarted ? "exam-fullscreen-cursor fixed inset-0 z-[100] bg-zinc-950 overflow-y-auto" : "relative w-full"}>
       
       {!testStarted ? (
         <div className="p-8 max-w-2xl mx-auto mt-10 relative z-50">
@@ -338,7 +348,7 @@ export default function TakeTestPage() {
                 <ul className="list-disc list-inside text-zinc-300 text-sm space-y-1 ml-4">
                   <li>Upon starting, the test will enter fullscreen mode.</li>
                   <li>Do NOT switch tabs or minimize the browser window. Doing so will be recorded as a violation.</li>
-                  <li>Three (3) violations will trigger an automatic submission of your test.</li>
+                  <li>Any tab/app switch or fullscreen exit can trigger automatic submission.</li>
                   <li>Right-click is disabled during the test.</li>
                   <li>Ensure you have a stable internet connection.</li>
                 </ul>
