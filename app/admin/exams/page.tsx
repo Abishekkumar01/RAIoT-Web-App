@@ -668,16 +668,13 @@ export default function AdminExamsPage() {
 
         <div className="flex justify-between items-center mt-8">
           <h2 className="text-xl font-bold">Questions ({questions.length})</h2>
-          <div className="flex items-center gap-2">
-            <Input
-              type="file"
-              accept=".json,.csv"
-              onChange={handleQuestionFileUpload}
-              disabled={importingQuestions}
-              className="w-[240px]"
-            />
-            <Button onClick={addQuestion}><Plus className="w-4 h-4 mr-2" /> Add Question</Button>
-          </div>
+          <Input
+            type="file"
+            accept=".json,.csv"
+            onChange={handleQuestionFileUpload}
+            disabled={importingQuestions}
+            className="w-[240px]"
+          />
         </div>
         <p className="text-xs text-muted-foreground -mt-4">
           Bulk import format: JSON array (or object with questions[]) or CSV with headers: text,type,options,correctAnswer,imageUrl,keywords,keywordMatchMode,allowManualReview,points,negativePoints.
@@ -877,8 +874,13 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
           </Card>
         ))}
 
-        <div className="flex justify-end pt-4">
-          <Button onClick={submitExam} size="lg"><Save className="w-4 h-4 mr-2" /> {isEditing ? 'Save Changes' : 'Save Test'}</Button>
+        <div className="sticky bottom-4 z-20 pt-4">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-950/95 backdrop-blur px-4 py-3">
+            <Button type="button" variant="outline" onClick={addQuestion}>
+              <Plus className="w-4 h-4 mr-2" /> Add Question
+            </Button>
+            <Button onClick={submitExam} size="lg"><Save className="w-4 h-4 mr-2" /> {isEditing ? 'Save Changes' : 'Save Test'}</Button>
+          </div>
         </div>
       </div>
     );
