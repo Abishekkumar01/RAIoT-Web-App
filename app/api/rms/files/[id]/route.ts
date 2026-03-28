@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { GridFSBucket, ObjectId } from 'mongodb';
+import { Readable } from 'stream';
 import dbConnect from '@/lib/mongodb';
 import { verifyUser } from '@/lib/firebase-admin';
+
+export const runtime = 'nodejs';
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
@@ -30,20 +33,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
         }
 
         const downloadStream = bucket.openDownloadStream(objectId);
-        const chunks: Buffer[] = [];
-        await new Promise<void>((resolve, reject) => {
-            downloadStream.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
-            downloadStream.on('error', reject);
-            downloadStream.on('end', () => resolve());
-        });
-
-        const buffer = Buffer.concat(chunks);
         const headers = new Headers();
         const metadata = (fileDoc.metadata || {}) as { mimeType?: string; originalName?: string };
         headers.set('Content-Type', metadata.mimeType || 'application/octet-stream');
         headers.set('Content-Disposition', `attachment; filename="${metadata.originalName || fileDoc.filename || 'resource'}"`);
+        headers.set('Content-Length', String(fileDoc.length || 0));
 
-        return new NextResponse(buffer, { status: 200, headers });
+        const webStream = Readable.toWeb(downloadStream) as ReadableStream<Uint8Array>;
+        return new NextResponse(webStream, { status: 200, headers });
     } catch (error: any) {
         console.error('Error downloading RMS document from MongoDB:', error);
         return NextResponse.json({ error: 'Failed to download file' }, { status: 500 });

@@ -39,15 +39,6 @@ export function CloudinaryRMSUpload({ userId, onUploadSuccess, currentFileUrl }:
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (file.size > 16 * 1024 * 1024) {
-            toast({
-                title: "File too large",
-                description: "Please select a file smaller than 16MB.",
-                variant: "destructive"
-            });
-            return;
-        }
-
         setIsUploading(true);
         setSuccess(false);
         setFileName(file.name);
@@ -171,7 +162,7 @@ export function CloudinaryRMSUpload({ userId, onUploadSuccess, currentFileUrl }:
                         )}
                     </p>
                     {!isUploading && !success && (
-                        <p className="text-xs text-zinc-500">PDF, DOCX, ZIP, PNG, JPG (Max 16MB)</p>
+                        <p className="text-xs text-zinc-500">PDF, DOCX, ZIP, PNG, JPG (Large files supported)</p>
                     )}
                 </div>
                 <input 

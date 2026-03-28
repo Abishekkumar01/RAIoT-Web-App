@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { GridFSBucket } from 'mongodb';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 import dbConnect from '@/lib/mongodb';
 import { getAdminDb, verifyUser } from '@/lib/firebase-admin';
+
+export const runtime = 'nodejs';
 
 const sanitizeFileName = (name: string) => name.replace(/[^a-zA-Z0-9._-]/g, '_');
 
@@ -35,10 +39,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Images should be uploaded to Cloudinary for RMS.' }, { status: 400 });
         }
 
-        if (file.size > 16 * 1024 * 1024) {
-            return NextResponse.json({ error: 'File exceeds 16MB upload limit' }, { status: 400 });
-        }
-
         await dbConnect();
         const db = mongoose.connection.db;
         if (!db) {
@@ -47,7 +47,6 @@ export async function POST(request: Request) {
 
         const bucket = new GridFSBucket(db, { bucketName: 'rms_files' });
         const fileName = sanitizeFileName(file.name || `rms_${Date.now()}`);
-        const buffer = Buffer.from(await file.arrayBuffer());
 
         const uploadStream = bucket.openUploadStream(fileName, {
             metadata: {
@@ -58,11 +57,9 @@ export async function POST(request: Request) {
             },
         });
 
-        await new Promise<void>((resolve, reject) => {
-            uploadStream.on('finish', () => resolve());
-            uploadStream.on('error', (err) => reject(err));
-            uploadStream.end(buffer);
-        });
+        const webReadable = file.stream();
+        const nodeReadable = Readable.fromWeb(webReadable as any);
+        await pipeline(nodeReadable, uploadStream);
 
         const fileId = uploadStream.id?.toString();
         if (!fileId) {
