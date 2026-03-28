@@ -85,6 +85,12 @@ export default function AdminExamsPage() {
         options: q.type === "mcq" || q.type === "checkbox"
           ? (q.options && q.options.length > 0 ? [...q.options] : ["", ""])
           : undefined,
+        optionsAreImages: q.optionsAreImages === true,
+        optionImageUrls: q.type === "mcq" || q.type === "checkbox"
+          ? (q.optionImageUrls && q.optionImageUrls.length > 0
+              ? [...q.optionImageUrls]
+              : Array((q.options && q.options.length > 0 ? q.options.length : 2)).fill(""))
+          : undefined,
         correctAnswer: Array.isArray(q.correctAnswer) ? q.correctAnswer.join(",") : (q.correctAnswer ?? ""),
         keywords: Array.isArray(q.keywords) ? q.keywords : [],
         keywordMatchMode: q.keywordMatchMode || "any",
@@ -122,6 +128,8 @@ export default function AdminExamsPage() {
         text: "",
         type: "mcq",
         options: ["", "", "", ""],
+        optionsAreImages: false,
+        optionImageUrls: ["", "", "", ""],
         correctAnswer: "",
         points: 1,
         negativePoints: 0
@@ -155,12 +163,18 @@ export default function AdminExamsPage() {
 
     if (type === "mcq" || type === "checkbox") {
       next.options = current.options && current.options.length > 0 ? [...current.options] : ["", "", "", ""];
+      next.optionsAreImages = current.optionsAreImages === true;
+      next.optionImageUrls = current.optionImageUrls && current.optionImageUrls.length > 0
+        ? [...current.optionImageUrls]
+        : Array(next.options.length).fill("");
       next.correctAnswer = type === "mcq" ? "" : "";
       next.keywords = undefined;
       next.keywordMatchMode = undefined;
       next.allowManualReview = undefined;
     } else {
       next.options = undefined;
+      next.optionsAreImages = undefined;
+      next.optionImageUrls = undefined;
       next.correctAnswer = undefined;
       next.keywords = current.keywords || [];
       next.keywordMatchMode = current.keywordMatchMode || "any";
@@ -234,10 +248,38 @@ export default function AdminExamsPage() {
     setQuestions(updated);
   };
 
+  const updateOptionImage = (qIndex: number, optIndex: number, value: string) => {
+    const updated = [...questions];
+    if (!updated[qIndex].optionImageUrls) {
+      updated[qIndex].optionImageUrls = Array(updated[qIndex].options?.length || 0).fill("");
+    }
+    updated[qIndex].optionImageUrls![optIndex] = value;
+    setQuestions(updated);
+  };
+
+  const toggleOptionsAreImages = (qIndex: number, checked: boolean) => {
+    const updated = [...questions];
+    const q = updated[qIndex];
+    const optionCount = q.options?.length || 0;
+    updated[qIndex] = {
+      ...q,
+      optionsAreImages: checked,
+      optionImageUrls: checked
+        ? (q.optionImageUrls && q.optionImageUrls.length > 0
+            ? [...q.optionImageUrls]
+            : Array(optionCount).fill(""))
+        : q.optionImageUrls,
+    };
+    setQuestions(updated);
+  };
+
   const addOption = (qIndex: number) => {
     const updated = [...questions];
     if (updated[qIndex].options) {
       updated[qIndex].options!.push("");
+      if (updated[qIndex].optionImageUrls) {
+        updated[qIndex].optionImageUrls!.push("");
+      }
     }
     setQuestions(updated);
   };
@@ -246,6 +288,9 @@ export default function AdminExamsPage() {
     const updated = [...questions];
     if (updated[qIndex].options) {
       updated[qIndex].options!.splice(optIndex, 1);
+      if (updated[qIndex].optionImageUrls) {
+        updated[qIndex].optionImageUrls!.splice(optIndex, 1);
+      }
     }
     setQuestions(updated);
   };
@@ -273,6 +318,18 @@ export default function AdminExamsPage() {
       if (!options || options.length < 2) throw new Error(`Question ${index + 1}: ${type === "mcq" ? "MCQ" : "Checkbox"} requires at least 2 options`);
     }
 
+    const optionsAreImages =
+      raw.optionsAreImages === true ||
+      String(raw.optionsAreImages || "").toLowerCase() === "true";
+
+    const optionImageUrls = (type === "mcq" || type === "checkbox")
+      ? (Array.isArray(raw.optionImageUrls)
+          ? raw.optionImageUrls.map((v: any) => String(v).trim())
+          : String(raw.optionImageUrls || "")
+              .split("|")
+              .map((v) => v.trim()))
+      : undefined;
+
     let correctAnswer: string | undefined;
     if (type === "checkbox") {
       const selected = Array.isArray(raw.correctAnswer)
@@ -296,6 +353,8 @@ export default function AdminExamsPage() {
       text,
       type,
       options,
+      optionsAreImages,
+      optionImageUrls: optionImageUrls && optionImageUrls.length > 0 ? optionImageUrls : undefined,
       correctAnswer,
       imageUrl: raw.imageUrl ? String(raw.imageUrl).trim() : undefined,
       keywords: (type === "short_answer" || type === "long_answer")
@@ -341,6 +400,8 @@ export default function AdminExamsPage() {
           text: obj.text || obj.question,
           type: obj.type,
           options: obj.options,
+          optionsAreImages: obj.optionsareimages,
+          optionImageUrls: obj.optionimageurls,
           correctAnswer: obj.correctanswer,
           imageUrl: obj.imageurl,
           keywords: obj.keywords,
@@ -408,6 +469,7 @@ export default function AdminExamsPage() {
         ...q,
         imageUrl: q.imageUrl?.trim() || undefined,
         keywords: (q.keywords || []).map((kw) => kw.trim()).filter(Boolean),
+        optionImageUrls: (q.optionImageUrls || []).map((url) => url.trim()),
       }));
 
       const newExam = {
@@ -705,8 +767,16 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
 
               {(q.type === 'mcq' || q.type === 'checkbox') && q.options && (
                 <div className="pl-8 space-y-2">
+                  <label className="flex items-center gap-2 text-sm text-zinc-300 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={q.optionsAreImages === true}
+                      onChange={(e) => toggleOptionsAreImages(qIndex, e.target.checked)}
+                    />
+                    Options are images
+                  </label>
                   {q.options.map((opt, optIndex) => (
-                    <div key={optIndex} className="flex items-center gap-2">
+                    <div key={optIndex} className="flex items-start gap-2">
                       {q.type === 'mcq' ? (
                         <input 
                           type="radio" 
@@ -721,7 +791,16 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                           onChange={(e) => toggleCheckboxCorrectOption(qIndex, optIndex, e.target.checked)}
                         />
                       )}
-                      <Input placeholder={`Option ${optIndex + 1}`} value={opt} onChange={e => updateOption(qIndex, optIndex, e.target.value)} />
+                      <div className="flex-1 space-y-2">
+                        <Input placeholder={`Option ${optIndex + 1}`} value={opt} onChange={e => updateOption(qIndex, optIndex, e.target.value)} />
+                        {q.optionsAreImages && (
+                          <CloudinaryUpload
+                            folderName="raiot_exams/options"
+                            currentImageUrl={q.optionImageUrls?.[optIndex]}
+                            onUploadSuccess={(url) => updateOptionImage(qIndex, optIndex, url)}
+                          />
+                        )}
+                      </div>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 shrink-0" onClick={() => removeOption(qIndex, optIndex)} disabled={q.options!.length <= 2}>
                         <X className="w-4 h-4" />
                       </Button>

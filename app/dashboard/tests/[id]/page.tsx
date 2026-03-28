@@ -436,7 +436,16 @@ export default function TakeTestPage() {
                         onChange={() => handleAnswerChange(q.id, optIndex.toString())}
                         className="w-4 h-4 text-primary bg-zinc-900 border-zinc-700 focus:ring-primary focus:ring-offset-zinc-900"
                       />
-                      <span className="font-medium">{opt}</span>
+                      <div className="space-y-2">
+                        {q.optionsAreImages && q.optionImageUrls?.[optIndex] ? (
+                          <img
+                            src={q.optionImageUrls[optIndex]}
+                            alt={`Option ${optIndex + 1}`}
+                            className="max-h-40 w-auto rounded-md border border-zinc-800 object-contain"
+                          />
+                        ) : null}
+                        <span className="font-medium">{opt}</span>
+                      </div>
                     </label>
                   ))}
                 </div>
@@ -453,7 +462,16 @@ export default function TakeTestPage() {
                           onChange={(e) => handleCheckboxAnswerChange(q.id, optIndex.toString(), e.target.checked)}
                           className="w-4 h-4 text-primary bg-zinc-900 border-zinc-700 focus:ring-primary focus:ring-offset-zinc-900"
                         />
-                        <span className="font-medium">{opt}</span>
+                        <div className="space-y-2">
+                          {q.optionsAreImages && q.optionImageUrls?.[optIndex] ? (
+                            <img
+                              src={q.optionImageUrls[optIndex]}
+                              alt={`Option ${optIndex + 1}`}
+                              className="max-h-40 w-auto rounded-md border border-zinc-800 object-contain"
+                            />
+                          ) : null}
+                          <span className="font-medium">{opt}</span>
+                        </div>
                       </label>
                     );
                   })}

@@ -6,6 +6,8 @@ export interface Question {
   text: string;
   type: QuestionType;
   options?: string[]; // Applicable for 'mcq' and 'checkbox'
+  optionsAreImages?: boolean;
+  optionImageUrls?: string[]; // Parallel array to options when optionsAreImages is true
   correctAnswer?: string | string[];
   imageUrl?: string;
   keywords?: string[]; // Applicable for short/long answer auto-evaluation
