@@ -188,6 +188,20 @@ export default function AdminExamsPage() {
       const registered = isRegisteredForTest(examId);
       const submission = getSubmissionForTest(examId);
 
+      if (isSuperAdmin) {
+        if (submission) {
+          if (exam.resultPublished) {
+            router.push(`/dashboard/tests/results/${examId}`);
+          } else {
+            alert('You already attempted this test. Result is not published yet.');
+          }
+          return;
+        }
+
+        router.push(`/dashboard/tests/${examId}`);
+        return;
+      }
+
       if (status === 'upcoming') {
         if (!registered) {
           const result = await registerForTest(examId);

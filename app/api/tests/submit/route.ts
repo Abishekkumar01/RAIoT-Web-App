@@ -58,6 +58,14 @@ export async function POST(request: Request) {
         const adminDb = getAdminDb();
         if (!adminDb) throw new Error('Database not initialized');
 
+        const superAdminEmails = new Set(['chouhanchetan066@gmail.com', 'amanchoudhary.1502@gmail.com']);
+        let isSuperAdmin = !!authUser.email && superAdminEmails.has(authUser.email.toLowerCase());
+        if (!isSuperAdmin) {
+            const userDoc = await adminDb.collection('users').doc(authUser.uid).get();
+            const role = String(userDoc.data()?.role || '').toLowerCase();
+            isSuperAdmin = role === 'superadmin';
+        }
+
         // Verify test is live
         const testDoc = await adminDb.collection('exams').doc(testId).get();
         if (!testDoc.exists) {
@@ -75,7 +83,7 @@ export async function POST(request: Request) {
             : testData?.status;
 
         // Block if not started yet
-        if (effectiveStatus === 'upcoming') {
+        if (!isSuperAdmin && effectiveStatus === 'upcoming') {
             return NextResponse.json({ error: 'Test has not started yet' }, { status: 400 });
         }
         // Note: Allow submission even after examEndTime because a user who started

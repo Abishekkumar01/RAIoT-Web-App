@@ -13,6 +13,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
         const adminDb = getAdminDb();
         if (!adminDb) throw new Error('Database not initialized');
 
+        const superAdminEmails = new Set(['chouhanchetan066@gmail.com', 'amanchoudhary.1502@gmail.com']);
+        let isSuperAdmin = !!authUser.email && superAdminEmails.has(authUser.email.toLowerCase());
+        if (!isSuperAdmin) {
+            const userDoc = await adminDb.collection('users').doc(authUser.uid).get();
+            const role = String(userDoc.data()?.role || '').toLowerCase();
+            isSuperAdmin = role === 'superadmin';
+        }
+
         const testDoc = await adminDb.collection('exams').doc(testId).get();
         if (!testDoc.exists) {
             return NextResponse.json({ error: 'Test not found' }, { status: 404 });
@@ -45,16 +53,16 @@ export async function GET(request: Request, { params }: { params: { id: string }
             ? (now < examStart ? 'upcoming' : now <= examEnd ? 'live' : 'previous')
             : testData.status;
 
-        if (regSnapshot.empty && effectiveStatus !== 'previous') {
+        if (!isSuperAdmin && regSnapshot.empty && effectiveStatus !== 'previous') {
              return NextResponse.json({ error: 'You are not registered for this test' }, { status: 403 });
         }
 
-        if (effectiveStatus === 'upcoming') {
+        if (!isSuperAdmin && effectiveStatus === 'upcoming') {
             return NextResponse.json({ error: 'The test has not started yet.' }, { status: 403 });
         }
 
         // If they are trying to START the test after the deadline, block them
-        if (effectiveStatus === 'live' && examEnd && now > examEnd) {
+        if (!isSuperAdmin && effectiveStatus === 'live' && examEnd && now > examEnd) {
             return NextResponse.json({ error: 'The deadline to start this test has passed.' }, { status: 403 });
         }
 
