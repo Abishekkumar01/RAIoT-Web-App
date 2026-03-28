@@ -1,6 +1,6 @@
 export interface MemberResource {
     id: string; // Document ID
-    userId: string; // Target member's UID
+    userId: string; // Target member's UID or 'all' for global visibility
     title: string; // Name of the resource
     description?: string; // Optional context
     fileUrl: string; // Cloudinary URL

@@ -78,7 +78,7 @@ export default function AdminResourcesPage() {
   const filteredResources = resources.filter(res => 
     res.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
     res.fileName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    users.find(u => u.uid === res.userId)?.displayName.toLowerCase().includes(searchTerm.toLowerCase())
+    getUserName(res.userId).toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const handleUploadSuccess = (payload: {
@@ -187,6 +187,7 @@ export default function AdminResourcesPage() {
   }
 
   const getUserName = (uid: string) => {
+    if (uid === 'all') return 'All Members'
     return users.find(u => u.uid === uid)?.displayName || uid
   }
 
@@ -215,6 +216,7 @@ export default function AdminResourcesPage() {
                     <SelectValue placeholder="Select a member..." />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-800 border-zinc-700 text-white max-h-64">
+                    <SelectItem value="all">All Members (Visible to everyone)</SelectItem>
                     {users.map(u => (
                       <SelectItem key={u.uid} value={u.uid}>{u.displayName} ({u.email})</SelectItem>
                     ))}
@@ -291,7 +293,13 @@ export default function AdminResourcesPage() {
                     {res.description && <div className="text-xs text-zinc-500">{res.description}</div>}
                   </TableCell>
                   <TableCell className="text-zinc-300">
-                    {getUserName(res.userId)}
+                    {res.userId === 'all' ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-900/40 text-purple-300 border border-purple-700/40">
+                        All Members
+                      </span>
+                    ) : (
+                      getUserName(res.userId)
+                    )}
                   </TableCell>
                   <TableCell>
                     <button

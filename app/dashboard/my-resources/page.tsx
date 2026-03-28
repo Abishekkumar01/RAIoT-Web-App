@@ -60,7 +60,7 @@ export default function MyResourcesPage() {
 
     const q = query(
       collection(db, "member_resources"),
-      where("userId", "==", currentUser.uid)
+      where("userId", "in", [currentUser.uid, "all"])
     )
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
