@@ -14,6 +14,8 @@ export default function AdminExamsPage() {
   const [exams, setExams] = useState<ExamTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingExamId, setEditingExamId] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [resultsLoadingByExam, setResultsLoadingByExam] = useState<Record<string, boolean>>({});
   const [resultsByExam, setResultsByExam] = useState<Record<string, any[]>>({});
@@ -36,6 +38,54 @@ export default function AdminExamsPage() {
   useEffect(() => {
     setIsSuperAdmin(user?.role === 'superadmin');
   }, [user]);
+
+  const toDateTimeLocal = (isoString?: string) => {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) return "";
+    const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+    return localDate.toISOString().slice(0, 16);
+  };
+
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setStartTime("");
+    setEndTime("");
+    setExamStartTime("");
+    setExamEndTime("");
+    setDuration("60");
+    setQuestions([]);
+    setIsEditing(false);
+    setEditingExamId(null);
+  };
+
+  const openCreateForm = () => {
+    resetForm();
+    setIsCreating(true);
+  };
+
+  const startEditExam = (exam: ExamTest) => {
+    setIsEditing(true);
+    setEditingExamId(exam.id || null);
+    setTitle(exam.title || "");
+    setDescription(exam.description || "");
+    setStartTime(toDateTimeLocal(exam.startTime));
+    setEndTime(toDateTimeLocal(exam.endTime));
+    setExamStartTime(toDateTimeLocal(exam.examStartTime));
+    setExamEndTime(toDateTimeLocal(exam.examEndTime));
+    setDuration(String(exam.durationMinutes || 60));
+    setQuestions(
+      (exam.questions || []).map((q) => ({
+        ...q,
+        id: q.id || crypto.randomUUID(),
+        options: q.type === "mcq" ? (q.options && q.options.length > 0 ? [...q.options] : ["", ""]) : undefined,
+        correctAnswer: q.correctAnswer ?? "",
+        negativePoints: q.negativePoints ?? 0,
+      }))
+    );
+    setIsCreating(true);
+  };
 
   const fetchExams = async () => {
     try {
@@ -238,24 +288,32 @@ export default function AdminExamsPage() {
         questions
       };
 
-      const res = await fetch('/api/admin/exams', {
-        method: 'POST',
+      const isUpdate = isEditing && !!editingExamId;
+      const endpoint = isUpdate ? `/api/admin/exams/${editingExamId}` : '/api/admin/exams';
+      const method = isUpdate ? 'PUT' : 'POST';
+      const body = isUpdate ? { ...newExam, resultPublished: false } : newExam;
+
+      const res = await fetch(endpoint, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(newExam)
+        body: JSON.stringify(body)
       });
 
       const data = await res.json();
       if (res.ok) {
-        alert("Test created successfully!");
+        if (isUpdate) {
+          alert("Test updated successfully. Results are now unpublished. Review changes and publish again.");
+        } else {
+          alert("Test created successfully!");
+        }
         setIsCreating(false);
         fetchExams();
-        // Reset form
-        setTitle(""); setDescription(""); setStartTime(""); setEndTime(""); setExamStartTime(""); setExamEndTime(""); setQuestions([]);
+        resetForm();
       } else {
-        alert(data.error || "Failed to create test.");
+        alert(data.error || (isUpdate ? "Failed to update test." : "Failed to create test."));
       }
     } catch (err: any) {
       console.error("Error submitting test:", err);
@@ -335,8 +393,8 @@ export default function AdminExamsPage() {
     return (
       <div className="p-6 space-y-6 max-w-4xl mx-auto">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Create New Test</h1>
-          <Button variant="outline" onClick={() => setIsCreating(false)}>Cancel</Button>
+          <h1 className="text-2xl font-bold">{isEditing ? 'Edit Test' : 'Create New Test'}</h1>
+          <Button variant="outline" onClick={() => { setIsCreating(false); resetForm(); }}>Cancel</Button>
         </div>
         
         <Card>
@@ -480,7 +538,7 @@ Define IoT in one line.,short_answer,, ,2,0`}
         ))}
 
         <div className="flex justify-end pt-4">
-          <Button onClick={submitExam} size="lg"><Save className="w-4 h-4 mr-2" /> Save Test</Button>
+          <Button onClick={submitExam} size="lg"><Save className="w-4 h-4 mr-2" /> {isEditing ? 'Save Changes' : 'Save Test'}</Button>
         </div>
       </div>
     );
@@ -490,7 +548,7 @@ Define IoT in one line.,short_answer,, ,2,0`}
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Exam Management</h1>
-        <Button onClick={() => setIsCreating(true)}><Plus className="w-4 h-4 mr-2" /> Create Test</Button>
+        <Button onClick={openCreateForm}><Plus className="w-4 h-4 mr-2" /> Create Test</Button>
       </div>
 
       <div className="grid gap-4">
@@ -509,6 +567,11 @@ Define IoT in one line.,short_answer,, ,2,0`}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  {isSuperAdmin && (
+                    <Button variant="outline" onClick={() => startEditExam(exam)}>
+                      <Edit className="w-4 h-4 mr-2" /> Edit Test
+                    </Button>
+                  )}
                   {isSuperAdmin && (
                     <Button
                       variant={exam.resultPublished ? "secondary" : "default"}

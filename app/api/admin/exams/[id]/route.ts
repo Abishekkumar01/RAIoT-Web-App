@@ -26,6 +26,10 @@ export async function PUT(request: Request, { params }: { params: { id: string }
             ...body,
             updatedAt: new Date().toISOString()
         };
+        // If question content changes, require an explicit re-publish after edits.
+        if (Object.prototype.hasOwnProperty.call(body, 'questions') && !Object.prototype.hasOwnProperty.call(body, 'resultPublished')) {
+            updates.resultPublished = false;
+        }
         // Remove id if it's there
         delete updates.id;
 
