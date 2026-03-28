@@ -8,7 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, ArrowLeft, Send, Clock } from "lucide-react";
-import { ExamTest } from "@/types/examination";
+import { ExamTest, Question } from "@/types/examination";
+
+// Fisher-Yates shuffle algorithm to randomize question order
+const shuffleQuestions = (questions: Question[]): Question[] => {
+  const shuffled = [...questions];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
 
 export default function TakeTestPage() {
   const { id } = useParams();
@@ -191,7 +201,12 @@ export default function TakeTestPage() {
       if (!res.ok) {
         setError(data.error);
       } else {
-        setTest(data.test);
+        // Shuffle questions for randomized order
+        const shuffledQuestions = shuffleQuestions(data.test.questions || []);
+        setTest({
+          ...data.test,
+          questions: shuffledQuestions
+        });
       }
     } catch (err) {
       console.error(err);
