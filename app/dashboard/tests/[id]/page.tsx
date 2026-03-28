@@ -82,6 +82,19 @@ export default function TakeTestPage() {
   // Start countdown once test loaded and user has clicked start
   useEffect(() => {
     if (!test || !testStarted) return;
+    const MAX_SWITCH_VIOLATIONS = 1;
+
+    const registerSwitchViolation = () => {
+      if (hasAutoSubmitted.current) return;
+      const viols = parseInt(localStorage.getItem(`test_violations_${id}`) || '0') + 1;
+      localStorage.setItem(`test_violations_${id}`, viols.toString());
+      setViolationWarning(`Switching tabs/apps is not allowed during the test. Violation count: ${viols}`);
+
+      if (viols >= MAX_SWITCH_VIOLATIONS) {
+        alert('Tab/app switch detected. Submitting test automatically.');
+        submitTest(true);
+      }
+    };
     
     // Anticheat: Disable Right Click
     const handleContextMenu = (e: MouseEvent) => {
@@ -94,6 +107,11 @@ export default function TakeTestPage() {
       if (e.key === 'F5' || (e.ctrlKey && e.key.toLowerCase() === 'r') || (e.metaKey && e.key.toLowerCase() === 'r')) {
         e.preventDefault();
         setViolationWarning("Refreshing the page is not allowed during the test!");
+      }
+      // Best-effort prevention for Alt+Tab; browsers cannot fully block OS-level shortcuts.
+      if (e.altKey && e.key.toLowerCase() === 'tab') {
+        e.preventDefault();
+        registerSwitchViolation();
       }
       // Prevent DevTools: F12, Ctrl+Shift+I/J, Cmd+Option+I/J
       if (
@@ -114,15 +132,14 @@ export default function TakeTestPage() {
     // Anticheat: Tab switch warning
     const handleVisibilityChange = () => {
       if (document.hidden && !hasAutoSubmitted.current) {
-        const viols = parseInt(localStorage.getItem(`test_violations_${id}`) || '0') + 1;
-        localStorage.setItem(`test_violations_${id}`, viols.toString());
-        setViolationWarning(`Warning: You switched tabs or minimized the window! This action has been recorded. Violation count: ${viols}`);
-        
-        // Optional: Auto submit on 3 violations
-        if (viols >= 3) {
-          alert('Maximum violations reached. Submitting test automatically.');
-          submitTest(true);
-        }
+        registerSwitchViolation();
+      }
+    };
+
+    // Anticheat: Window focus loss (covers app switching, including Alt+Tab)
+    const handleWindowBlur = () => {
+      if (!hasAutoSubmitted.current && document.hidden) {
+        registerSwitchViolation();
       }
     };
 
@@ -139,6 +156,7 @@ export default function TakeTestPage() {
     document.addEventListener("keydown", handleKeyDown);
     window.addEventListener("beforeunload", handleBeforeUnload);
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
 
     // Timer persistence logic
@@ -172,6 +190,7 @@ export default function TakeTestPage() {
       document.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("beforeunload", handleBeforeUnload);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
   }, [test, testStarted, id, submitTest]);
