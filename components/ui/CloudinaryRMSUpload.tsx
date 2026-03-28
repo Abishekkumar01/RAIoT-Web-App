@@ -26,6 +26,15 @@ export function CloudinaryRMSUpload({ userId, onUploadSuccess, currentFileUrl }:
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
 
+    const parseResponsePayload = async (response: Response) => {
+        const raw = await response.text();
+        try {
+            return { json: JSON.parse(raw), raw };
+        } catch {
+            return { json: null as any, raw };
+        }
+    };
+
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -63,10 +72,10 @@ export function CloudinaryRMSUpload({ userId, onUploadSuccess, currentFileUrl }:
                     body: formData
                 });
 
-                const data = await response.json();
+                const { json: data, raw } = await parseResponsePayload(response);
 
                 if (!response.ok) {
-                    throw new Error(data.error?.message || 'Upload failed');
+                    throw new Error(data?.error?.message || raw || 'Upload failed');
                 }
 
                 setSuccess(true);
@@ -93,9 +102,13 @@ export function CloudinaryRMSUpload({ userId, onUploadSuccess, currentFileUrl }:
                     body: formData,
                 });
 
-                const data = await response.json();
+                const { json: data, raw } = await parseResponsePayload(response);
                 if (!response.ok) {
-                    throw new Error(data.error || 'Document upload failed');
+                    const parsedError = data?.error;
+                    const fallback = raw?.includes('Request Entity Too Large')
+                        ? 'Document is too large for server upload. Please upload a smaller file or increase server body size limit.'
+                        : raw;
+                    throw new Error(parsedError || fallback || 'Document upload failed');
                 }
 
                 setSuccess(true);

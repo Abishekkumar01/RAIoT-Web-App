@@ -2,15 +2,27 @@ import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { GridFSBucket } from 'mongodb';
 import dbConnect from '@/lib/mongodb';
-import { verifyExaminationAdmin } from '@/lib/firebase-admin';
+import { getAdminDb, verifyUser } from '@/lib/firebase-admin';
 
 const sanitizeFileName = (name: string) => name.replace(/[^a-zA-Z0-9._-]/g, '_');
 
 export async function POST(request: Request) {
     try {
-        const authUser = await verifyExaminationAdmin(request);
+        const authUser = await verifyUser(request);
         if (!authUser) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const adminDb = getAdminDb();
+        if (!adminDb) {
+            return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
+        }
+
+        const userDoc = await adminDb.collection('users').doc(authUser.uid).get();
+        const role = (userDoc.data()?.role || '').toLowerCase();
+        const allowedRoles = new Set(['superadmin', 'admin', 'president', 'vice_president', 'student_coordinator']);
+        if (!allowedRoles.has(role)) {
+            return NextResponse.json({ error: 'Unauthorized: Resource upload access required' }, { status: 403 });
         }
 
         const formData = await request.formData();

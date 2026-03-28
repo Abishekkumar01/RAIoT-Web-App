@@ -30,6 +30,7 @@ export default function AdminExamsPage() {
   const [examEndTime, setExamEndTime] = useState("");
   const [duration, setDuration] = useState("60");
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [keywordDraftByQuestion, setKeywordDraftByQuestion] = useState<Record<string, string>>({});
   const [importingQuestions, setImportingQuestions] = useState(false);
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function AdminExamsPage() {
     setExamEndTime("");
     setDuration("60");
     setQuestions([]);
+    setKeywordDraftByQuestion({});
     setIsEditing(false);
     setEditingExamId(null);
   };
@@ -180,11 +182,35 @@ export default function AdminExamsPage() {
     setQuestions(updated);
   };
 
-  const updateKeywords = (qIndex: number, value: string) => {
+  const setKeywordDraft = (questionId: string, value: string) => {
+    setKeywordDraftByQuestion((prev) => ({ ...prev, [questionId]: value }));
+  };
+
+  const addKeywordToQuestion = (qIndex: number) => {
     const updated = [...questions];
-    // Keep raw typing experience (spaces/commas) and sanitize before save.
-    const keywords = value.split(",");
-    updated[qIndex] = { ...updated[qIndex], keywords };
+    const question = updated[qIndex];
+    const questionId = question.id;
+    const draft = (keywordDraftByQuestion[questionId] || "").trim();
+    if (!draft) return;
+
+    const existing = new Set((question.keywords || []).map((kw) => kw.trim().toLowerCase()));
+    if (!existing.has(draft.toLowerCase())) {
+      updated[qIndex] = {
+        ...question,
+        keywords: [...(question.keywords || []), draft],
+      };
+    }
+
+    setKeywordDraftByQuestion((prev) => ({ ...prev, [questionId]: "" }));
+    setQuestions(updated);
+  };
+
+  const removeKeywordFromQuestion = (qIndex: number, keyword: string) => {
+    const updated = [...questions];
+    updated[qIndex] = {
+      ...updated[qIndex],
+      keywords: (updated[qIndex].keywords || []).filter((kw) => kw !== keyword),
+    };
     setQuestions(updated);
   };
 
@@ -714,11 +740,38 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
 
               {(q.type === 'short_answer' || q.type === 'long_answer') && (
                 <div className="pl-8 space-y-3">
-                  <Input
-                    placeholder="Keywords (comma separated), e.g. internet, things"
-                    value={(q.keywords || []).join(', ')}
-                    onChange={(e) => updateKeywords(qIndex, e.target.value)}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="Type keyword and click Add"
+                      value={keywordDraftByQuestion[q.id] || ""}
+                      onChange={(e) => setKeywordDraft(q.id, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addKeywordToQuestion(qIndex);
+                        }
+                      }}
+                    />
+                    <Button type="button" variant="outline" onClick={() => addKeywordToQuestion(qIndex)}>
+                      Add Keyword
+                    </Button>
+                  </div>
+                  {(q.keywords || []).length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {(q.keywords || []).map((keyword, keywordIndex) => (
+                        <span key={`${keyword}-${keywordIndex}`} className="inline-flex items-center gap-1 rounded-full bg-zinc-800 border border-zinc-700 px-3 py-1 text-xs text-zinc-200">
+                          {keyword}
+                          <button
+                            type="button"
+                            className="text-zinc-400 hover:text-red-400"
+                            onClick={() => removeKeywordFromQuestion(qIndex, keyword)}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex items-center gap-3">
                     <Select value={q.keywordMatchMode || 'any'} onValueChange={(val) => updateKeywordMatchMode(qIndex, val as KeywordMatchMode)}>
                       <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
