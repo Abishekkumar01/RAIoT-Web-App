@@ -851,8 +851,8 @@ export default function AdminExamsPage() {
 
   const submitManualScore = async () => {
     const score = Number(manualScoreDialog.value);
-    if (!Number.isFinite(score) || score < 0) {
-      showNotice("Please enter a valid non-negative number.", 'Invalid Score');
+    if (!Number.isFinite(score)) {
+      showNotice("Please enter a valid numeric score.", 'Invalid Score');
       return;
     }
 
@@ -872,7 +872,7 @@ export default function AdminExamsPage() {
       setResultsByExam((prev) => ({
         ...prev,
         [manualScoreDialog.examId]: (prev[manualScoreDialog.examId] || []).map((row: any) =>
-          row.id === manualScoreDialog.submissionId ? { ...row, score, requiresManualReview: false } : row
+          row.id === manualScoreDialog.submissionId ? { ...row, score, obtainedMarks: score, requiresManualReview: false } : row
         ),
       }));
       setManualScoreDialog({ open: false, examId: "", submissionId: "", value: "0" });
@@ -905,50 +905,12 @@ export default function AdminExamsPage() {
         showNotice(data.error || "Failed to update question grade", 'Update Failed');
         return;
       }
-      
-      // Update local state with new grades
-      setResultsByExam((prev) => ({
-        ...prev,
-        [manualQuestionGradeDialog.examId]: (prev[manualQuestionGradeDialog.examId] || []).map((row: any) => {
-          if (row.id !== manualQuestionGradeDialog.submissionId) return row;
-          
-          // Recalculate marks based on manually graded questions
-          const breakdown = (row.questionBreakdown || []).map((q: any) => {
-            if (q.questionId === manualQuestionGradeDialog.questionId) {
-              return {
-                ...q,
-                isCorrect,
-                status: isCorrect ? 'correct' : 'incorrect'
-              };
-            }
-            return q;
-          });
-          
-          // Recalculate overall stats
-          let correctCount = 0;
-          let incorrectCount = 0;
-          let totalMarks = 0;
-          breakdown.forEach((q: any) => {
-            if (q.attempted) {
-              if (q.status === 'correct') {
-                correctCount++;
-                totalMarks += q.points || 0;
-              } else {
-                incorrectCount++;
-                totalMarks -= q.negativePoints || 0;
-              }
-            }
-          });
-          
-          return {
-            ...row,
-            correctCount,
-            incorrectCount,
-            obtainedMarks: Math.max(0, totalMarks),
-            questionBreakdown: breakdown
-          };
-        }),
-      }));
+
+      // Refresh from server so manual grades and score math stay consistent.
+      const refreshedSubmissions = await fetchExamResultsData(manualQuestionGradeDialog.examId);
+      if (refreshedSubmissions) {
+        setResultsByExam((prev) => ({ ...prev, [manualQuestionGradeDialog.examId]: refreshedSubmissions }));
+      }
       
       setManualQuestionGradeDialog({ 
         open: false, 
@@ -1030,11 +992,10 @@ export default function AdminExamsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Set Manual Score</DialogTitle>
-            <DialogDescription>Enter a final non-negative score for this submission.</DialogDescription>
+            <DialogDescription>Enter a final score for this submission (negative allowed).</DialogDescription>
           </DialogHeader>
           <Input
             type="number"
-            min={0}
             step="0.01"
             value={manualScoreDialog.value}
             onChange={(e) => setManualScoreDialog((prev) => ({ ...prev, value: e.target.value }))}
@@ -1494,11 +1455,11 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                   Details
                                 </Button>
                                 {(row.score === null || row.requiresManualReview) ? (
-                                  <Button size="sm" variant="outline" onClick={() => setManualScore(exam.id!, row.id, row.score)}>
+                                  <Button size="sm" variant="outline" onClick={() => setManualScore(exam.id!, row.id, row.score ?? row.obtainedMarks)}>
                                     Manual Score
                                   </Button>
                                 ) : (
-                                  <Button size="sm" variant="ghost" onClick={() => setManualScore(exam.id!, row.id, row.score)}>
+                                  <Button size="sm" variant="ghost" onClick={() => setManualScore(exam.id!, row.id, row.score ?? row.obtainedMarks)}>
                                     Edit Score
                                   </Button>
                                 )}

@@ -36,8 +36,8 @@ export async function PUT(
         // Handle manual score update (for overall submission score)
         if (score !== undefined && score !== null) {
             const manualScore = Number(score);
-            if (!Number.isFinite(manualScore) || manualScore < 0) {
-                return NextResponse.json({ error: 'Valid non-negative score is required' }, { status: 400 });
+            if (!Number.isFinite(manualScore)) {
+                return NextResponse.json({ error: 'Valid numeric score is required' }, { status: 400 });
             }
             updateData.score = manualScore;
             updateData.requiresManualReview = false;

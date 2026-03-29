@@ -103,6 +103,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
         const submissions = submissionsSnapshot.docs.map(doc => {
             const data = doc.data();
+            const manualGrades = (data?.manualGrades && typeof data.manualGrades === 'object') ? data.manualGrades : {};
             const userInfo = userMap.get(data.userId) || { name: 'Unknown User', email: '', role: 'guest' };
             const totalQuestions = examQuestions.length;
             const totalMarks = examQuestions.reduce((sum: number, q: any) => sum + Number(q?.points || 0), 0);
@@ -134,6 +135,12 @@ export async function GET(request: Request, { params }: { params: { id: string }
                         const matchMode: 'any' | 'all' = question.keywordMatchMode === 'all' ? 'all' : 'any';
                         isCorrect = keywords.length > 0 && evaluateKeywordAnswer(userAnswer, keywords, matchMode);
                     }
+
+                    // If a question has been manually graded, manual grade always wins.
+                    const manualGrade = manualGrades?.[question.id];
+                    if (manualGrade && typeof manualGrade.isCorrect === 'boolean') {
+                        isCorrect = manualGrade.isCorrect;
+                    }
                 }
 
                 if (attempted) {
@@ -160,9 +167,15 @@ export async function GET(request: Request, { params }: { params: { id: string }
                     userAnswer: userAnswerText,
                     correctAnswer: correctAnswerText,
                     points: Number(question.points || 0),
-                    negativePoints: Number(question.negativePoints || 0)
+                    negativePoints: Math.abs(Number(question.negativePoints || 0))
                 };
             });
+
+            const calculatedObtainedMarks = questionBreakdown.reduce((sum: number, question: any) => {
+                if (!question.attempted) return sum;
+                if (question.status === 'correct') return sum + Number(question.points || 0);
+                return sum - Math.abs(Number(question.negativePoints || 0));
+            }, 0);
 
             return {
                 id: doc.id,
@@ -176,7 +189,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 unattemptedCount: Math.max(0, totalQuestions - attemptedCount),
                 correctCount,
                 incorrectCount,
-                obtainedMarks: typeof data?.score === 'number' ? data.score : (typeof data?.autoScore === 'number' ? data.autoScore : null),
+                obtainedMarks: typeof data?.score === 'number' ? data.score : calculatedObtainedMarks,
                 questionBreakdown
             };
         }).sort((a: any, b: any) => {
