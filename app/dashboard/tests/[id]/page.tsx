@@ -36,15 +36,16 @@ export default function TakeTestPage() {
   const [testStarted, setTestStarted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [violationWarning, setViolationWarning] = useState<string | null>(null);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const hasAutoSubmitted = useRef(false);
 
   const submitTest = useCallback(async (auto = false) => {
     if (auto && hasAutoSubmitted.current) return;
     if (auto) hasAutoSubmitted.current = true;
-    if (!auto && !confirm("Are you sure you want to submit your answers? You cannot change them later.")) return;
 
     setSubmitting(true);
+    setShowSubmitConfirm(false);
     if (timerRef.current) clearInterval(timerRef.current);
     try {
       const auth = (await import("@/lib/firebase")).auth;
@@ -392,6 +393,36 @@ export default function TakeTestPage() {
             </div>
           )}
 
+          {showSubmitConfirm && (
+            <div className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="w-full max-w-md rounded-xl border border-zinc-700 bg-zinc-900 p-6 shadow-2xl">
+                <h3 className="text-xl font-bold text-zinc-100">Submit Test?</h3>
+                <p className="mt-3 text-zinc-300">
+                  Are you sure you want to submit your answers? You cannot change them later.
+                </p>
+                <div className="mt-6 flex items-center justify-end gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowSubmitConfirm(false)}
+                    disabled={submitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => submitTest()}
+                    disabled={submitting}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Yes, Submit
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="p-6 max-w-4xl mx-auto space-y-8">
       <div className="flex justify-between items-center bg-zinc-900 p-6 rounded-lg border border-zinc-800">
         <div>
@@ -560,7 +591,7 @@ export default function TakeTestPage() {
       </div>
 
       <div className="flex justify-end pt-4 sticky bottom-8">
-        <Button onClick={() => submitTest()} size="lg" disabled={submitting} className="shadow-2xl shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8">
+        <Button onClick={() => setShowSubmitConfirm(true)} size="lg" disabled={submitting} className="shadow-2xl shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8">
           {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Send className="w-5 h-5 mr-2" />}
           Submit Final Answers
         </Button>
