@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CloudinaryUpload } from "@/components/ui/CloudinaryUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp, FileSpreadsheet } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ExamTest, KeywordMatchMode, Question, QuestionType } from "@/types/examination";
@@ -25,9 +26,26 @@ export default function AdminExamsPage() {
   const [resultsLoadingByExam, setResultsLoadingByExam] = useState<Record<string, boolean>>({});
   const [resultsByExam, setResultsByExam] = useState<Record<string, any[]>>({});
   const [expandedSubmissionRows, setExpandedSubmissionRows] = useState<Record<string, boolean>>({});
+  const [noticeDialog, setNoticeDialog] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: "Notice",
+    message: ""
+  });
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: "Confirm Action",
+    message: ""
+  });
+  const [manualScoreDialog, setManualScoreDialog] = useState<{
+    open: boolean;
+    examId: string;
+    submissionId: string;
+    value: string;
+  }>({ open: false, examId: "", submissionId: "", value: "0" });
   const [myRegistrations, setMyRegistrations] = useState<any[]>([]);
   const [mySubmissions, setMySubmissions] = useState<any[]>([]);
   const [takeActionLoadingByExam, setTakeActionLoadingByExam] = useState<Record<string, boolean>>({});
+  const confirmActionRef = useRef<null | (() => Promise<void> | void)>(null);
   
   // Form state
   const [title, setTitle] = useState("");
@@ -51,6 +69,22 @@ export default function AdminExamsPage() {
     setIsSuperAdmin(role === 'superadmin');
     setIsAdminUser(role === 'superadmin' || role === 'admin');
   }, [user]);
+
+  const showNotice = (message: string, title = "Notice") => {
+    setNoticeDialog({ open: true, title, message });
+  };
+
+  const openConfirmDialog = (message: string, onConfirm: () => Promise<void> | void, title = "Confirm Action") => {
+    confirmActionRef.current = onConfirm;
+    setConfirmDialog({ open: true, title, message });
+  };
+
+  const confirmDialogAction = async () => {
+    const action = confirmActionRef.current;
+    confirmActionRef.current = null;
+    setConfirmDialog((prev) => ({ ...prev, open: false }));
+    if (action) await action();
+  };
 
   const computeStatus = (exam: Partial<ExamTest>): 'upcoming' | 'live' | 'previous' => {
     const now = new Date();
@@ -199,12 +233,12 @@ export default function AdminExamsPage() {
         if (!registered) {
           const result = await registerForTest(examId);
           if (!result.ok && !String(result.data?.error || '').toLowerCase().includes('already registered')) {
-            alert(result.data?.error || 'Failed to register for test.');
+            showNotice(result.data?.error || 'Failed to register for test.', 'Registration Failed');
             return;
           }
           await fetchMyTestState();
         }
-        alert('Registered successfully. The test is not live yet.');
+        showNotice('Registered successfully. The test is not live yet.', 'Registered');
         return;
       }
 
@@ -212,13 +246,13 @@ export default function AdminExamsPage() {
         if (!registered) {
           const result = await registerForTest(examId);
           if (!result.ok && !String(result.data?.error || '').toLowerCase().includes('already registered')) {
-            alert(result.data?.error || 'Failed to register for test.');
+            showNotice(result.data?.error || 'Failed to register for test.', 'Registration Failed');
             return;
           }
         }
 
         if (submission) {
-          alert('You have already submitted this test.');
+          showNotice('You have already submitted this test.', 'Already Submitted');
           return;
         }
 
@@ -229,13 +263,13 @@ export default function AdminExamsPage() {
       if (submission && exam.resultPublished) {
         router.push(`/dashboard/tests/results/${examId}`);
       } else if (submission && !exam.resultPublished) {
-        alert('You already attempted this test. Result is not published yet.');
+        showNotice('You already attempted this test. Result is not published yet.', 'Result Not Published');
       } else {
-        alert('Test is closed. You did not attempt it during the live window.');
+        showNotice('Test is closed. You did not attempt it during the live window.', 'Test Closed');
       }
     } catch (err) {
       console.error(err);
-      alert('Failed to process test action.');
+      showNotice('Failed to process test action.', 'Error');
     } finally {
       setTakeActionLoadingByExam((prev) => ({ ...prev, [examId]: false }));
     }
@@ -546,9 +580,9 @@ export default function AdminExamsPage() {
     try {
       const importedQuestions = await parseQuestionsFromFile(file);
       setQuestions((prev) => [...prev, ...importedQuestions]);
-      alert(`Imported ${importedQuestions.length} questions successfully.`);
+      showNotice(`Imported ${importedQuestions.length} questions successfully.`, 'Import Complete');
     } catch (err: any) {
-      alert(err?.message || "Failed to import questions from file.");
+      showNotice(err?.message || "Failed to import questions from file.", 'Import Failed');
     } finally {
       setImportingQuestions(false);
       event.target.value = "";
@@ -557,14 +591,14 @@ export default function AdminExamsPage() {
 
   const submitExam = async () => {
     if (!title || !description || !startTime || !endTime || !examStartTime || !examEndTime || !duration) {
-      alert("Please fill all test details (Title, Description, Registration Dates, Exam Dates, and Duration).");
+      showNotice("Please fill all test details (Title, Description, Registration Dates, Exam Dates, and Duration).", 'Missing Details');
       return;
     }
 
     try {
       const { auth } = await import("@/lib/firebase");
       if (!auth.currentUser) {
-        alert("Authentication lost. Please refresh the page.");
+        showNotice("Authentication lost. Please refresh the page.", 'Authentication Required');
         return;
       }
       
@@ -577,12 +611,12 @@ export default function AdminExamsPage() {
         exStDate = new Date(examStartTime).toISOString();
         exEnDate = new Date(examEndTime).toISOString();
       } catch (e) {
-        alert("Invalid Date format selected.");
+        showNotice("Invalid Date format selected.", 'Invalid Date');
         return;
       }
 
       if (questions.length === 0) {
-        alert("Please add at least one question.");
+        showNotice("Please add at least one question.", 'No Questions');
         return;
       }
 
@@ -622,35 +656,43 @@ export default function AdminExamsPage() {
       const data = await res.json();
       if (res.ok) {
         if (isUpdate) {
-          alert("Test updated successfully. Results are now unpublished. Review changes and publish again.");
+          showNotice("Test updated successfully. Results are now unpublished. Review changes and publish again.", 'Updated');
         } else {
-          alert("Test created successfully!");
+          showNotice("Test created successfully!", 'Created');
         }
         setIsCreating(false);
         fetchExams();
         resetForm();
       } else {
-        alert(data.error || (isUpdate ? "Failed to update test." : "Failed to create test."));
+        showNotice(data.error || (isUpdate ? "Failed to update test." : "Failed to create test."), 'Save Failed');
       }
     } catch (err: any) {
       console.error("Error submitting test:", err);
-      alert("An error occurred while saving: " + err.message);
+      showNotice("An error occurred while saving: " + err.message, 'Error');
     }
   };
 
   const deleteExam = async (id: string) => {
-    if (!confirm("Are you sure?")) return;
-    try {
-      const auth = (await import("@/lib/firebase")).auth;
-      const token = await auth.currentUser?.getIdToken();
-      await fetch(`/api/admin/exams/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      fetchExams();
-    } catch (err) {
-      console.error(err);
-    }
+    openConfirmDialog('Delete this test permanently? This action cannot be undone.', async () => {
+      try {
+        const auth = (await import("@/lib/firebase")).auth;
+        const token = await auth.currentUser?.getIdToken();
+        const res = await fetch(`/api/admin/exams/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          showNotice(data.error || 'Failed to delete test.', 'Delete Failed');
+          return;
+        }
+        showNotice('Test deleted successfully.', 'Deleted');
+        fetchExams();
+      } catch (err) {
+        console.error(err);
+        showNotice('Failed to delete test.', 'Delete Failed');
+      }
+    }, 'Delete Test');
   };
 
   const updateResultPublished = async (id: string, nextValue: boolean) => {
@@ -666,10 +708,11 @@ export default function AdminExamsPage() {
         setExams(prev => prev.map(exam => exam.id === id ? { ...exam, resultPublished: nextValue } : exam));
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to update publish status");
+        showNotice(data.error || "Failed to update publish status", 'Update Failed');
       }
     } catch (err) {
       console.error(err);
+      showNotice('Failed to update publish status', 'Update Failed');
     }
   };
 
@@ -682,13 +725,13 @@ export default function AdminExamsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Failed to fetch member results");
+        showNotice(data.error || "Failed to fetch member results", 'Fetch Failed');
         return null;
       }
       return data.submissions || [];
     } catch (err) {
       console.error(err);
-      alert("Failed to fetch member results");
+      showNotice("Failed to fetch member results", 'Fetch Failed');
       return null;
     }
   };
@@ -726,7 +769,7 @@ export default function AdminExamsPage() {
     const cached = resultsByExam[examId];
     const submissions = cached || (await fetchExamResultsData(examId)) || [];
     if (submissions.length === 0) {
-      alert("No submission data available to export.");
+      showNotice("No submission data available to export.", 'Nothing to Export');
       return;
     }
 
@@ -769,65 +812,131 @@ export default function AdminExamsPage() {
   };
 
   const setManualScore = async (examId: string, submissionId: string, currentScore: number | null | undefined) => {
-    const entered = prompt("Enter final manual score", currentScore === null || currentScore === undefined ? "0" : String(currentScore));
-    if (entered === null) return;
-    const score = Number(entered);
+    setManualScoreDialog({
+      open: true,
+      examId,
+      submissionId,
+      value: currentScore === null || currentScore === undefined ? "0" : String(currentScore)
+    });
+  };
+
+  const submitManualScore = async () => {
+    const score = Number(manualScoreDialog.value);
     if (!Number.isFinite(score) || score < 0) {
-      alert("Please enter a valid non-negative number.");
+      showNotice("Please enter a valid non-negative number.", 'Invalid Score');
       return;
     }
 
     try {
       const auth = (await import("@/lib/firebase")).auth;
       const token = await auth.currentUser?.getIdToken(true);
-      const res = await fetch(`/api/admin/exams/${examId}/results/${submissionId}`, {
+      const res = await fetch(`/api/admin/exams/${manualScoreDialog.examId}/results/${manualScoreDialog.submissionId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ score }),
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Failed to update manual score");
+        showNotice(data.error || "Failed to update manual score", 'Update Failed');
         return;
       }
       setResultsByExam((prev) => ({
         ...prev,
-        [examId]: (prev[examId] || []).map((row: any) =>
-          row.id === submissionId ? { ...row, score, requiresManualReview: false } : row
+        [manualScoreDialog.examId]: (prev[manualScoreDialog.examId] || []).map((row: any) =>
+          row.id === manualScoreDialog.submissionId ? { ...row, score, requiresManualReview: false } : row
         ),
       }));
-      alert("Manual score updated successfully.");
+      setManualScoreDialog({ open: false, examId: "", submissionId: "", value: "0" });
+      showNotice("Manual score updated successfully.", 'Updated');
     } catch (err) {
       console.error(err);
-      alert("Failed to update manual score");
+      showNotice("Failed to update manual score", 'Update Failed');
     }
   };
 
   const deleteSubmissionData = async (examId: string, submissionId: string) => {
-    if (!confirm('Delete this submission data permanently?')) return;
-    try {
-      const auth = (await import("@/lib/firebase")).auth;
-      const token = await auth.currentUser?.getIdToken(true);
-      const res = await fetch(`/api/admin/exams/${examId}/results/${submissionId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || 'Failed to delete submission data');
-        return;
+    openConfirmDialog('Delete this submission data permanently?', async () => {
+      try {
+        const auth = (await import("@/lib/firebase")).auth;
+        const token = await auth.currentUser?.getIdToken(true);
+        const res = await fetch(`/api/admin/exams/${examId}/results/${submissionId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showNotice(data.error || 'Failed to delete submission data', 'Delete Failed');
+          return;
+        }
+        setResultsByExam((prev) => ({
+          ...prev,
+          [examId]: (prev[examId] || []).filter((row: any) => row.id !== submissionId),
+        }));
+        showNotice('Submission data deleted successfully.', 'Deleted');
+        await fetchMyTestState();
+      } catch (err) {
+        console.error(err);
+        showNotice('Failed to delete submission data', 'Delete Failed');
       }
-      setResultsByExam((prev) => ({
-        ...prev,
-        [examId]: (prev[examId] || []).filter((row: any) => row.id !== submissionId),
-      }));
-      alert('Submission data deleted successfully.');
-      await fetchMyTestState();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to delete submission data');
-    }
+    }, 'Delete Submission');
   };
+
+  const renderOverlayDialogs = () => (
+    <>
+      <Dialog open={noticeDialog.open} onOpenChange={(open) => setNoticeDialog((prev) => ({ ...prev, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{noticeDialog.title}</DialogTitle>
+            <DialogDescription>{noticeDialog.message}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setNoticeDialog((prev) => ({ ...prev, open: false }))}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog((prev) => ({ ...prev, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmDialog.title}</DialogTitle>
+            <DialogDescription>{confirmDialog.message}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDialogAction}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={manualScoreDialog.open}
+        onOpenChange={(open) => setManualScoreDialog((prev) => ({ ...prev, open }))}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Manual Score</DialogTitle>
+            <DialogDescription>Enter a final non-negative score for this submission.</DialogDescription>
+          </DialogHeader>
+          <Input
+            type="number"
+            min={0}
+            step="0.01"
+            value={manualScoreDialog.value}
+            onChange={(e) => setManualScoreDialog((prev) => ({ ...prev, value: e.target.value }))}
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setManualScoreDialog({ open: false, examId: "", submissionId: "", value: "0" })}
+            >
+              Cancel
+            </Button>
+            <Button onClick={submitManualScore}>Save Score</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 
   const totalMarks = questions.reduce((sum, q) => sum + (Number.isFinite(Number(q.points)) ? Number(q.points) : 0), 0);
 
@@ -1103,6 +1212,8 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
             <Button onClick={submitExam} size="lg"><Save className="w-4 h-4 mr-2" /> {isEditing ? 'Save Changes' : 'Save Test'}</Button>
           </div>
         </div>
+
+        {renderOverlayDialogs()}
       </div>
     );
   }
@@ -1263,6 +1374,8 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
           ))
         )}
       </div>
+
+      {renderOverlayDialogs()}
     </div>
   );
 }
