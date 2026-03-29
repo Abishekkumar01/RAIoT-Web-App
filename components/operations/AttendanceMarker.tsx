@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/contexts/AuthContext"
 import { db } from "@/lib/firebase"
-import { collection, getDocs, query, where, Timestamp } from "firebase/firestore"
+import { collection, getDocs, Timestamp } from "firebase/firestore"
 import { toast } from "sonner"
 import { getAttendanceByDate, saveAttendance, getAllAttendanceRecords, getAttendanceStats } from '@/app/actions/attendanceActions';
 import { testConnection } from '@/app/actions/testConnection';
@@ -80,8 +80,7 @@ export function AttendanceMarker() {
             setLoading(true)
 
             // 1. Fetch Users from Firebase
-            const q = query(collection(db, "users"), where("role", "in", ["trainee", "member", "junior_developer", "senior_developer"]))
-            const snapshot = await getDocs(q)
+            const snapshot = await getDocs(collection(db, "users"))
 
             // 2. Fetch Attendance Stats from MongoDB
             const statsResult = await getAttendanceStats();
@@ -97,11 +96,17 @@ export function AttendanceMarker() {
             snapshot.forEach((doc) => {
                 const data = doc.data()
                 const studentId = doc.id;
+                const normalizedRole = String(data.role || '').toLowerCase().trim();
+
+                // Include only roles that should be marked in attendance.
+                if (!['trainee', 'member', 'junior_developer', 'senior_developer'].includes(normalizedRole)) {
+                    return;
+                }
                 
                 let studentStats = statsMap[studentId] || { present: 0, total: 0, rate: 0 };
                 
                 // For trainees, if they have no attendance logged yet, default to 1/1 as requested
-                if (data.role === 'trainee' && studentStats.total === 0) {
+                if (normalizedRole === 'trainee' && studentStats.total === 0) {
                     studentStats = { present: 1, total: 1, rate: 100 };
                 }
 
@@ -114,11 +119,11 @@ export function AttendanceMarker() {
                     id: studentId,
                     uniqueId: uniqueId,
                     name: data.displayName || data.name || traineeInfo?.name || 'Unknown',
-                    batch: data.role === 'trainee' ? courseInfo : (data.profileData?.year ? `${data.profileData.year} - ${data.profileData.branch || ''}` : 'General'),
+                    batch: normalizedRole === 'trainee' ? courseInfo : (data.profileData?.year ? `${data.profileData.year} - ${data.profileData.branch || ''}` : 'General'),
                     attendanceRate: studentStats.rate,
                     presentCount: studentStats.present,
                     totalSessions: studentStats.total,
-                    role: data.role
+                    role: normalizedRole
                 })
             })
             setStudents(fetched)

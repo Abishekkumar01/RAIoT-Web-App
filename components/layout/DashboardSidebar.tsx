@@ -57,6 +57,7 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/dashboard/profile", label: "Profile", icon: User },
     { href: "/dashboard/my-resources", label: "My Resources", icon: FileText },
+    { href: "/dashboard/attendance", label: "Attendance", icon: ClipboardList },
     { href: "/dashboard/tests", label: "Tests", icon: ClipboardList },
   ];
 

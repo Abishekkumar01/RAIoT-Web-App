@@ -150,7 +150,7 @@ export default function DashboardPage() {
 
         {/* Attendance/Classes Card - changes based on user role */}
         <Card className="overflow-hidden relative">
-          {user?.role !== 'trainee' && (
+          {['trainee', 'junior_developer', 'senior_developer', 'member'].includes(user?.role || '') && (
             <Link href="/dashboard/attendance" className="absolute inset-0 z-10" />
           )}
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -163,25 +163,8 @@ export default function DashboardPage() {
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {user?.role === 'trainee' ? (
-              // Trainees see their individual attendance initialized to 1/1
-              <>
-                <div className="text-2xl font-bold">
-                  1/1
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Events Attended
-                </p>
-                <div className="flex gap-2 mt-3 text-[10px] text-muted-foreground">
-                  <span className="text-green-500">1 Present</span>
-                  <span>•</span>
-                  <span className="text-orange-500">0 Late</span>
-                  <span>•</span>
-                  <span className="text-red-500">0 Absent</span>
-                </div>
-              </>
-            ) : user?.role === 'junior_developer' || user?.role === 'senior_developer' || user?.role === 'member' ? (
-              // Developers/Members see their attendance stats
+            {user?.role === 'trainee' || user?.role === 'junior_developer' || user?.role === 'senior_developer' || user?.role === 'member' ? (
+              // Trainees/Developers/Members see their attendance stats
               <>
                 <div className="text-2xl font-bold">
                   {attendanceStats.present + attendanceStats.late}/{attendanceStats.total}
