@@ -206,13 +206,16 @@ export default function TakeTestPage() {
 
     // Anticheat: Window focus loss (covers app switching, including Alt+Tab)
     const handleWindowBlur = () => {
-      if (!hasAutoSubmitted.current && document.hidden) {
-        registerViolation('Window focus lost.');
+      if (!hasAutoSubmitted.current) {
+        // Count blur regardless of document.hidden because some browsers/OS paths
+        // (notably Alt+Tab/task switch overlays) may not set hidden reliably.
+        registerViolation('Window focus lost (possible app switch).');
       }
     };
 
     // Anticheat: when window regains focus (e.g., Alt+Tab back), enforce fullscreen state.
     const handleWindowFocus = () => {
+      // On return, re-validate fullscreen and force user back if they exited.
       syncFullscreenState('Window focused without fullscreen.', true);
     };
 
