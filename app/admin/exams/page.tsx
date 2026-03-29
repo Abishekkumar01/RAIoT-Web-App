@@ -803,6 +803,7 @@ export default function AdminExamsPage() {
         QuestionType: q.questionType,
         Question: q.questionText,
         Status: q.status,
+        MarksObtained: q.status === 'correct' ? (q.points ?? 0) : q.status === 'incorrect' ? -(q.negativePoints ?? 0) : 0,
         UserAnswer: q.userAnswer || "",
         CorrectAnswer: q.correctAnswer || "",
         Points: q.points ?? 0,
@@ -1376,6 +1377,10 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                       <p className="text-zinc-400">Type: {detail.questionType}</p>
                                       <p className="text-zinc-300"><span className="text-zinc-500">User Answer:</span> {detail.userAnswer || '-'}</p>
                                       <p className="text-zinc-300"><span className="text-zinc-500">Correct Answer:</span> {detail.correctAnswer || '-'}</p>
+                                      <p className={`text-zinc-300 font-medium ${detail.status === 'correct' ? 'text-emerald-400' : detail.status === 'incorrect' ? 'text-red-400' : 'text-zinc-400'}`}>
+                                        <span className="text-zinc-500">Marks: </span>
+                                        {detail.status === 'correct' ? `+${detail.points || 0}` : detail.status === 'incorrect' ? `-${detail.negativePoints || 0}` : '0'}
+                                      </p>
                                     </div>
                                   ))}
                                 </div>

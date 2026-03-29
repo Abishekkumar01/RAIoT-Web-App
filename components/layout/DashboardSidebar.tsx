@@ -56,8 +56,8 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
   const traineeLinks = [
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/dashboard/profile", label: "Profile", icon: User },
+    { href: "/dashboard/my-resources", label: "My Resources", icon: FileText },
     { href: "/dashboard/tests", label: "Tests", icon: ClipboardList },
-    // Minimal view: Dashboard and Profile only
   ];
 
   const memberLinks = [
