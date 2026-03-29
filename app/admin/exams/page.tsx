@@ -42,6 +42,29 @@ export default function AdminExamsPage() {
     submissionId: string;
     value: string;
   }>({ open: false, examId: "", submissionId: "", value: "0" });
+  const [manualQuestionGradeDialog, setManualQuestionGradeDialog] = useState<{
+    open: boolean;
+    examId: string;
+    submissionId: string;
+    questionId: string;
+    questionNo: number;
+    questionText: string;
+    userAnswer: string;
+    correctAnswer: string;
+    points: number;
+    negativePoints: number;
+  }>({ 
+    open: false, 
+    examId: "", 
+    submissionId: "", 
+    questionId: "", 
+    questionNo: 0, 
+    questionText: "",
+    userAnswer: "",
+    correctAnswer: "",
+    points: 0,
+    negativePoints: 0
+  });
   const [myRegistrations, setMyRegistrations] = useState<any[]>([]);
   const [mySubmissions, setMySubmissions] = useState<any[]>([]);
   const [takeActionLoadingByExam, setTakeActionLoadingByExam] = useState<Record<string, boolean>>({});
@@ -860,6 +883,92 @@ export default function AdminExamsPage() {
     }
   };
 
+  const markQuestionManually = async (isCorrect: boolean) => {
+    try {
+      const auth = (await import("@/lib/firebase")).auth;
+      const token = await auth.currentUser?.getIdToken(true);
+      const res = await fetch(`/api/admin/exams/${manualQuestionGradeDialog.examId}/results/${manualQuestionGradeDialog.submissionId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({
+          manualGrades: {
+            [manualQuestionGradeDialog.questionId]: {
+              isCorrect,
+              points: isCorrect ? manualQuestionGradeDialog.points : -manualQuestionGradeDialog.negativePoints,
+              markedAt: new Date().toISOString()
+            }
+          }
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showNotice(data.error || "Failed to update question grade", 'Update Failed');
+        return;
+      }
+      
+      // Update local state with new grades
+      setResultsByExam((prev) => ({
+        ...prev,
+        [manualQuestionGradeDialog.examId]: (prev[manualQuestionGradeDialog.examId] || []).map((row: any) => {
+          if (row.id !== manualQuestionGradeDialog.submissionId) return row;
+          
+          // Recalculate marks based on manually graded questions
+          const breakdown = (row.questionBreakdown || []).map((q: any) => {
+            if (q.questionId === manualQuestionGradeDialog.questionId) {
+              return {
+                ...q,
+                isCorrect,
+                status: isCorrect ? 'correct' : 'incorrect'
+              };
+            }
+            return q;
+          });
+          
+          // Recalculate overall stats
+          let correctCount = 0;
+          let incorrectCount = 0;
+          let totalMarks = 0;
+          breakdown.forEach((q: any) => {
+            if (q.attempted) {
+              if (q.status === 'correct') {
+                correctCount++;
+                totalMarks += q.points || 0;
+              } else {
+                incorrectCount++;
+                totalMarks -= q.negativePoints || 0;
+              }
+            }
+          });
+          
+          return {
+            ...row,
+            correctCount,
+            incorrectCount,
+            obtainedMarks: Math.max(0, totalMarks),
+            questionBreakdown: breakdown
+          };
+        }),
+      }));
+      
+      setManualQuestionGradeDialog({ 
+        open: false, 
+        examId: "", 
+        submissionId: "", 
+        questionId: "",
+        questionNo: 0,
+        questionText: "",
+        userAnswer: "",
+        correctAnswer: "",
+        points: 0,
+        negativePoints: 0
+      });
+      showNotice(`Question marked as ${isCorrect ? 'correct' : 'incorrect'}.`, 'Updated');
+    } catch (err) {
+      console.error(err);
+      showNotice("Failed to update question grade", 'Update Failed');
+    }
+  };
+
   const deleteSubmissionData = async (examId: string, submissionId: string) => {
     openConfirmDialog('Delete this submission data permanently?', async () => {
       try {
@@ -938,6 +1047,54 @@ export default function AdminExamsPage() {
               Cancel
             </Button>
             <Button onClick={submitManualScore}>Save Score</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={manualQuestionGradeDialog.open}
+        onOpenChange={(open) => setManualQuestionGradeDialog((prev) => ({ ...prev, open }))}
+      >
+        <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle>Grade Short/Long Answer</DialogTitle>
+            <DialogDescription className="text-zinc-400">Q{manualQuestionGradeDialog.questionNo}: {manualQuestionGradeDialog.questionText}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4 text-sm">
+            <div>
+              <p className="text-zinc-500 mb-1">Student's Answer:</p>
+              <p className="text-zinc-200 p-2 bg-zinc-800 rounded">{manualQuestionGradeDialog.userAnswer || '-'}</p>
+            </div>
+            <div>
+              <p className="text-zinc-500 mb-1">Expected Answer:</p>
+              <p className="text-zinc-200 p-2 bg-zinc-800 rounded">{manualQuestionGradeDialog.correctAnswer || '-'}</p>
+            </div>
+            <div className="pt-2 border-t border-zinc-800">
+              <p className="text-zinc-400 text-xs mb-2">
+                Correct: +{manualQuestionGradeDialog.points} marks | 
+                Incorrect: -{manualQuestionGradeDialog.negativePoints} marks
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setManualQuestionGradeDialog((prev) => ({ ...prev, open: false }))}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => markQuestionManually(false)}
+            >
+              Mark Incorrect
+            </Button>
+            <Button 
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => markQuestionManually(true)}
+            >
+              Mark Correct
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1381,6 +1538,49 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                         <span className="text-zinc-500">Marks: </span>
                                         {detail.status === 'correct' ? `+${detail.points || 0}` : detail.status === 'incorrect' ? `-${detail.negativePoints || 0}` : '0'}
                                       </p>
+                                      
+                                      {(detail.questionType === 'short_answer' || detail.questionType === 'long_answer') && detail.attempted && (
+                                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-zinc-800">
+                                          <Button 
+                                            size="sm" 
+                                            variant={detail.status === 'correct' ? 'default' : 'outline'}
+                                            className={`text-xs ${detail.status === 'correct' ? 'bg-emerald-600 hover:bg-emerald-700' : 'hover:bg-emerald-900/20 hover:text-emerald-300'}`}
+                                            onClick={() => setManualQuestionGradeDialog({
+                                              open: true,
+                                              examId: exam.id,
+                                              submissionId: row.id,
+                                              questionId: detail.questionId,
+                                              questionNo: detail.questionNo,
+                                              questionText: detail.questionText,
+                                              userAnswer: detail.userAnswer,
+                                              correctAnswer: detail.correctAnswer,
+                                              points: detail.points,
+                                              negativePoints: detail.negativePoints
+                                            })}
+                                          >
+                                            ✓ Correct
+                                          </Button>
+                                          <Button 
+                                            size="sm" 
+                                            variant={detail.status === 'incorrect' ? 'default' : 'outline'}
+                                            className={`text-xs ${detail.status === 'incorrect' ? 'bg-red-600 hover:bg-red-700' : 'hover:bg-red-900/20 hover:text-red-300'}`}
+                                            onClick={() => setManualQuestionGradeDialog({
+                                              open: true,
+                                              examId: exam.id,
+                                              submissionId: row.id,
+                                              questionId: detail.questionId,
+                                              questionNo: detail.questionNo,
+                                              questionText: detail.questionText,
+                                              userAnswer: detail.userAnswer,
+                                              correctAnswer: detail.correctAnswer,
+                                              points: detail.points,
+                                              negativePoints: detail.negativePoints
+                                            })}
+                                          >
+                                            ✗ Incorrect
+                                          </Button>
+                                        </div>
+                                      )}
                                     </div>
                                   ))}
                                 </div>

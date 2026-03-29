@@ -13,11 +13,7 @@ export async function PUT(
 
         const { id: testId, submissionId } = params;
         const body = await request.json();
-        const manualScore = Number(body?.score);
-
-        if (!Number.isFinite(manualScore) || manualScore < 0) {
-            return NextResponse.json({ error: 'Valid non-negative score is required' }, { status: 400 });
-        }
+        const { score, manualGrades } = body;
 
         const adminDb = getAdminDb();
         if (!adminDb) throw new Error('Database not initialized');
@@ -33,18 +29,48 @@ export async function PUT(
             return NextResponse.json({ error: 'Submission does not belong to this test' }, { status: 400 });
         }
 
-        await submissionRef.update({
-            score: manualScore,
-            requiresManualReview: false,
-            manualReviewedBy: authUser.uid,
-            manualReviewedAt: new Date().toISOString(),
+        const updateData: any = {
             updatedAt: new Date().toISOString(),
-        });
+        };
 
-        return NextResponse.json({ success: true, message: 'Manual score updated successfully' });
+        // Handle manual score update (for overall submission score)
+        if (score !== undefined && score !== null) {
+            const manualScore = Number(score);
+            if (!Number.isFinite(manualScore) || manualScore < 0) {
+                return NextResponse.json({ error: 'Valid non-negative score is required' }, { status: 400 });
+            }
+            updateData.score = manualScore;
+            updateData.requiresManualReview = false;
+            updateData.manualReviewedBy = authUser.uid;
+            updateData.manualReviewedAt = new Date().toISOString();
+        }
+
+        // Handle manual grade update for specific questions
+        if (manualGrades && typeof manualGrades === 'object') {
+            updateData.manualGrades = {
+                ...(submissionData?.manualGrades || {}),
+                ...manualGrades
+            };
+        }
+
+        if (Object.keys(updateData).length === 1) {
+            // Only updatedAt is present
+            return NextResponse.json(
+                { error: 'No valid update fields provided' },
+                { status: 400 }
+            );
+        }
+
+        // Update the submission
+        await submissionRef.update(updateData);
+
+        return NextResponse.json({
+            success: true,
+            message: 'Submission updated successfully'
+        });
     } catch (error: any) {
-        console.error('Error updating manual score:', error);
-        return NextResponse.json({ error: 'Failed to update manual score' }, { status: 500 });
+        console.error('Error updating submission:', error);
+        return NextResponse.json({ error: 'Failed to update submission' }, { status: 500 });
     }
 }
 
