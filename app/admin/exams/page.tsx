@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CloudinaryUpload } from "@/components/ui/CloudinaryUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Edit, Trash2, Save, X } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp, FileSpreadsheet } from "lucide-react";
+import * as XLSX from "xlsx";
 import { ExamTest, KeywordMatchMode, Question, QuestionType } from "@/types/examination";
 
 export default function AdminExamsPage() {
@@ -23,6 +24,7 @@ export default function AdminExamsPage() {
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [resultsLoadingByExam, setResultsLoadingByExam] = useState<Record<string, boolean>>({});
   const [resultsByExam, setResultsByExam] = useState<Record<string, any[]>>({});
+  const [expandedSubmissionRows, setExpandedSubmissionRows] = useState<Record<string, boolean>>({});
   const [myRegistrations, setMyRegistrations] = useState<any[]>([]);
   const [mySubmissions, setMySubmissions] = useState<any[]>([]);
   const [takeActionLoadingByExam, setTakeActionLoadingByExam] = useState<Record<string, boolean>>({});
@@ -671,6 +673,26 @@ export default function AdminExamsPage() {
     }
   };
 
+  const fetchExamResultsData = async (examId: string): Promise<any[] | null> => {
+    try {
+      const auth = (await import("@/lib/firebase")).auth;
+      const token = await auth.currentUser?.getIdToken(true);
+      const res = await fetch(`/api/admin/exams/${examId}/results`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to fetch member results");
+        return null;
+      }
+      return data.submissions || [];
+    } catch (err) {
+      console.error(err);
+      alert("Failed to fetch member results");
+      return null;
+    }
+  };
+
   const loadExamResults = async (examId: string) => {
     if (resultsByExam[examId]) {
       setResultsByExam(prev => {
@@ -683,23 +705,67 @@ export default function AdminExamsPage() {
 
     setResultsLoadingByExam(prev => ({ ...prev, [examId]: true }));
     try {
-      const auth = (await import("@/lib/firebase")).auth;
-      const token = await auth.currentUser?.getIdToken(true);
-      const res = await fetch(`/api/admin/exams/${examId}/results`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setResultsByExam(prev => ({ ...prev, [examId]: data.submissions || [] }));
-      } else {
-        alert(data.error || 'Failed to fetch member results');
+      const submissions = await fetchExamResultsData(examId);
+      if (submissions) {
+        setResultsByExam(prev => ({ ...prev, [examId]: submissions }));
       }
-    } catch (err) {
-      console.error(err);
-      alert('Failed to fetch member results');
     } finally {
       setResultsLoadingByExam(prev => ({ ...prev, [examId]: false }));
     }
+  };
+
+  const toggleSubmissionDetails = (examId: string, submissionId: string) => {
+    const key = `${examId}:${submissionId}`;
+    setExpandedSubmissionRows((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const exportExamResultsToExcel = async (exam: ExamTest) => {
+    const examId = exam.id;
+    if (!examId) return;
+
+    const cached = resultsByExam[examId];
+    const submissions = cached || (await fetchExamResultsData(examId)) || [];
+    if (submissions.length === 0) {
+      alert("No submission data available to export.");
+      return;
+    }
+
+    if (!cached) {
+      setResultsByExam((prev) => ({ ...prev, [examId]: submissions }));
+    }
+
+    const summaryRows = submissions.map((row: any, index: number) => ({
+      SNo: index + 1,
+      Member: row.userName || "Unknown User",
+      Email: row.userEmail || "",
+      Role: row.userRole || "",
+      Score: row.score ?? "Pending",
+      Attempted: row.attemptedCount ?? 0,
+      Correct: row.correctCount ?? 0,
+      Incorrect: row.incorrectCount ?? 0,
+      SubmittedAt: row.submittedAt ? new Date(row.submittedAt).toLocaleString() : ""
+    }));
+
+    const questionRows = submissions.flatMap((row: any, rowIndex: number) =>
+      (row.questionBreakdown || []).map((q: any) => ({
+        SubmissionSNo: rowIndex + 1,
+        Member: row.userName || "Unknown User",
+        Email: row.userEmail || "",
+        QuestionNo: q.questionNo,
+        QuestionType: q.questionType,
+        Question: q.questionText,
+        Status: q.status,
+        UserAnswer: q.userAnswer || "",
+        CorrectAnswer: q.correctAnswer || "",
+        Points: q.points ?? 0,
+        NegativePoints: q.negativePoints ?? 0
+      }))
+    );
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(summaryRows), "Summary");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(questionRows), "Question Breakdown");
+    XLSX.writeFile(workbook, `${(exam.title || "exam-results").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-results.xlsx`);
   };
 
   const setManualScore = async (examId: string, submissionId: string, currentScore: number | null | undefined) => {
@@ -1094,6 +1160,11 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                       {resultsByExam[exam.id!] ? 'Hide Member Results' : 'View Member Results'}
                     </Button>
                   )}
+                  {isSuperAdmin && (
+                    <Button variant="outline" onClick={() => exportExamResultsToExcel(exam)}>
+                      <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
+                    </Button>
+                  )}
                   <Button variant="destructive" size="icon" onClick={() => deleteExam(exam.id!)}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -1102,13 +1173,14 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
               {isSuperAdmin && (resultsLoadingByExam[exam.id!] || resultsByExam[exam.id!]) && (
                 <CardContent className="pt-0 pb-4">
                   <div className="rounded-md border border-zinc-800 overflow-hidden">
-                    <div className="grid grid-cols-14 gap-2 p-3 bg-zinc-900 text-xs uppercase tracking-wide text-zinc-400">
-                      <div className="col-span-3">Member</div>
+                    <div className="grid grid-cols-16 gap-2 p-3 bg-zinc-900 text-xs uppercase tracking-wide text-zinc-400">
+                      <div className="col-span-2">Member</div>
                       <div className="col-span-3">Email</div>
                       <div className="col-span-2">Role</div>
                       <div className="col-span-2">Score</div>
+                      <div className="col-span-2">Attempt/Corr/Inc</div>
                       <div className="col-span-2">Submitted At</div>
-                      <div className="col-span-2">Action</div>
+                      <div className="col-span-3">Action</div>
                     </div>
                     {resultsLoadingByExam[exam.id!] && (
                       <div className="p-4 text-sm text-muted-foreground flex items-center gap-2">
@@ -1118,31 +1190,72 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                     {!resultsLoadingByExam[exam.id!] && resultsByExam[exam.id!].length === 0 && (
                       <div className="p-4 text-sm text-muted-foreground">No member submissions yet.</div>
                     )}
-                    {!resultsLoadingByExam[exam.id!] && resultsByExam[exam.id!].map((row: any) => (
-                      <div key={row.id} className="grid grid-cols-14 gap-2 p-3 border-t border-zinc-800 text-sm">
-                        <div className="col-span-3 truncate">{row.userName || 'Unknown User'}</div>
-                        <div className="col-span-3 truncate text-zinc-400">{row.userEmail || '-'}</div>
-                        <div className="col-span-2 capitalize text-zinc-400">{row.userRole || '-'}</div>
-                        <div className="col-span-2 font-semibold">{row.score === null || row.score === undefined ? 'Pending' : row.score}</div>
-                        <div className="col-span-2 text-zinc-400">{row.submittedAt ? new Date(row.submittedAt).toLocaleString() : '-'}</div>
-                        <div className="col-span-2">
-                          <div className="flex items-center gap-2">
-                            {(row.score === null || row.requiresManualReview) ? (
-                              <Button size="sm" variant="outline" onClick={() => setManualScore(exam.id!, row.id, row.score)}>
-                                Manual Score
-                              </Button>
-                            ) : (
-                              <Button size="sm" variant="ghost" onClick={() => setManualScore(exam.id!, row.id, row.score)}>
-                                Edit Score
-                              </Button>
-                            )}
-                            <Button size="sm" variant="destructive" onClick={() => deleteSubmissionData(exam.id!, row.id)}>
-                              Delete Data
-                            </Button>
+                    {!resultsLoadingByExam[exam.id!] && resultsByExam[exam.id!].map((row: any) => {
+                      const expandKey = `${exam.id!}:${row.id}`;
+                      const isExpanded = !!expandedSubmissionRows[expandKey];
+                      return (
+                        <div key={row.id} className="border-t border-zinc-800">
+                          <div className="grid grid-cols-16 gap-2 p-3 text-sm items-center">
+                            <div className="col-span-2 truncate">{row.userName || 'Unknown User'}</div>
+                            <div className="col-span-3 truncate text-zinc-400">{row.userEmail || '-'}</div>
+                            <div className="col-span-2 capitalize text-zinc-400">{row.userRole || '-'}</div>
+                            <div className="col-span-2 font-semibold">{row.score === null || row.score === undefined ? 'Pending' : row.score}</div>
+                            <div className="col-span-2 text-zinc-300">
+                              {(row.attemptedCount ?? 0)}/{(row.correctCount ?? 0)}/{(row.incorrectCount ?? 0)}
+                            </div>
+                            <div className="col-span-2 text-zinc-400">{row.submittedAt ? new Date(row.submittedAt).toLocaleString() : '-'}</div>
+                            <div className="col-span-3">
+                              <div className="flex items-center gap-2 flex-wrap justify-end">
+                                <Button size="sm" variant="outline" onClick={() => toggleSubmissionDetails(exam.id!, row.id)}>
+                                  {isExpanded ? <ChevronUp className="w-4 h-4 mr-1" /> : <ChevronDown className="w-4 h-4 mr-1" />}
+                                  Details
+                                </Button>
+                                {(row.score === null || row.requiresManualReview) ? (
+                                  <Button size="sm" variant="outline" onClick={() => setManualScore(exam.id!, row.id, row.score)}>
+                                    Manual Score
+                                  </Button>
+                                ) : (
+                                  <Button size="sm" variant="ghost" onClick={() => setManualScore(exam.id!, row.id, row.score)}>
+                                    Edit Score
+                                  </Button>
+                                )}
+                                <Button size="sm" variant="destructive" onClick={() => deleteSubmissionData(exam.id!, row.id)}>
+                                  Delete Data
+                                </Button>
+                              </div>
+                            </div>
                           </div>
+
+                          {isExpanded && (
+                            <div className="px-3 pb-3">
+                              <div className="rounded-md border border-zinc-800 bg-zinc-950/50 overflow-hidden">
+                                <div className="flex items-center justify-between px-3 py-2 text-xs text-zinc-300 border-b border-zinc-800">
+                                  <span>
+                                    Attempted: {row.attemptedCount ?? 0} | Correct: {row.correctCount ?? 0} | Incorrect: {row.incorrectCount ?? 0}
+                                  </span>
+                                  <span className="text-zinc-400">Question-wise Responses</span>
+                                </div>
+                                <div className="max-h-[380px] overflow-auto">
+                                  {(row.questionBreakdown || []).map((detail: any) => (
+                                    <div key={`${row.id}-${detail.questionId}`} className="border-b border-zinc-800/70 p-3 text-xs space-y-1">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <p className="text-zinc-100 font-medium">Q{detail.questionNo}. {detail.questionText}</p>
+                                        <span className={`uppercase text-[10px] px-2 py-0.5 rounded ${detail.status === 'correct' ? 'bg-emerald-900/40 text-emerald-300' : detail.status === 'incorrect' ? 'bg-red-900/40 text-red-300' : 'bg-zinc-800 text-zinc-300'}`}>
+                                          {detail.status}
+                                        </span>
+                                      </div>
+                                      <p className="text-zinc-400">Type: {detail.questionType}</p>
+                                      <p className="text-zinc-300"><span className="text-zinc-500">User Answer:</span> {detail.userAnswer || '-'}</p>
+                                      <p className="text-zinc-300"><span className="text-zinc-500">Correct Answer:</span> {detail.correctAnswer || '-'}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               )}

@@ -1,6 +1,63 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb, verifySuperAdmin } from '@/lib/firebase-admin';
 
+const normalizeIndexAnswer = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+        return value
+            .map((item) => String(item).trim())
+            .filter(Boolean)
+            .sort();
+    }
+    if (typeof value === 'string') {
+        return value
+            .split(/[|,]/)
+            .map((item) => item.trim())
+            .filter(Boolean)
+            .sort();
+    }
+    return [];
+};
+
+const isAttemptedAnswer = (value: unknown): boolean => {
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'string') return value.trim().length > 0;
+    return false;
+};
+
+const normalizeKeyword = (value: string): string => value.trim().toLowerCase();
+
+const evaluateKeywordAnswer = (
+    answerValue: unknown,
+    keywords: string[],
+    matchMode: 'any' | 'all'
+): boolean => {
+    const answer = String(answerValue ?? '').toLowerCase();
+    const expected = keywords.map(normalizeKeyword).filter(Boolean);
+    if (expected.length === 0) return false;
+
+    if (matchMode === 'all') {
+        return expected.every((kw) => answer.includes(kw));
+    }
+    return expected.some((kw) => answer.includes(kw));
+};
+
+const formatChoiceAnswer = (value: unknown, options?: string[]): string => {
+    if (!options || options.length === 0) {
+        if (Array.isArray(value)) return value.map((v) => String(v)).join(', ');
+        return String(value ?? '');
+    }
+
+    const indexes = normalizeIndexAnswer(value);
+    if (indexes.length === 0) return '';
+
+    return indexes
+        .map((idx) => {
+            const optionText = options[Number(idx)];
+            return optionText !== undefined ? `${idx}: ${optionText}` : idx;
+        })
+        .join(' | ');
+};
+
 export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
         const authUser = await verifySuperAdmin(request);
@@ -16,6 +73,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
         if (!examDoc.exists) {
             return NextResponse.json({ error: 'Test not found' }, { status: 404 });
         }
+        const examData = examDoc.data() || {};
+        const examQuestions = Array.isArray(examData.questions) ? examData.questions : [];
 
         const submissionsSnapshot = await adminDb.collection('examSubmissions')
             .where('testId', '==', testId)
@@ -45,12 +104,74 @@ export async function GET(request: Request, { params }: { params: { id: string }
         const submissions = submissionsSnapshot.docs.map(doc => {
             const data = doc.data();
             const userInfo = userMap.get(data.userId) || { name: 'Unknown User', email: '', role: 'guest' };
+
+            let attemptedCount = 0;
+            let correctCount = 0;
+            let incorrectCount = 0;
+
+            const questionBreakdown = examQuestions.map((question: any, index: number) => {
+                const userAnswer = data?.answers?.[question.id];
+                const attempted = isAttemptedAnswer(userAnswer);
+                if (attempted) attemptedCount += 1;
+
+                let isCorrect = false;
+                if (attempted) {
+                    if (question.type === 'mcq') {
+                        isCorrect = String(userAnswer ?? '').trim() === String(question.correctAnswer ?? '').trim();
+                    } else if (question.type === 'checkbox') {
+                        const selectedIndexes = normalizeIndexAnswer(userAnswer);
+                        const correctIndexes = normalizeIndexAnswer(question.correctAnswer);
+                        isCorrect =
+                            selectedIndexes.length > 0 &&
+                            selectedIndexes.length === correctIndexes.length &&
+                            selectedIndexes.every((value, idx) => value === correctIndexes[idx]);
+                    } else if (question.type === 'short_answer' || question.type === 'long_answer') {
+                        const keywords = Array.isArray(question.keywords)
+                            ? question.keywords.map((v: any) => String(v).trim()).filter(Boolean)
+                            : [];
+                        const matchMode: 'any' | 'all' = question.keywordMatchMode === 'all' ? 'all' : 'any';
+                        isCorrect = keywords.length > 0 && evaluateKeywordAnswer(userAnswer, keywords, matchMode);
+                    }
+                }
+
+                if (attempted) {
+                    if (isCorrect) correctCount += 1;
+                    else incorrectCount += 1;
+                }
+
+                const correctAnswerText = question.type === 'mcq' || question.type === 'checkbox'
+                    ? formatChoiceAnswer(question.correctAnswer, question.options)
+                    : String(question.correctAnswer ?? (Array.isArray(question.keywords) ? question.keywords.join(', ') : ''));
+
+                const userAnswerText = question.type === 'mcq' || question.type === 'checkbox'
+                    ? formatChoiceAnswer(userAnswer, question.options)
+                    : String(userAnswer ?? '');
+
+                return {
+                    questionId: question.id,
+                    questionNo: index + 1,
+                    questionText: question.text || '',
+                    questionType: question.type || 'unknown',
+                    attempted,
+                    isCorrect,
+                    status: !attempted ? 'unattempted' : (isCorrect ? 'correct' : 'incorrect'),
+                    userAnswer: userAnswerText,
+                    correctAnswer: correctAnswerText,
+                    points: Number(question.points || 0),
+                    negativePoints: Number(question.negativePoints || 0)
+                };
+            });
+
             return {
                 id: doc.id,
                 ...data,
                 userName: userInfo.name,
                 userEmail: userInfo.email,
-                userRole: userInfo.role
+                userRole: userInfo.role,
+                attemptedCount,
+                correctCount,
+                incorrectCount,
+                questionBreakdown
             };
         }).sort((a: any, b: any) => {
             const aTime = new Date(a.submittedAt || 0).getTime();
@@ -61,8 +182,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
         return NextResponse.json({
             exam: {
                 id: examDoc.id,
-                title: examDoc.data()?.title || 'Untitled Test',
-                resultPublished: examDoc.data()?.resultPublished === true
+                title: examData?.title || 'Untitled Test',
+                resultPublished: examData?.resultPublished === true
             },
             submissions
         });
