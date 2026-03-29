@@ -36,9 +36,12 @@ export default function TakeTestPage() {
   const [testStarted, setTestStarted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [violationWarning, setViolationWarning] = useState<string | null>(null);
+  const [violationCount, setViolationCount] = useState(0);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const hasAutoSubmitted = useRef(false);
+  const lastViolationTsRef = useRef(0);
+  const maxViolations = 3;
 
   const submitTest = useCallback(async (auto = false) => {
     if (auto && hasAutoSubmitted.current) return;
@@ -83,16 +86,32 @@ export default function TakeTestPage() {
   // Start countdown once test loaded and user has clicked start
   useEffect(() => {
     if (!test || !testStarted) return;
-    const MAX_SWITCH_VIOLATIONS = 1;
+    const VIOLATION_COOLDOWN_MS = 1200;
+    setViolationCount(parseInt(localStorage.getItem(`test_violations_${id}`) || '0'));
 
-    const registerSwitchViolation = () => {
+    const registerViolation = (reason: string, attemptReenterFullscreen = false) => {
       if (hasAutoSubmitted.current) return;
+
+      const now = Date.now();
+      if (now - lastViolationTsRef.current < VIOLATION_COOLDOWN_MS) return;
+      lastViolationTsRef.current = now;
+
       const viols = parseInt(localStorage.getItem(`test_violations_${id}`) || '0') + 1;
       localStorage.setItem(`test_violations_${id}`, viols.toString());
-      setViolationWarning(`Switching tabs/apps is not allowed during the test. Violation count: ${viols}`);
+      setViolationCount(viols);
+      setViolationWarning(`${reason} Violation count: ${viols}/${maxViolations}`);
 
-      if (viols >= MAX_SWITCH_VIOLATIONS) {
-        alert('Tab/app switch detected. Submitting test automatically.');
+      if (attemptReenterFullscreen) {
+        const elem = document.getElementById("exam-fullscreen-container") || document.documentElement;
+        if (document.fullscreenElement !== elem && elem.requestFullscreen) {
+          elem.requestFullscreen().catch(() => {
+            setViolationWarning(`Could not re-enter fullscreen automatically. Click "Resume Fullscreen" now. Violation count: ${viols}/${maxViolations}`);
+          });
+        }
+      }
+
+      if (viols >= maxViolations) {
+        setViolationWarning('Maximum violations reached. Submitting test automatically.');
         submitTest(true);
       }
     };
@@ -112,12 +131,17 @@ export default function TakeTestPage() {
       // Best-effort prevention for F11 fullscreen toggle.
       if (e.key === 'F11') {
         e.preventDefault();
-        setViolationWarning('F11 fullscreen toggle is disabled during the test.');
+        registerViolation('F11 fullscreen toggle attempt detected.', true);
+      }
+      // Best-effort prevention for Escape fullscreen exit.
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        registerViolation('Escape key fullscreen-exit attempt detected.', true);
       }
       // Best-effort prevention for Alt+Tab; browsers cannot fully block OS-level shortcuts.
       if (e.altKey && e.key.toLowerCase() === 'tab') {
         e.preventDefault();
-        registerSwitchViolation();
+        registerViolation('Tab/app switch detected.');
       }
       // Prevent DevTools: F12, Ctrl+Shift+I/J, Cmd+Option+I/J
       if (
@@ -138,14 +162,14 @@ export default function TakeTestPage() {
     // Anticheat: Tab switch warning
     const handleVisibilityChange = () => {
       if (document.hidden && !hasAutoSubmitted.current) {
-        registerSwitchViolation();
+        registerViolation('Tab/app switch detected.');
       }
     };
 
     // Anticheat: Window focus loss (covers app switching, including Alt+Tab)
     const handleWindowBlur = () => {
       if (!hasAutoSubmitted.current && document.hidden) {
-        registerSwitchViolation();
+        registerViolation('Window focus lost.');
       }
     };
 
@@ -154,9 +178,7 @@ export default function TakeTestPage() {
       if (!document.fullscreenElement) {
         setIsFullscreen(false);
         if (!hasAutoSubmitted.current) {
-          setViolationWarning('Fullscreen exit detected. Submitting test automatically.');
-          alert('Fullscreen exit detected. Your test will be submitted automatically.');
-          submitTest(true);
+          registerViolation('Fullscreen exit detected.', true);
         }
       } else {
         setIsFullscreen(true);
@@ -204,7 +226,7 @@ export default function TakeTestPage() {
       window.removeEventListener("blur", handleWindowBlur);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
-  }, [test, testStarted, id, submitTest]);
+  }, [test, testStarted, id, submitTest, maxViolations]);
 
   const handleStartTest = () => {
     const elem = document.getElementById("exam-fullscreen-container") || document.documentElement;
@@ -349,7 +371,7 @@ export default function TakeTestPage() {
                 <ul className="list-disc list-inside text-zinc-300 text-sm space-y-1 ml-4">
                   <li>Upon starting, the test will enter fullscreen mode.</li>
                   <li>Do NOT switch tabs or minimize the browser window. Doing so will be recorded as a violation.</li>
-                  <li>Any tab/app switch or fullscreen exit can trigger automatic submission.</li>
+                  <li>After 3 violations (tab/app switch or fullscreen exit), your test is auto-submitted.</li>
                   <li>Right-click is disabled during the test.</li>
                   <li>Ensure you have a stable internet connection.</li>
                 </ul>
@@ -435,6 +457,9 @@ export default function TakeTestPage() {
             {timeLeft !== null ? formatTime(timeLeft) : `${test.durationMinutes}:00`}
           </p>
           <p className="text-xs text-muted-foreground mt-1">Time Remaining</p>
+          <p className={`text-xs mt-1 font-medium ${violationCount >= maxViolations - 1 ? 'text-red-400' : 'text-amber-300'}`}>
+            Violations: {violationCount}/{maxViolations}
+          </p>
         </div>
       </div>
 
