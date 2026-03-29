@@ -186,10 +186,21 @@ export default function TakeTestPage() {
       e.returnValue = ''; // Triggers the browser's native "Leave site?" warning
     };
 
+    const syncFullscreenState = (reason: string, countViolation = false) => {
+      const inFs = !!document.fullscreenElement;
+      setIsFullscreen(inFs);
+      if (!inFs && !hasAutoSubmitted.current && countViolation) {
+        registerViolation(reason, true);
+      }
+    };
+
     // Anticheat: Tab switch warning
     const handleVisibilityChange = () => {
       if (document.hidden && !hasAutoSubmitted.current) {
         registerViolation('Tab/app switch detected.');
+      } else if (!document.hidden) {
+        // On return to the tab, always verify fullscreen state from the browser API.
+        syncFullscreenState('Returned to test without fullscreen.', true);
       }
     };
 
@@ -198,6 +209,11 @@ export default function TakeTestPage() {
       if (!hasAutoSubmitted.current && document.hidden) {
         registerViolation('Window focus lost.');
       }
+    };
+
+    // Anticheat: when window regains focus (e.g., Alt+Tab back), enforce fullscreen state.
+    const handleWindowFocus = () => {
+      syncFullscreenState('Window focused without fullscreen.', true);
     };
 
     // Anticheat: Fullscreen monitoring
@@ -217,6 +233,7 @@ export default function TakeTestPage() {
     window.addEventListener("beforeunload", handleBeforeUnload);
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("focus", handleWindowFocus);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
 
     // Timer persistence logic
@@ -251,15 +268,20 @@ export default function TakeTestPage() {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("focus", handleWindowFocus);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
   }, [test, testStarted, id, submitTest, maxViolations]);
 
-  const handleStartTest = () => {
+  const handleStartTest = async () => {
     const elem = document.getElementById("exam-fullscreen-container") || document.documentElement;
     if (elem.requestFullscreen) {
-      elem.requestFullscreen().catch((err) => console.log('Fullscreen failed:', err));
-      setIsFullscreen(true);
+      try {
+        await elem.requestFullscreen();
+      } catch (err) {
+        console.log('Fullscreen failed:', err);
+      }
+      setIsFullscreen(!!document.fullscreenElement);
     }
     setTestStarted(true);
   };
