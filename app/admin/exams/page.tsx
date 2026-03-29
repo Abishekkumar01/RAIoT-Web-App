@@ -525,7 +525,8 @@ export default function AdminExamsPage() {
         ? true
         : ["true", "1", "yes"].includes(String(raw.allowManualReview).toLowerCase()),
       points: Number.isFinite(points) ? points : 1,
-      negativePoints: Number.isFinite(negativePoints) ? negativePoints : 0,
+      // Ensure negativePoints is always positive (prevent bug where -1 gets applied as +1 in scoring)
+      negativePoints: Number.isFinite(negativePoints) ? Math.abs(negativePoints) : 0,
     };
   };
 
@@ -625,6 +626,8 @@ export default function AdminExamsPage() {
         imageUrl: q.imageUrl?.trim() || undefined,
         keywords: (q.keywords || []).map((kw) => kw.trim()).filter(Boolean),
         optionImageUrls: (q.optionImageUrls || []).map((url) => url.trim()),
+        // Ensure negativePoints is always positive (prevent bug where -1 gets applied as +1 in scoring)
+        negativePoints: Math.abs(q.negativePoints || 0),
       }));
 
       const newExam = {

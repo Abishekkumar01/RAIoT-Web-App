@@ -124,7 +124,8 @@ export async function POST(request: Request) {
                     score += q.points || 0;
                 } else {
                     // Negative marking only for attempted and incorrect answers.
-                    score -= q.negativePoints || 0;
+                    // Use Math.abs to ensure negativePoints is always positive (guards against -1 being stored)
+                    score -= Math.abs(q.negativePoints || 0);
                 }
                 continue;
             }
@@ -141,7 +142,8 @@ export async function POST(request: Request) {
                     score += q.points || 0;
                 } else {
                     // Award marks only on exact option set match; otherwise apply negative marks.
-                    score -= q.negativePoints || 0;
+                    // Use Math.abs to ensure negativePoints is always positive (guards against -1 being stored)
+                    score -= Math.abs(q.negativePoints || 0);
                 }
                 continue;
             }
@@ -166,7 +168,8 @@ export async function POST(request: Request) {
                             reason: `Keyword check failed (${matchMode.toUpperCase()} match)`
                         });
                     } else {
-                        score -= q.negativePoints || 0;
+                        // Use Math.abs to ensure negativePoints is always positive (guards against -1 being stored)
+                        score -= Math.abs(q.negativePoints || 0);
                     }
                 } else if (allowManualReview) {
                     requiresManualGrading = true;
@@ -177,7 +180,8 @@ export async function POST(request: Request) {
                         reason: 'No keywords configured; requires manual review'
                     });
                 } else {
-                    score -= q.negativePoints || 0;
+                    // Use Math.abs to ensure negativePoints is always positive (guards against -1 being stored)
+                    score -= Math.abs(q.negativePoints || 0);
                 }
                 continue;
             }
