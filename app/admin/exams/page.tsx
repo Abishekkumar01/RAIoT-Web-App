@@ -1128,19 +1128,25 @@ export default function AdminExamsPage() {
         open={manualQuestionGradeDialog.open}
         onOpenChange={(open) => setManualQuestionGradeDialog((prev) => ({ ...prev, open }))}
       >
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md">
+        <DialogContent className="bg-zinc-900 border-zinc-800 text-white w-[min(92vw,760px)] max-w-[760px] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Grade Question</DialogTitle>
-            <DialogDescription className="text-zinc-400">Q{manualQuestionGradeDialog.questionNo}: {manualQuestionGradeDialog.questionText}</DialogDescription>
+            <DialogDescription className="text-zinc-400 break-words">
+              Q{manualQuestionGradeDialog.questionNo}: {manualQuestionGradeDialog.questionText}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 py-4 text-sm">
+          <div className="space-y-3 py-4 text-sm min-w-0">
             <div>
               <p className="text-zinc-500 mb-1">Student's Answer:</p>
-              <p className="text-zinc-200 p-2 bg-zinc-800 rounded">{manualQuestionGradeDialog.userAnswer || '-'}</p>
+              <p className="text-zinc-200 p-2 bg-zinc-800 rounded w-full max-w-full whitespace-pre-wrap break-words overflow-hidden">
+                {manualQuestionGradeDialog.userAnswer || '-'}
+              </p>
             </div>
             <div>
               <p className="text-zinc-500 mb-1">Expected Answer:</p>
-              <p className="text-zinc-200 p-2 bg-zinc-800 rounded">{manualQuestionGradeDialog.correctAnswer || '-'}</p>
+              <p className="text-zinc-200 p-2 bg-zinc-800 rounded w-full max-w-full whitespace-pre-wrap break-words overflow-hidden">
+                {manualQuestionGradeDialog.correctAnswer || '-'}
+              </p>
             </div>
             <div className="pt-2 border-t border-zinc-800">
               <p className="text-zinc-400 text-xs mb-2">
@@ -1150,7 +1156,7 @@ export default function AdminExamsPage() {
               </p>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-wrap gap-2">
             <Button
               variant="outline"
               onClick={() => setManualQuestionGradeDialog((prev) => ({ ...prev, open: false }))}
@@ -1730,7 +1736,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                           className="text-xs"
                                           onClick={() => setManualQuestionGradeDialog({
                                             open: true,
-                                            examId: exam.id,
+                                            examId: exam.id || "",
                                             submissionId: row.id,
                                             questionId: detail.questionId,
                                             status: detail.status,
