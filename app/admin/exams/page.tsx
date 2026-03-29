@@ -47,6 +47,7 @@ export default function AdminExamsPage() {
     examId: string;
     submissionId: string;
     questionId: string;
+    status: 'correct' | 'incorrect' | 'unattempted';
     questionNo: number;
     questionText: string;
     userAnswer: string;
@@ -58,6 +59,7 @@ export default function AdminExamsPage() {
     examId: "", 
     submissionId: "", 
     questionId: "", 
+    status: 'unattempted',
     questionNo: 0, 
     questionText: "",
     userAnswer: "",
@@ -883,7 +885,7 @@ export default function AdminExamsPage() {
     }
   };
 
-  const markQuestionManually = async (isCorrect: boolean) => {
+  const markQuestionManually = async (status: 'correct' | 'incorrect' | 'unattempted') => {
     try {
       const auth = (await import("@/lib/firebase")).auth;
       const token = await auth.currentUser?.getIdToken(true);
@@ -893,8 +895,7 @@ export default function AdminExamsPage() {
         body: JSON.stringify({
           manualGrades: {
             [manualQuestionGradeDialog.questionId]: {
-              isCorrect,
-              points: isCorrect ? manualQuestionGradeDialog.points : -manualQuestionGradeDialog.negativePoints,
+              status,
               markedAt: new Date().toISOString()
             }
           }
@@ -917,6 +918,7 @@ export default function AdminExamsPage() {
         examId: "", 
         submissionId: "", 
         questionId: "",
+        status: 'unattempted',
         questionNo: 0,
         questionText: "",
         userAnswer: "",
@@ -924,7 +926,7 @@ export default function AdminExamsPage() {
         points: 0,
         negativePoints: 0
       });
-      showNotice(`Question marked as ${isCorrect ? 'correct' : 'incorrect'}.`, 'Updated');
+      showNotice(`Question marked as ${status}.`, 'Updated');
     } catch (err) {
       console.error(err);
       showNotice("Failed to update question grade", 'Update Failed');
@@ -1018,7 +1020,7 @@ export default function AdminExamsPage() {
       >
         <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md">
           <DialogHeader>
-            <DialogTitle>Grade Short/Long Answer</DialogTitle>
+            <DialogTitle>Grade Question</DialogTitle>
             <DialogDescription className="text-zinc-400">Q{manualQuestionGradeDialog.questionNo}: {manualQuestionGradeDialog.questionText}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-4 text-sm">
@@ -1033,7 +1035,8 @@ export default function AdminExamsPage() {
             <div className="pt-2 border-t border-zinc-800">
               <p className="text-zinc-400 text-xs mb-2">
                 Correct: +{manualQuestionGradeDialog.points} marks | 
-                Incorrect: -{manualQuestionGradeDialog.negativePoints} marks
+                Incorrect: -{manualQuestionGradeDialog.negativePoints} marks | 
+                Unattempted: 0 marks
               </p>
             </div>
           </div>
@@ -1044,15 +1047,21 @@ export default function AdminExamsPage() {
             >
               Cancel
             </Button>
+            <Button
+              variant="secondary"
+              onClick={() => markQuestionManually('unattempted')}
+            >
+              Mark Unattempted
+            </Button>
             <Button 
               variant="destructive"
-              onClick={() => markQuestionManually(false)}
+              onClick={() => markQuestionManually('incorrect')}
             >
               Mark Incorrect
             </Button>
             <Button 
               className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => markQuestionManually(true)}
+              onClick={() => markQuestionManually('correct')}
             >
               Mark Correct
             </Button>
@@ -1500,48 +1509,29 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                         {detail.status === 'correct' ? `+${detail.points || 0}` : detail.status === 'incorrect' ? `-${detail.negativePoints || 0}` : '0'}
                                       </p>
                                       
-                                      {(detail.questionType === 'short_answer' || detail.questionType === 'long_answer') && detail.attempted && (
-                                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-zinc-800">
-                                          <Button 
-                                            size="sm" 
-                                            variant={detail.status === 'correct' ? 'default' : 'outline'}
-                                            className={`text-xs ${detail.status === 'correct' ? 'bg-emerald-600 hover:bg-emerald-700' : 'hover:bg-emerald-900/20 hover:text-emerald-300'}`}
-                                            onClick={() => setManualQuestionGradeDialog({
-                                              open: true,
-                                              examId: exam.id,
-                                              submissionId: row.id,
-                                              questionId: detail.questionId,
-                                              questionNo: detail.questionNo,
-                                              questionText: detail.questionText,
-                                              userAnswer: detail.userAnswer,
-                                              correctAnswer: detail.correctAnswer,
-                                              points: detail.points,
-                                              negativePoints: detail.negativePoints
-                                            })}
-                                          >
-                                            ✓ Correct
-                                          </Button>
-                                          <Button 
-                                            size="sm" 
-                                            variant={detail.status === 'incorrect' ? 'default' : 'outline'}
-                                            className={`text-xs ${detail.status === 'incorrect' ? 'bg-red-600 hover:bg-red-700' : 'hover:bg-red-900/20 hover:text-red-300'}`}
-                                            onClick={() => setManualQuestionGradeDialog({
-                                              open: true,
-                                              examId: exam.id,
-                                              submissionId: row.id,
-                                              questionId: detail.questionId,
-                                              questionNo: detail.questionNo,
-                                              questionText: detail.questionText,
-                                              userAnswer: detail.userAnswer,
-                                              correctAnswer: detail.correctAnswer,
-                                              points: detail.points,
-                                              negativePoints: detail.negativePoints
-                                            })}
-                                          >
-                                            ✗ Incorrect
-                                          </Button>
-                                        </div>
-                                      )}
+                                      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-zinc-800">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="text-xs"
+                                          onClick={() => setManualQuestionGradeDialog({
+                                            open: true,
+                                            examId: exam.id,
+                                            submissionId: row.id,
+                                            questionId: detail.questionId,
+                                            status: detail.status,
+                                            questionNo: detail.questionNo,
+                                            questionText: detail.questionText,
+                                            userAnswer: detail.userAnswer,
+                                            correctAnswer: detail.correctAnswer,
+                                            points: detail.points,
+                                            negativePoints: detail.negativePoints
+                                          })}
+                                        >
+                                          Manual Grade
+                                        </Button>
+                                        <span className="text-[10px] text-zinc-500">Set as Correct / Incorrect / Unattempted</span>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>

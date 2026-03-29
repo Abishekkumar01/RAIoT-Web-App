@@ -114,10 +114,13 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
             const questionBreakdown = examQuestions.map((question: any, index: number) => {
                 const userAnswer = data?.answers?.[question.id];
-                const attempted = isAttemptedAnswer(userAnswer);
-                if (attempted) attemptedCount += 1;
+                const manualGrade = manualGrades?.[question.id];
 
+                let attempted = isAttemptedAnswer(userAnswer);
                 let isCorrect = false;
+                let status: 'correct' | 'incorrect' | 'unattempted' = 'unattempted';
+
+                // Apply auto-evaluation first.
                 if (attempted) {
                     if (question.type === 'mcq') {
                         isCorrect = String(userAnswer ?? '').trim() === String(question.correctAnswer ?? '').trim();
@@ -135,18 +138,31 @@ export async function GET(request: Request, { params }: { params: { id: string }
                         const matchMode: 'any' | 'all' = question.keywordMatchMode === 'all' ? 'all' : 'any';
                         isCorrect = keywords.length > 0 && evaluateKeywordAnswer(userAnswer, keywords, matchMode);
                     }
+                }
 
-                    // If a question has been manually graded, manual grade always wins.
-                    const manualGrade = manualGrades?.[question.id];
-                    if (manualGrade && typeof manualGrade.isCorrect === 'boolean') {
-                        isCorrect = manualGrade.isCorrect;
+                status = !attempted ? 'unattempted' : (isCorrect ? 'correct' : 'incorrect');
+
+                // Manual override supports three states: correct | incorrect | unattempted.
+                if (manualGrade) {
+                    if (manualGrade.status === 'correct' || manualGrade.status === 'incorrect' || manualGrade.status === 'unattempted') {
+                        status = manualGrade.status;
+                    } else if (typeof manualGrade.isCorrect === 'boolean') {
+                        // Backward compatibility with older manualGrades format.
+                        status = manualGrade.isCorrect ? 'correct' : 'incorrect';
+                    }
+
+                    if (status === 'unattempted') {
+                        attempted = false;
+                        isCorrect = false;
+                    } else {
+                        attempted = true;
+                        isCorrect = status === 'correct';
                     }
                 }
 
-                if (attempted) {
-                    if (isCorrect) correctCount += 1;
-                    else incorrectCount += 1;
-                }
+                if (attempted) attemptedCount += 1;
+                if (status === 'correct') correctCount += 1;
+                if (status === 'incorrect') incorrectCount += 1;
 
                 const correctAnswerText = question.type === 'mcq' || question.type === 'checkbox'
                     ? formatChoiceAnswer(question.correctAnswer, question.options)
@@ -163,7 +179,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
                     questionType: question.type || 'unknown',
                     attempted,
                     isCorrect,
-                    status: !attempted ? 'unattempted' : (isCorrect ? 'correct' : 'incorrect'),
+                    status,
                     userAnswer: userAnswerText,
                     correctAnswer: correctAnswerText,
                     points: Number(question.points || 0),
