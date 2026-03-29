@@ -31,6 +31,8 @@ export default function TakeTestPage() {
   const [test, setTest] = useState<ExamTest | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
+  const [viewedQuestions, setViewedQuestions] = useState<Record<string, boolean>>({});
+  const [reviewMarkedQuestions, setReviewMarkedQuestions] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null); // seconds
   const [testStarted, setTestStarted] = useState(false);
@@ -66,6 +68,8 @@ export default function TakeTestPage() {
       localStorage.removeItem(`test_start_${id}`);
       localStorage.removeItem(`test_violations_${id}`);
       localStorage.removeItem(`test_answers_${id}`);
+      localStorage.removeItem(`test_viewed_${id}`);
+      localStorage.removeItem(`test_review_${id}`);
       
       router.replace('/dashboard/tests');
     } catch (err) {
@@ -81,7 +85,30 @@ export default function TakeTestPage() {
     if (saved) {
       try { setAnswers(JSON.parse(saved)); } catch (e) {}
     }
+
+    const savedViewed = localStorage.getItem(`test_viewed_${id}`);
+    if (savedViewed) {
+      try { setViewedQuestions(JSON.parse(savedViewed)); } catch (e) {}
+    }
+
+    const savedReview = localStorage.getItem(`test_review_${id}`);
+    if (savedReview) {
+      try { setReviewMarkedQuestions(JSON.parse(savedReview)); } catch (e) {}
+    }
   }, [id]);
+
+  useEffect(() => {
+    if (!testStarted || !test?.questions?.length) return;
+    const q = test.questions[currentQuestionIndex];
+    if (!q?.id) return;
+
+    setViewedQuestions((prev) => {
+      if (prev[q.id]) return prev;
+      const updated = { ...prev, [q.id]: true };
+      localStorage.setItem(`test_viewed_${id}`, JSON.stringify(updated));
+      return updated;
+    });
+  }, [testStarted, test, currentQuestionIndex, id]);
 
   // Start countdown once test loaded and user has clicked start
   useEffect(() => {
@@ -327,6 +354,39 @@ export default function TakeTestPage() {
     });
   };
 
+  const toggleMarkForReview = (questionId: string) => {
+    setReviewMarkedQuestions((prev) => {
+      const updated = { ...prev, [questionId]: !prev[questionId] };
+      localStorage.setItem(`test_review_${id}`, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const getQuestionTileStyle = (questionId: string, index: number) => {
+    const isCurrent = currentQuestionIndex === index;
+    const isReviewed = !!reviewMarkedQuestions[questionId];
+    const isAnswered = isQuestionAnswered(questionId);
+    const isViewed = !!viewedQuestions[questionId];
+
+    let base = "h-9 px-0 border transition-colors";
+
+    if (isReviewed) {
+      base += " bg-amber-500/20 border-amber-400 text-amber-200 hover:bg-amber-500/30";
+    } else if (isAnswered) {
+      base += " bg-emerald-500/20 border-emerald-400 text-emerald-200 hover:bg-emerald-500/30";
+    } else if (isViewed) {
+      base += " bg-red-500/20 border-red-400 text-red-200 hover:bg-red-500/30";
+    } else {
+      base += " bg-transparent border-zinc-700 text-zinc-300 hover:bg-zinc-800/60";
+    }
+
+    if (isCurrent) {
+      base += " ring-2 ring-primary/70";
+    }
+
+    return base;
+  };
+
   if (loading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
 
   if (error) {
@@ -346,6 +406,7 @@ export default function TakeTestPage() {
   const totalQuestions = test.questions.length;
   const attemptedQuestions = test.questions.filter((q) => isQuestionAnswered(q.id)).length;
   const unattendedQuestions = totalQuestions - attemptedQuestions;
+  const reviewedQuestions = test.questions.filter((q) => !!reviewMarkedQuestions[q.id]).length;
   const currentQuestion = test.questions[currentQuestionIndex];
 
   return (
@@ -467,20 +528,25 @@ export default function TakeTestPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Question Navigator</CardTitle>
           <CardDescription>
-            Jump to any question. Green = answered, gray = unanswered.
-            Attempted: {attemptedQuestions}/{totalQuestions} | Unattempted: {unattendedQuestions}
+            Jump to any question.
+            Attempted: {attemptedQuestions}/{totalQuestions} | Unattempted: {unattendedQuestions} | Review: {reviewedQuestions}
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-zinc-300">
+            <span className="px-2 py-1 rounded border border-zinc-700 bg-transparent">Not Viewed</span>
+            <span className="px-2 py-1 rounded border border-red-400 bg-red-500/20 text-red-200">Viewed Unattempted</span>
+            <span className="px-2 py-1 rounded border border-emerald-400 bg-emerald-500/20 text-emerald-200">Attempted</span>
+            <span className="px-2 py-1 rounded border border-amber-400 bg-amber-500/20 text-amber-200">Marked for Review</span>
+          </div>
           <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2">
             {test.questions.map((q, index) => {
-              const answered = isQuestionAnswered(q.id);
               return (
                 <Button
                   key={`nav-${q.id}`}
                   type="button"
-                  variant={answered ? "default" : "secondary"}
-                  className="h-9 px-0"
+                  variant="outline"
+                  className={getQuestionTileStyle(q.id, index)}
                   onClick={() => jumpToQuestion(index)}
                 >
                   {index + 1}
@@ -606,9 +672,19 @@ export default function TakeTestPage() {
                     Next <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
                 </div>
-                <Button type="button" variant="ghost" onClick={() => clearAnswer(currentQuestion.id)}>
-                  <Eraser className="w-4 h-4 mr-2" /> Clear Answer
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant={reviewMarkedQuestions[currentQuestion.id] ? "secondary" : "ghost"}
+                    onClick={() => toggleMarkForReview(currentQuestion.id)}
+                    className={reviewMarkedQuestions[currentQuestion.id] ? "border border-amber-400/70 text-amber-200" : ""}
+                  >
+                    {reviewMarkedQuestions[currentQuestion.id] ? "Unmark Review" : "Mark for Review"}
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={() => clearAnswer(currentQuestion.id)}>
+                    <Eraser className="w-4 h-4 mr-2" /> Clear Answer
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

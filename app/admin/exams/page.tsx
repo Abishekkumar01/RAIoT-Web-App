@@ -782,8 +782,10 @@ export default function AdminExamsPage() {
       Member: row.userName || "Unknown User",
       Email: row.userEmail || "",
       Role: row.userRole || "",
-      Score: row.score ?? "Pending",
+      ScoreStatus: row.score === null || row.score === undefined ? "Pending Manual Review" : "Final",
+      OverallMarks: `${row.obtainedMarks ?? 0}/${row.totalMarks ?? 0}`,
       Attempted: row.attemptedCount ?? 0,
+      Unattempted: row.unattemptedCount ?? 0,
       Correct: row.correctCount ?? 0,
       Incorrect: row.incorrectCount ?? 0,
       SubmittedAt: row.submittedAt ? new Date(row.submittedAt).toLocaleString() : ""
@@ -1288,8 +1290,8 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                       <div className="col-span-2">Member</div>
                       <div className="col-span-3">Email</div>
                       <div className="col-span-2">Role</div>
-                      <div className="col-span-2">Score</div>
-                      <div className="col-span-2">Attempt/Corr/Inc</div>
+                      <div className="col-span-2">Overall Marks</div>
+                      <div className="col-span-2">Attempt Stats</div>
                       <div className="col-span-2">Submitted At</div>
                       <div className="col-span-3">Action</div>
                     </div>
@@ -1310,9 +1312,18 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                             <div className="col-span-2 truncate">{row.userName || 'Unknown User'}</div>
                             <div className="col-span-3 truncate text-zinc-400">{row.userEmail || '-'}</div>
                             <div className="col-span-2 capitalize text-zinc-400">{row.userRole || '-'}</div>
-                            <div className="col-span-2 font-semibold">{row.score === null || row.score === undefined ? 'Pending' : row.score}</div>
-                            <div className="col-span-2 text-zinc-300">
-                              {(row.attemptedCount ?? 0)}/{(row.correctCount ?? 0)}/{(row.incorrectCount ?? 0)}
+                            <div className="col-span-2">
+                              <div className="text-sm font-semibold text-zinc-100">
+                                {row.obtainedMarks ?? 0}/{row.totalMarks ?? 0}
+                              </div>
+                              <div className={`text-[11px] ${row.score === null || row.score === undefined ? 'text-amber-300' : 'text-emerald-300'}`}>
+                                {row.score === null || row.score === undefined ? 'Pending Manual Review' : 'Finalized'}
+                              </div>
+                            </div>
+                            <div className="col-span-2 flex flex-wrap items-center gap-1 text-[10px]">
+                              <span className="px-2 py-0.5 rounded border border-emerald-500/70 bg-emerald-500/15 text-emerald-300">A {row.attemptedCount ?? 0}</span>
+                              <span className="px-2 py-0.5 rounded border border-red-500/70 bg-red-500/15 text-red-300">U {row.unattemptedCount ?? 0}</span>
+                              <span className="px-2 py-0.5 rounded border border-cyan-500/70 bg-cyan-500/15 text-cyan-300">C {row.correctCount ?? 0}</span>
                             </div>
                             <div className="col-span-2 text-zinc-400">{row.submittedAt ? new Date(row.submittedAt).toLocaleString() : '-'}</div>
                             <div className="col-span-3">
@@ -1341,9 +1352,13 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                             <div className="px-3 pb-3">
                               <div className="rounded-md border border-zinc-800 bg-zinc-950/50 overflow-hidden">
                                 <div className="flex items-center justify-between px-3 py-2 text-xs text-zinc-300 border-b border-zinc-800">
-                                  <span>
-                                    Attempted: {row.attemptedCount ?? 0} | Correct: {row.correctCount ?? 0} | Incorrect: {row.incorrectCount ?? 0}
-                                  </span>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded border border-emerald-500/70 bg-emerald-500/15 text-emerald-300">Attempted: {row.attemptedCount ?? 0}</span>
+                                    <span className="px-2 py-0.5 rounded border border-red-500/70 bg-red-500/15 text-red-300">Unattempted: {row.unattemptedCount ?? 0}</span>
+                                    <span className="px-2 py-0.5 rounded border border-cyan-500/70 bg-cyan-500/15 text-cyan-300">Correct: {row.correctCount ?? 0}</span>
+                                    <span className="px-2 py-0.5 rounded border border-amber-500/70 bg-amber-500/15 text-amber-300">Incorrect: {row.incorrectCount ?? 0}</span>
+                                    <span className="px-2 py-0.5 rounded border border-violet-500/70 bg-violet-500/15 text-violet-300">Overall: {row.obtainedMarks ?? 0}/{row.totalMarks ?? 0}</span>
+                                  </div>
                                   <span className="text-zinc-400">Question-wise Responses</span>
                                 </div>
                                 <div className="max-h-[380px] overflow-auto">

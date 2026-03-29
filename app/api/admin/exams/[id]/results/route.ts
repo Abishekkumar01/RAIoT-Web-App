@@ -104,6 +104,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
         const submissions = submissionsSnapshot.docs.map(doc => {
             const data = doc.data();
             const userInfo = userMap.get(data.userId) || { name: 'Unknown User', email: '', role: 'guest' };
+            const totalQuestions = examQuestions.length;
+            const totalMarks = examQuestions.reduce((sum: number, q: any) => sum + Number(q?.points || 0), 0);
 
             let attemptedCount = 0;
             let correctCount = 0;
@@ -168,9 +170,13 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 userName: userInfo.name,
                 userEmail: userInfo.email,
                 userRole: userInfo.role,
+                totalQuestions,
+                totalMarks,
                 attemptedCount,
+                unattemptedCount: Math.max(0, totalQuestions - attemptedCount),
                 correctCount,
                 incorrectCount,
+                obtainedMarks: typeof data?.score === 'number' ? data.score : (typeof data?.autoScore === 'number' ? data.autoScore : null),
                 questionBreakdown
             };
         }).sort((a: any, b: any) => {
