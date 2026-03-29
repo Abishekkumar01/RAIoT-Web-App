@@ -26,6 +26,9 @@ export default function AdminExamsPage() {
   const [resultsLoadingByExam, setResultsLoadingByExam] = useState<Record<string, boolean>>({});
   const [resultsByExam, setResultsByExam] = useState<Record<string, any[]>>({});
   const [expandedSubmissionRows, setExpandedSubmissionRows] = useState<Record<string, boolean>>({});
+  const [questionTypeFilterBySubmission, setQuestionTypeFilterBySubmission] = useState<
+    Record<string, 'all' | 'mcq' | 'checkbox' | 'short_answer' | 'long_answer'>
+  >({});
   const [noticeDialog, setNoticeDialog] = useState<{ open: boolean; title: string; message: string }>({
     open: false,
     title: "Notice",
@@ -885,6 +888,37 @@ export default function AdminExamsPage() {
     }
   };
 
+  const recomputeSubmissionFromBreakdown = (row: any, breakdown: any[]) => {
+    let attemptedCount = 0;
+    let correctCount = 0;
+    let incorrectCount = 0;
+    let recalculatedMarks = 0;
+
+    breakdown.forEach((question: any) => {
+      const status = question?.status;
+      if (status === 'correct') {
+        attemptedCount += 1;
+        correctCount += 1;
+        recalculatedMarks += Number(question?.points || 0);
+      } else if (status === 'incorrect') {
+        attemptedCount += 1;
+        incorrectCount += 1;
+        recalculatedMarks -= Math.abs(Number(question?.negativePoints || 0));
+      }
+    });
+
+    return {
+      ...row,
+      attemptedCount,
+      unattemptedCount: Math.max(0, (row?.totalQuestions || 0) - attemptedCount),
+      correctCount,
+      incorrectCount,
+      // If final manual score is already set, keep it as source of truth.
+      obtainedMarks: typeof row?.score === 'number' ? row.score : recalculatedMarks,
+      questionBreakdown: breakdown,
+    };
+  };
+
   const markQuestionManually = async (status: 'correct' | 'incorrect' | 'unattempted') => {
     try {
       const auth = (await import("@/lib/firebase")).auth;
@@ -907,11 +941,27 @@ export default function AdminExamsPage() {
         return;
       }
 
-      // Refresh from server so manual grades and score math stay consistent.
-      const refreshedSubmissions = await fetchExamResultsData(manualQuestionGradeDialog.examId);
-      if (refreshedSubmissions) {
-        setResultsByExam((prev) => ({ ...prev, [manualQuestionGradeDialog.examId]: refreshedSubmissions }));
-      }
+      // Fast local update to avoid slow full refetch after each manual mark.
+      setResultsByExam((prev) => {
+        const examRows = prev[manualQuestionGradeDialog.examId] || [];
+        const nextRows = examRows.map((row: any) => {
+          if (row.id !== manualQuestionGradeDialog.submissionId) return row;
+
+          const nextBreakdown = (row.questionBreakdown || []).map((detail: any) => {
+            if (detail.questionId !== manualQuestionGradeDialog.questionId) return detail;
+            return {
+              ...detail,
+              status,
+              attempted: status !== 'unattempted',
+              isCorrect: status === 'correct',
+            };
+          });
+
+          return recomputeSubmissionFromBreakdown(row, nextBreakdown);
+        });
+
+        return { ...prev, [manualQuestionGradeDialog.examId]: nextRows };
+      });
       
       setManualQuestionGradeDialog({ 
         open: false, 
@@ -1437,6 +1487,11 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                     {!resultsLoadingByExam[exam.id!] && resultsByExam[exam.id!].map((row: any) => {
                       const expandKey = `${exam.id!}:${row.id}`;
                       const isExpanded = !!expandedSubmissionRows[expandKey];
+                      const questionTypeFilter = questionTypeFilterBySubmission[expandKey] || 'all';
+                      const filteredQuestionBreakdown = (row.questionBreakdown || []).filter((detail: any) => {
+                        if (questionTypeFilter === 'all') return true;
+                        return detail.questionType === questionTypeFilter;
+                      });
                       return (
                         <div key={row.id} className="border-t border-zinc-800">
                           <div className="grid grid-cols-16 gap-2 p-3 text-sm items-center">
@@ -1490,14 +1545,36 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                     <span className="px-2 py-0.5 rounded border border-amber-500/70 bg-amber-500/15 text-amber-300">Incorrect: {row.incorrectCount ?? 0}</span>
                                     <span className="px-2 py-0.5 rounded border border-violet-500/70 bg-violet-500/15 text-violet-300">Overall: {row.obtainedMarks ?? 0}/{row.totalMarks ?? 0}</span>
                                   </div>
-                                  <span className="text-zinc-400">Question-wise Responses</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-zinc-400">Question-wise Responses</span>
+                                    <Select
+                                      value={questionTypeFilter}
+                                      onValueChange={(value: 'all' | 'mcq' | 'checkbox' | 'short_answer' | 'long_answer') =>
+                                        setQuestionTypeFilterBySubmission((prev) => ({ ...prev, [expandKey]: value }))
+                                      }
+                                    >
+                                      <SelectTrigger className="h-7 w-[180px] text-[11px]">
+                                        <SelectValue placeholder="Filter by type" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="all">All Types</SelectItem>
+                                        <SelectItem value="mcq">MCQ</SelectItem>
+                                        <SelectItem value="checkbox">Checkbox</SelectItem>
+                                        <SelectItem value="short_answer">Short Answer</SelectItem>
+                                        <SelectItem value="long_answer">Long Answer</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
                                 </div>
                                 <div className="max-h-[380px] overflow-auto">
-                                  {(row.questionBreakdown || []).map((detail: any) => (
+                                  {filteredQuestionBreakdown.length === 0 && (
+                                    <div className="p-4 text-xs text-zinc-500">No questions found for selected type.</div>
+                                  )}
+                                  {filteredQuestionBreakdown.map((detail: any) => (
                                     <div key={`${row.id}-${detail.questionId}`} className="border-b border-zinc-800/70 p-3 text-xs space-y-1">
                                       <div className="flex items-center justify-between gap-2">
                                         <p className="text-zinc-100 font-medium">Q{detail.questionNo}. {detail.questionText}</p>
-                                        <span className={`uppercase text-[10px] px-2 py-0.5 rounded ${detail.status === 'correct' ? 'bg-emerald-900/40 text-emerald-300' : detail.status === 'incorrect' ? 'bg-red-900/40 text-red-300' : 'bg-zinc-800 text-zinc-300'}`}>
+                                        <span className={`uppercase font-semibold tracking-wide text-[10px] px-2 py-0.5 rounded border ${detail.status === 'correct' ? 'bg-emerald-900/40 text-emerald-300 border-emerald-700/70' : detail.status === 'incorrect' ? 'bg-red-900/40 text-red-300 border-red-700/70' : 'bg-zinc-800 text-zinc-300 border-zinc-700'}`}>
                                           {detail.status}
                                         </span>
                                       </div>
@@ -1530,7 +1607,9 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                         >
                                           Manual Grade
                                         </Button>
-                                        <span className="text-[10px] text-zinc-500">Set as Correct / Incorrect / Unattempted</span>
+                                        <span className={`text-[10px] font-medium ${detail.status === 'correct' ? 'text-emerald-300' : detail.status === 'incorrect' ? 'text-red-300' : 'text-zinc-400'}`}>
+                                          Current: {String(detail.status || 'unattempted').toUpperCase()}
+                                        </span>
                                       </div>
                                     </div>
                                   ))}
