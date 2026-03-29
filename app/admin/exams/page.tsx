@@ -13,6 +13,8 @@ import { Loader2, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp, FileSprea
 import * as XLSX from "xlsx";
 import { ExamTest, KeywordMatchMode, Question, QuestionType } from "@/types/examination";
 
+type TargetableRole = 'member' | 'junior_developer' | 'senior_developer' | 'trainee';
+
 export default function AdminExamsPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -25,6 +27,7 @@ export default function AdminExamsPage() {
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [resultsLoadingByExam, setResultsLoadingByExam] = useState<Record<string, boolean>>({});
   const [resultsByExam, setResultsByExam] = useState<Record<string, any[]>>({});
+  const [roleFilterByExam, setRoleFilterByExam] = useState<Record<string, 'both' | 'member' | 'trainee'>>({});
   const [expandedSubmissionRows, setExpandedSubmissionRows] = useState<Record<string, boolean>>({});
   const [questionTypeFilterBySubmission, setQuestionTypeFilterBySubmission] = useState<
     Record<string, 'all' | 'mcq' | 'checkbox' | 'short_answer' | 'long_answer'>
@@ -83,6 +86,9 @@ export default function AdminExamsPage() {
   const [examStartTime, setExamStartTime] = useState("");
   const [examEndTime, setExamEndTime] = useState("");
   const [duration, setDuration] = useState("60");
+  const [publishTarget, setPublishTarget] = useState<'all' | 'member' | 'trainee' | 'selected'>('all');
+  const [publishToUserIds, setPublishToUserIds] = useState<string[]>([]);
+  const [eligibleUsers, setEligibleUsers] = useState<Array<{ uid: string; name: string; email: string; role: string }>>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [keywordDraftByQuestion, setKeywordDraftByQuestion] = useState<Record<string, string>>({});
   const [importingQuestions, setImportingQuestions] = useState(false);
@@ -142,6 +148,8 @@ export default function AdminExamsPage() {
     setExamStartTime("");
     setExamEndTime("");
     setDuration("60");
+    setPublishTarget('all');
+    setPublishToUserIds([]);
     setQuestions([]);
     setKeywordDraftByQuestion({});
     setIsEditing(false);
@@ -163,6 +171,8 @@ export default function AdminExamsPage() {
     setExamStartTime(toDateTimeLocal(exam.examStartTime));
     setExamEndTime(toDateTimeLocal(exam.examEndTime));
     setDuration(String(exam.durationMinutes || 60));
+    setPublishTarget(exam.publishTarget || 'all');
+    setPublishToUserIds(Array.isArray(exam.publishToUserIds) ? exam.publishToUserIds : []);
     setQuestions(
       (exam.questions || []).map((q) => ({
         ...q,
@@ -185,6 +195,49 @@ export default function AdminExamsPage() {
       }))
     );
     setIsCreating(true);
+  };
+
+  const fetchEligibleUsers = async () => {
+    try {
+      const { db } = await import("@/lib/firebase");
+      const { collection, getDocs } = await import("firebase/firestore");
+      const snapshot = await getDocs(collection(db, "users"));
+      const allowedRoles = new Set<TargetableRole>(['member', 'junior_developer', 'senior_developer', 'trainee']);
+
+      const users = snapshot.docs
+        .map((doc) => {
+          const data: any = doc.data() || {};
+          const role = String(data.role || '').toLowerCase().trim();
+          return {
+            uid: doc.id,
+            name: data.displayName || data.name || data.profileData?.name || 'Unknown User',
+            email: data.email || '',
+            role,
+          };
+        })
+        .filter((u) => allowedRoles.has(u.role as TargetableRole))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      setEligibleUsers(users);
+    } catch (err) {
+      console.error("Failed to fetch target users", err);
+    }
+  };
+
+  useEffect(() => {
+    if (isCreating && eligibleUsers.length === 0) {
+      fetchEligibleUsers();
+    }
+  }, [isCreating, eligibleUsers.length]);
+
+  const togglePublishUser = (uid: string, checked: boolean) => {
+    setPublishToUserIds((prev) => {
+      if (checked) {
+        if (prev.includes(uid)) return prev;
+        return [...prev, uid];
+      }
+      return prev.filter((id) => id !== uid);
+    });
   };
 
   const fetchExams = async () => {
@@ -649,6 +702,11 @@ export default function AdminExamsPage() {
         return;
       }
 
+      if (publishTarget === 'selected' && publishToUserIds.length === 0) {
+        showNotice("Please select at least one member/trainee for selected publish mode.", 'Audience Required');
+        return;
+      }
+
       const preparedQuestions = questions.map((q) => ({
         ...q,
         imageUrl: q.imageUrl?.trim() || undefined,
@@ -665,6 +723,8 @@ export default function AdminExamsPage() {
         endTime: enDate,
         examStartTime: exStDate,
         examEndTime: exEnDate,
+        publishTarget,
+        publishToUserIds: publishTarget === 'selected' ? publishToUserIds : [],
         durationMinutes: parseInt(duration),
         status: "upcoming",
         questions: preparedQuestions
@@ -1168,6 +1228,48 @@ export default function AdminExamsPage() {
                 <Input type="datetime-local" value={examEndTime} onChange={e => setExamEndTime(e.target.value)} />
               </div>
             </div>
+            <div>
+              <label className="text-sm font-medium">Publish Test For</label>
+              <Select value={publishTarget} onValueChange={(val: 'all' | 'member' | 'trainee' | 'selected') => setPublishTarget(val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select audience" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">ALL (Default)</SelectItem>
+                  <SelectItem value="member">Members Only</SelectItem>
+                  <SelectItem value="trainee">Trainees Only</SelectItem>
+                  <SelectItem value="selected">Selected Members/Trainees</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Controls who can view/register/attempt this test.
+              </p>
+            </div>
+
+            {publishTarget === 'selected' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Select Specific Users ({publishToUserIds.length} selected)</label>
+                <div className="max-h-48 overflow-y-auto rounded-md border border-zinc-800 p-2 space-y-2">
+                  {eligibleUsers.length === 0 ? (
+                    <p className="text-xs text-zinc-400 px-1 py-2">No eligible users found.</p>
+                  ) : (
+                    eligibleUsers.map((u) => (
+                      <label key={u.uid} className="flex items-center justify-between gap-3 rounded px-2 py-1 hover:bg-zinc-800/50">
+                        <div className="min-w-0">
+                          <p className="text-sm text-zinc-100 truncate">{u.name}</p>
+                          <p className="text-xs text-zinc-400 truncate">{u.email || u.uid} • {u.role}</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={publishToUserIds.includes(u.uid)}
+                          onChange={(e) => togglePublishUser(u.uid, e.target.checked)}
+                        />
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -1466,6 +1568,23 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
               </CardContent>
               {isSuperAdmin && (resultsLoadingByExam[exam.id!] || resultsByExam[exam.id!]) && (
                 <CardContent className="pt-0 pb-4">
+                  <div className="flex justify-end mb-2">
+                    <Select
+                      value={roleFilterByExam[exam.id!] || 'both'}
+                      onValueChange={(value: 'both' | 'member' | 'trainee') =>
+                        setRoleFilterByExam((prev) => ({ ...prev, [exam.id!]: value }))
+                      }
+                    >
+                      <SelectTrigger className="h-8 w-[190px] text-xs">
+                        <SelectValue placeholder="Filter by role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="both">Both (Members + Trainees)</SelectItem>
+                        <SelectItem value="member">Members Only</SelectItem>
+                        <SelectItem value="trainee">Trainees Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="rounded-md border border-zinc-800 overflow-hidden">
                     <div className="grid grid-cols-16 gap-2 p-3 bg-zinc-900 text-xs uppercase tracking-wide text-zinc-400">
                       <div className="col-span-2">Member</div>
@@ -1481,10 +1600,31 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                         <Loader2 className="w-4 h-4 animate-spin" /> Loading results...
                       </div>
                     )}
-                    {!resultsLoadingByExam[exam.id!] && resultsByExam[exam.id!].length === 0 && (
+                    {!resultsLoadingByExam[exam.id!] && (() => {
+                      const selectedRoleFilter = roleFilterByExam[exam.id!] || 'both';
+                      const filteredRows = (resultsByExam[exam.id!] || []).filter((row: any) => {
+                        const role = String(row.userRole || '').toLowerCase();
+                        const isMember = ['member', 'junior_developer', 'senior_developer'].includes(role);
+                        const isTrainee = role === 'trainee';
+                        if (selectedRoleFilter === 'member') return isMember;
+                        if (selectedRoleFilter === 'trainee') return isTrainee;
+                        return isMember || isTrainee;
+                      });
+                      return filteredRows.length === 0;
+                    })() && (
                       <div className="p-4 text-sm text-muted-foreground">No member submissions yet.</div>
                     )}
-                    {!resultsLoadingByExam[exam.id!] && resultsByExam[exam.id!].map((row: any) => {
+                    {!resultsLoadingByExam[exam.id!] && (resultsByExam[exam.id!] || [])
+                      .filter((row: any) => {
+                        const selectedRoleFilter = roleFilterByExam[exam.id!] || 'both';
+                        const role = String(row.userRole || '').toLowerCase();
+                        const isMember = ['member', 'junior_developer', 'senior_developer'].includes(role);
+                        const isTrainee = role === 'trainee';
+                        if (selectedRoleFilter === 'member') return isMember;
+                        if (selectedRoleFilter === 'trainee') return isTrainee;
+                        return isMember || isTrainee;
+                      })
+                      .map((row: any) => {
                       const expandKey = `${exam.id!}:${row.id}`;
                       const isExpanded = !!expandedSubmissionRows[expandKey];
                       const questionTypeFilter = questionTypeFilterBySubmission[expandKey] || 'all';
@@ -1501,9 +1641,6 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                             <div className="col-span-2">
                               <div className="text-sm font-semibold text-zinc-100">
                                 {row.obtainedMarks ?? 0}/{row.totalMarks ?? 0}
-                              </div>
-                              <div className={`text-[11px] ${row.score === null || row.score === undefined ? 'text-amber-300' : 'text-emerald-300'}`}>
-                                {row.score === null || row.score === undefined ? 'Pending Manual Review' : 'Finalized'}
                               </div>
                             </div>
                             <div className="col-span-2 flex flex-wrap items-center gap-1 text-[10px]">

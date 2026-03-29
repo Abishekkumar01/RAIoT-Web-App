@@ -2,6 +2,23 @@ import { NextResponse } from 'next/server';
 import { getAdminDb, verifyUser } from '@/lib/firebase-admin';
 import { ExamTest } from '@/types/examination';
 
+const isExamVisibleToUser = (
+    examData: any,
+    uid: string,
+    userRole: string
+): boolean => {
+    const target = String(examData?.publishTarget || 'all').toLowerCase();
+    const selectedUsers = Array.isArray(examData?.publishToUserIds) ? examData.publishToUserIds.map((v: any) => String(v)) : [];
+    const normalizedRole = String(userRole || '').toLowerCase().trim();
+    const isMemberRole = ['member', 'junior_developer', 'senior_developer'].includes(normalizedRole);
+
+    if (target === 'all') return true;
+    if (target === 'trainee') return normalizedRole === 'trainee';
+    if (target === 'member') return isMemberRole;
+    if (target === 'selected') return selectedUsers.includes(uid);
+    return true;
+};
+
 function computeStatus(data: any): 'upcoming' | 'live' | 'previous' {
     const now = new Date();
     const examStart = data.examStartTime ? new Date(data.examStartTime) : null;
@@ -25,12 +42,18 @@ export async function GET(request: Request) {
         const adminDb = getAdminDb();
         if (!adminDb) throw new Error('Database not initialized');
 
+        const userDoc = await adminDb.collection('users').doc(authUser.uid).get();
+        const userRole = String(userDoc.data()?.role || '').toLowerCase();
+
         // Fetch all exams
         const snapshot = await adminDb.collection('exams').orderBy('createdAt', 'desc').get();
         const exams: Partial<ExamTest>[] = [];
         const publishedResultTestIds = new Set<string>();
         snapshot.forEach(doc => {
             const data = doc.data();
+            if (!isExamVisibleToUser(data, authUser.uid, userRole)) {
+                return;
+            }
             // Remove questions so users cannot see them until test starts
             delete data.questions;
             // Compute real-time status from examStartTime / examEndTime

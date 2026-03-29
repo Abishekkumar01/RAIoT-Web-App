@@ -1,6 +1,23 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb, verifyUser } from '@/lib/firebase-admin';
 
+const isExamVisibleToUser = (
+    examData: any,
+    uid: string,
+    userRole: string
+): boolean => {
+    const target = String(examData?.publishTarget || 'all').toLowerCase();
+    const selectedUsers = Array.isArray(examData?.publishToUserIds) ? examData.publishToUserIds.map((v: any) => String(v)) : [];
+    const normalizedRole = String(userRole || '').toLowerCase().trim();
+    const isMemberRole = ['member', 'junior_developer', 'senior_developer'].includes(normalizedRole);
+
+    if (target === 'all') return true;
+    if (target === 'trainee') return normalizedRole === 'trainee';
+    if (target === 'member') return isMemberRole;
+    if (target === 'selected') return selectedUsers.includes(uid);
+    return true;
+};
+
 const normalizeIndexAnswer = (value: unknown): string[] => {
     if (Array.isArray(value)) {
         return value
@@ -60,10 +77,11 @@ export async function POST(request: Request) {
 
         const superAdminEmails = new Set(['chouhanchetan066@gmail.com', 'amanchoudhary.1502@gmail.com']);
         let isSuperAdmin = !!authUser.email && superAdminEmails.has(authUser.email.toLowerCase());
+        let userRole = '';
         if (!isSuperAdmin) {
             const userDoc = await adminDb.collection('users').doc(authUser.uid).get();
-            const role = String(userDoc.data()?.role || '').toLowerCase();
-            isSuperAdmin = role === 'superadmin';
+            userRole = String(userDoc.data()?.role || '').toLowerCase();
+            isSuperAdmin = userRole === 'superadmin';
         }
 
         // Verify test is live
@@ -73,6 +91,9 @@ export async function POST(request: Request) {
         }
 
         const testData = testDoc.data();
+        if (!isSuperAdmin && !isExamVisibleToUser(testData, authUser.uid, userRole)) {
+            return NextResponse.json({ error: 'This test is not published for your account' }, { status: 403 });
+        }
 
         // Compute real-time status from examStartTime/examEndTime
         const now = new Date();

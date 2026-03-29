@@ -18,6 +18,7 @@ export interface Question {
 }
 
 export type TestStatus = 'upcoming' | 'live' | 'previous';
+export type ExamPublishTarget = 'all' | 'member' | 'trainee' | 'selected';
 
 export interface ExamTest {
   id?: string;
@@ -29,6 +30,8 @@ export interface ExamTest {
   endTime: string;      // Registration window CLOSE (ISO String)
   examStartTime: string; // Test goes LIVE at this time (ISO String)
   examEndTime: string;   // Test closes for submissions at this time (ISO String)
+  publishTarget?: ExamPublishTarget;
+  publishToUserIds?: string[];
   durationMinutes: number;
   createdBy: string;
   createdAt: string;

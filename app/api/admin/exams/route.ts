@@ -46,6 +46,8 @@ export async function POST(request: Request) {
             endTime: body.endTime,
             examStartTime: body.examStartTime,
             examEndTime: body.examEndTime,
+            publishTarget: body.publishTarget || 'all',
+            publishToUserIds: Array.isArray(body.publishToUserIds) ? body.publishToUserIds : [],
             durationMinutes: body.durationMinutes,
             createdBy: authUser.uid,
             createdAt: new Date().toISOString(),
