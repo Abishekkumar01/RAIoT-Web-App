@@ -9,7 +9,7 @@ const isExamVisibleToUser = (
     const target = String(examData?.publishTarget || 'all').toLowerCase();
     const selectedUsers = Array.isArray(examData?.publishToUserIds) ? examData.publishToUserIds.map((v: any) => String(v)) : [];
     const normalizedRole = String(userRole || '').toLowerCase().trim();
-    const isMemberRole = ['member', 'junior_developer', 'senior_developer'].includes(normalizedRole);
+    const isMemberRole = normalizedRole !== '' && !['trainee', 'guest', 'public'].includes(normalizedRole);
 
     if (target === 'all') return true;
     if (target === 'trainee') return normalizedRole === 'trainee';

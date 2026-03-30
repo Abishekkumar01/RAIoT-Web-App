@@ -110,6 +110,7 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     { href: "/", label: "Home", icon: Home },
     { href: "/operations", label: "Operations Dashboard", icon: BarChart3 },
     { href: "/operations/my-events", label: "Events & Teams", icon: Calendar },
+    { href: "/dashboard/tests", label: "Tests", icon: ClipboardList },
     ...(isInventoryUser ? [{ href: "/dashboard/inventory", label: "Hardware Inventory", icon: Box }] : []),
     ...(isInventoryAdmin ? [{ href: "/admin/inventory", label: "Manage Inventory", icon: Box }] : []),
     { href: "/dashboard", label: "Club Dashboard", icon: Home },
