@@ -13,8 +13,6 @@ import { Loader2, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp, FileSprea
 import * as XLSX from "xlsx";
 import { ExamTest, KeywordMatchMode, Question, QuestionType } from "@/types/examination";
 
-type TargetableRole = 'member' | 'junior_developer' | 'senior_developer' | 'trainee';
-
 export default function AdminExamsPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -202,7 +200,6 @@ export default function AdminExamsPage() {
       const { db } = await import("@/lib/firebase");
       const { collection, getDocs } = await import("firebase/firestore");
       const snapshot = await getDocs(collection(db, "users"));
-      const allowedRoles = new Set<TargetableRole>(['member', 'junior_developer', 'senior_developer', 'trainee']);
 
       const users = snapshot.docs
         .map((doc) => {
@@ -215,7 +212,6 @@ export default function AdminExamsPage() {
             role,
           };
         })
-        .filter((u) => allowedRoles.has(u.role as TargetableRole))
         .sort((a, b) => a.name.localeCompare(b.name));
 
       setEligibleUsers(users);
