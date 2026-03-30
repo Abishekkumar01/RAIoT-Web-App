@@ -74,7 +74,10 @@ export default function AdminUsersPage() {
             year: data.profileData?.year || 'N/A',
             branch: data.profileData?.branch || data.profileData?.department || 'N/A',
             rollNumber: data.profileData?.rollNumber || data.uniqueId || 'N/A',
-            phone: data.profileData?.phone || 'N/A'
+            phone: data.profileData?.phone || 'N/A',
+            // Keep privilege flags in modal-bound state so checkboxes reflect saved values.
+            isInventoryManager: data.profileData?.isInventoryManager === true || data.isInventoryManager === true,
+            hasExaminationAccess: data.profileData?.hasExaminationAccess === true || data.hasExaminationAccess === true,
           }
         }
       })
