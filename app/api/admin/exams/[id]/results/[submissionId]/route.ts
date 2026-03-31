@@ -120,8 +120,16 @@ export async function DELETE(
             return NextResponse.json({ error: 'Submission does not belong to this test' }, { status: 400 });
         }
 
+        await adminDb.collection('deletedExamSubmissions').add({
+            testId,
+            originalSubmissionId: submissionId,
+            deletedAt: new Date().toISOString(),
+            deletedBy: authUser.uid,
+            submissionData,
+        });
+
         await submissionRef.delete();
-        return NextResponse.json({ success: true, message: 'Submission deleted successfully' });
+        return NextResponse.json({ success: true, message: 'Submission deleted successfully (moved to recycle bin)' });
     } catch (error: any) {
         console.error('Error deleting submission:', error);
         return NextResponse.json({ error: 'Failed to delete submission' }, { status: 500 });

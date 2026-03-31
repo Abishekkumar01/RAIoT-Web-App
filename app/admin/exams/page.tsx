@@ -25,6 +25,9 @@ export default function AdminExamsPage() {
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [resultsLoadingByExam, setResultsLoadingByExam] = useState<Record<string, boolean>>({});
   const [resultsByExam, setResultsByExam] = useState<Record<string, any[]>>({});
+  const [deletedResultsLoadingByExam, setDeletedResultsLoadingByExam] = useState<Record<string, boolean>>({});
+  const [deletedResultsByExam, setDeletedResultsByExam] = useState<Record<string, any[]>>({});
+  const [excelRestoreLoadingByExam, setExcelRestoreLoadingByExam] = useState<Record<string, boolean>>({});
   const [roleFilterByExam, setRoleFilterByExam] = useState<Record<string, 'both' | 'member' | 'trainee'>>({});
   const [expandedSubmissionRows, setExpandedSubmissionRows] = useState<Record<string, boolean>>({});
   const [questionTypeFilterBySubmission, setQuestionTypeFilterBySubmission] = useState<
@@ -77,6 +80,7 @@ export default function AdminExamsPage() {
   const [mySubmissions, setMySubmissions] = useState<any[]>([]);
   const [takeActionLoadingByExam, setTakeActionLoadingByExam] = useState<Record<string, boolean>>({});
   const confirmActionRef = useRef<null | (() => Promise<void> | void)>(null);
+  const restoreExcelInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   
   // Form state
   const [title, setTitle] = useState("");
@@ -859,6 +863,141 @@ export default function AdminExamsPage() {
     setExpandedSubmissionRows((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const fetchDeletedSubmissions = async (examId: string): Promise<any[] | null> => {
+    try {
+      const auth = (await import("@/lib/firebase")).auth;
+      const token = await auth.currentUser?.getIdToken(true);
+      const res = await fetch(`/api/admin/exams/${examId}/results/deleted`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showNotice(data.error || "Failed to fetch deleted submissions", 'Fetch Failed');
+        return null;
+      }
+      return data.deletedSubmissions || [];
+    } catch (err) {
+      console.error(err);
+      showNotice("Failed to fetch deleted submissions", 'Fetch Failed');
+      return null;
+    }
+  };
+
+  const toggleDeletedSubmissions = async (examId: string) => {
+    if (deletedResultsByExam[examId]) {
+      setDeletedResultsByExam((prev) => {
+        const next = { ...prev };
+        delete next[examId];
+        return next;
+      });
+      return;
+    }
+
+    setDeletedResultsLoadingByExam((prev) => ({ ...prev, [examId]: true }));
+    try {
+      const deleted = await fetchDeletedSubmissions(examId);
+      if (deleted) {
+        setDeletedResultsByExam((prev) => ({ ...prev, [examId]: deleted }));
+      }
+    } finally {
+      setDeletedResultsLoadingByExam((prev) => ({ ...prev, [examId]: false }));
+    }
+  };
+
+  const restoreDeletedSubmission = async (examId: string, deletedId: string) => {
+    try {
+      const auth = (await import("@/lib/firebase")).auth;
+      const token = await auth.currentUser?.getIdToken(true);
+      const res = await fetch(`/api/admin/exams/${examId}/results/deleted/${deletedId}/restore`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showNotice(data.error || 'Failed to restore submission', 'Restore Failed');
+        return;
+      }
+
+      showNotice('Submission restored successfully.', 'Restored');
+      const [activeRows, deletedRows] = await Promise.all([
+        fetchExamResultsData(examId),
+        fetchDeletedSubmissions(examId),
+      ]);
+      if (activeRows) {
+        setResultsByExam((prev) => ({ ...prev, [examId]: activeRows }));
+      }
+      if (deletedRows) {
+        setDeletedResultsByExam((prev) => ({ ...prev, [examId]: deletedRows }));
+      }
+    } catch (err) {
+      console.error(err);
+      showNotice('Failed to restore submission', 'Restore Failed');
+    }
+  };
+
+  const handleRestoreFromExcelFile = async (examId: string, file: File) => {
+    setExcelRestoreLoadingByExam((prev) => ({ ...prev, [examId]: true }));
+    try {
+      const auth = (await import("@/lib/firebase")).auth;
+      const token = await auth.currentUser?.getIdToken(true);
+
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
+      const summarySheet = workbook.Sheets['Summary'];
+      const breakdownSheet = workbook.Sheets['Question Breakdown'];
+      if (!summarySheet || !breakdownSheet) {
+        showNotice('Excel must contain Summary and Question Breakdown sheets.', 'Invalid File');
+        return;
+      }
+
+      const summaryRows = XLSX.utils.sheet_to_json<any>(summarySheet, { defval: '' });
+      const breakdownRows = XLSX.utils.sheet_to_json<any>(breakdownSheet, { defval: '' });
+
+      if (summaryRows.length === 0) {
+        showNotice('Summary sheet has no rows.', 'Invalid Data');
+        return;
+      }
+      if (breakdownRows.length === 0) {
+        showNotice('Question Breakdown sheet has no rows.', 'Invalid Data');
+        return;
+      }
+
+      const res = await fetch(`/api/admin/exams/${examId}/results/restore-from-export`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          summaryRows,
+          breakdownRows,
+          restoreMissingOnly: true,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        showNotice(data.error || 'Failed to restore from Excel', 'Restore Failed');
+        return;
+      }
+
+      showNotice(
+        `Excel merge complete. Restored: ${data.createdCount || 0}, Skipped existing: ${data.skippedExistingCount || 0}, Skipped no user: ${data.skippedNotFoundCount || 0}, Skipped invalid: ${data.skippedInvalidCount || 0}.`,
+        'Restore Complete'
+      );
+      const activeRows = await fetchExamResultsData(examId);
+      if (activeRows) {
+        setResultsByExam((prev) => ({ ...prev, [examId]: activeRows }));
+      }
+    } catch (err) {
+      console.error(err);
+      showNotice('Failed to restore from Excel file', 'Restore Failed');
+    } finally {
+      setExcelRestoreLoadingByExam((prev) => ({ ...prev, [examId]: false }));
+    }
+  };
+
+  const openRestoreFromExcelPicker = (examId: string) => {
+    restoreExcelInputRefs.current[examId]?.click();
+  };
+
   const exportExamResultsToExcel = async (exam: ExamTest) => {
     const examId = exam.id;
     if (!examId) return;
@@ -1623,6 +1762,39 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                     </Button>
                   )}
                   {isSuperAdmin && (
+                    <Button variant="outline" onClick={() => toggleDeletedSubmissions(exam.id!)}>
+                      {deletedResultsByExam[exam.id!] ? 'Hide Deleted Data' : 'View Deleted Data'}
+                    </Button>
+                  )}
+                  {isSuperAdmin && (
+                    <>
+                      <input
+                        type="file"
+                        accept=".xlsx"
+                        className="hidden"
+                        ref={(node) => {
+                          restoreExcelInputRefs.current[exam.id!] = node;
+                        }}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          await handleRestoreFromExcelFile(exam.id!, file);
+                          e.currentTarget.value = '';
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => openRestoreFromExcelPicker(exam.id!)}
+                        disabled={!!excelRestoreLoadingByExam[exam.id!]}
+                      >
+                        {excelRestoreLoadingByExam[exam.id!] ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : null}
+                        Recover Missing (Excel)
+                      </Button>
+                    </>
+                  )}
+                  {isSuperAdmin && (
                     <Button variant="outline" onClick={() => exportExamResultsToExcel(exam)}>
                       <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
                     </Button>
@@ -1825,6 +1997,35 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                       );
                     })}
                   </div>
+
+                  {(deletedResultsLoadingByExam[exam.id!] || deletedResultsByExam[exam.id!]) && (
+                    <div className="rounded-md border border-zinc-800 overflow-hidden mt-3">
+                      <div className="px-3 py-2 bg-zinc-900 text-xs uppercase tracking-wide text-zinc-400">
+                        Deleted Submissions (Recycle Bin)
+                      </div>
+                      {deletedResultsLoadingByExam[exam.id!] && (
+                        <div className="p-4 text-sm text-muted-foreground flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" /> Loading deleted submissions...
+                        </div>
+                      )}
+                      {!deletedResultsLoadingByExam[exam.id!] && (deletedResultsByExam[exam.id!] || []).length === 0 && (
+                        <div className="p-4 text-sm text-muted-foreground">No deleted submissions found.</div>
+                      )}
+                      {!deletedResultsLoadingByExam[exam.id!] && (deletedResultsByExam[exam.id!] || []).map((row: any) => (
+                        <div key={row.id} className="grid grid-cols-12 gap-2 p-3 text-sm items-center border-t border-zinc-800">
+                          <div className="col-span-3 truncate">{row.userName || 'Unknown User'}</div>
+                          <div className="col-span-3 truncate text-zinc-400">{row.userEmail || '-'}</div>
+                          <div className="col-span-2 text-zinc-400 capitalize">{row.userRole || '-'}</div>
+                          <div className="col-span-2 text-zinc-400">Deleted: {row.deletedAt ? new Date(row.deletedAt).toLocaleString() : '-'}</div>
+                          <div className="col-span-2 flex justify-end">
+                            <Button size="sm" variant="outline" onClick={() => restoreDeletedSubmission(exam.id!, row.id)}>
+                              Restore
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               )}
             </Card>
