@@ -58,6 +58,38 @@ const evaluateKeywordAnswer = (
     return expected.some((kw) => answer.includes(kw));
 };
 
+const computeCheckboxMarks = (
+    selectedAnswer: unknown,
+    correctAnswer: unknown,
+    points: number,
+    negativePoints: number
+): number => {
+    const selectedIndexes = normalizeIndexAnswer(selectedAnswer);
+    if (selectedIndexes.length === 0) return 0;
+
+    const correctIndexes = normalizeIndexAnswer(correctAnswer);
+    if (correctIndexes.length === 0) return 0;
+
+    const correctSet = new Set(correctIndexes);
+    const selectedSet = new Set(selectedIndexes);
+
+    let selectedCorrectCount = 0;
+    let selectedWrongCount = 0;
+
+    selectedSet.forEach((idx) => {
+        if (correctSet.has(idx)) {
+            selectedCorrectCount += 1;
+        } else {
+            selectedWrongCount += 1;
+        }
+    });
+
+    const divisor = correctIndexes.length;
+    const positive = (selectedCorrectCount / divisor) * Number(points || 0);
+    const negative = (selectedWrongCount / divisor) * Math.abs(Number(negativePoints || 0));
+    return positive - negative;
+};
+
 export async function POST(request: Request) {
     try {
         const authUser = await verifyUser(request);
@@ -152,20 +184,7 @@ export async function POST(request: Request) {
             }
 
             if (q.type === 'checkbox') {
-                const selectedIndexes = normalizeIndexAnswer(userAnswer);
-                const correctIndexes = normalizeIndexAnswer(q.correctAnswer);
-                const isExactMatch =
-                    selectedIndexes.length > 0 &&
-                    selectedIndexes.length === correctIndexes.length &&
-                    selectedIndexes.every((value, idx) => value === correctIndexes[idx]);
-
-                if (isExactMatch) {
-                    score += q.points || 0;
-                } else {
-                    // Award marks only on exact option set match; otherwise apply negative marks.
-                    // Use Math.abs to ensure negativePoints is always positive (guards against -1 being stored)
-                    score -= Math.abs(q.negativePoints || 0);
-                }
+                score += computeCheckboxMarks(userAnswer, q.correctAnswer, Number(q.points || 0), Number(q.negativePoints || 0));
                 continue;
             }
 

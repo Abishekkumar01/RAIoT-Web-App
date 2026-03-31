@@ -58,6 +58,38 @@ const formatChoiceAnswer = (value: unknown, options?: string[]): string => {
         .join(' | ');
 };
 
+const computeCheckboxMarks = (
+    selectedAnswer: unknown,
+    correctAnswer: unknown,
+    points: number,
+    negativePoints: number
+): number => {
+    const selectedIndexes = normalizeIndexAnswer(selectedAnswer);
+    if (selectedIndexes.length === 0) return 0;
+
+    const correctIndexes = normalizeIndexAnswer(correctAnswer);
+    if (correctIndexes.length === 0) return 0;
+
+    const correctSet = new Set(correctIndexes);
+    const selectedSet = new Set(selectedIndexes);
+
+    let selectedCorrectCount = 0;
+    let selectedWrongCount = 0;
+
+    selectedSet.forEach((idx) => {
+        if (correctSet.has(idx)) {
+            selectedCorrectCount += 1;
+        } else {
+            selectedWrongCount += 1;
+        }
+    });
+
+    const divisor = correctIndexes.length;
+    const positive = (selectedCorrectCount / divisor) * Number(points || 0);
+    const negative = (selectedWrongCount / divisor) * Math.abs(Number(negativePoints || 0));
+    return positive - negative;
+};
+
 export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
         const authUser = await verifySuperAdmin(request);
@@ -119,11 +151,15 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 let attempted = isAttemptedAnswer(userAnswer);
                 let isCorrect = false;
                 let status: 'correct' | 'incorrect' | 'unattempted' = 'unattempted';
+                let obtainedMarks = 0;
 
                 // Apply auto-evaluation first.
                 if (attempted) {
                     if (question.type === 'mcq') {
                         isCorrect = String(userAnswer ?? '').trim() === String(question.correctAnswer ?? '').trim();
+                        obtainedMarks = isCorrect
+                            ? Number(question.points || 0)
+                            : -Math.abs(Number(question.negativePoints || 0));
                     } else if (question.type === 'checkbox') {
                         const selectedIndexes = normalizeIndexAnswer(userAnswer);
                         const correctIndexes = normalizeIndexAnswer(question.correctAnswer);
@@ -131,12 +167,21 @@ export async function GET(request: Request, { params }: { params: { id: string }
                             selectedIndexes.length > 0 &&
                             selectedIndexes.length === correctIndexes.length &&
                             selectedIndexes.every((value, idx) => value === correctIndexes[idx]);
+                        obtainedMarks = computeCheckboxMarks(
+                            userAnswer,
+                            question.correctAnswer,
+                            Number(question.points || 0),
+                            Number(question.negativePoints || 0)
+                        );
                     } else if (question.type === 'short_answer' || question.type === 'long_answer') {
                         const keywords = Array.isArray(question.keywords)
                             ? question.keywords.map((v: any) => String(v).trim()).filter(Boolean)
                             : [];
                         const matchMode: 'any' | 'all' = question.keywordMatchMode === 'all' ? 'all' : 'any';
                         isCorrect = keywords.length > 0 && evaluateKeywordAnswer(userAnswer, keywords, matchMode);
+                        obtainedMarks = isCorrect
+                            ? Number(question.points || 0)
+                            : -Math.abs(Number(question.negativePoints || 0));
                     }
                 }
 
@@ -151,12 +196,24 @@ export async function GET(request: Request, { params }: { params: { id: string }
                         status = manualGrade.isCorrect ? 'correct' : 'incorrect';
                     }
 
+                    if (Number.isFinite(Number(manualGrade.marks))) {
+                        obtainedMarks = Number(manualGrade.marks);
+                    }
+
                     if (status === 'unattempted') {
                         attempted = false;
                         isCorrect = false;
+                        if (!Number.isFinite(Number(manualGrade.marks))) {
+                            obtainedMarks = 0;
+                        }
                     } else {
                         attempted = true;
                         isCorrect = status === 'correct';
+                        if (!Number.isFinite(Number(manualGrade.marks))) {
+                            obtainedMarks = status === 'correct'
+                                ? Number(question.points || 0)
+                                : -Math.abs(Number(question.negativePoints || 0));
+                        }
                     }
                 }
 
@@ -183,14 +240,13 @@ export async function GET(request: Request, { params }: { params: { id: string }
                     userAnswer: userAnswerText,
                     correctAnswer: correctAnswerText,
                     points: Number(question.points || 0),
-                    negativePoints: Math.abs(Number(question.negativePoints || 0))
+                    negativePoints: Math.abs(Number(question.negativePoints || 0)),
+                    obtainedMarks
                 };
             });
 
             const calculatedObtainedMarks = questionBreakdown.reduce((sum: number, question: any) => {
-                if (!question.attempted) return sum;
-                if (question.status === 'correct') return sum + Number(question.points || 0);
-                return sum - Math.abs(Number(question.negativePoints || 0));
+                return sum + Number(question.obtainedMarks || 0);
             }, 0);
 
             return {

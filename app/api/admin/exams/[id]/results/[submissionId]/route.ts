@@ -47,10 +47,31 @@ export async function PUT(
 
         // Handle manual grade update for specific questions
         if (manualGrades && typeof manualGrades === 'object') {
-            updateData.manualGrades = {
-                ...(submissionData?.manualGrades || {}),
-                ...manualGrades
-            };
+            const sanitizedManualGrades = Object.entries(manualGrades).reduce((acc: Record<string, any>, [questionId, grade]: [string, any]) => {
+                if (!grade || typeof grade !== 'object') return acc;
+
+                const nextGrade: Record<string, any> = { ...grade };
+                if (nextGrade.status && !['correct', 'incorrect', 'unattempted'].includes(String(nextGrade.status))) {
+                    delete nextGrade.status;
+                }
+                if (nextGrade.marks !== undefined) {
+                    const numericMarks = Number(nextGrade.marks);
+                    if (!Number.isFinite(numericMarks)) {
+                        return acc;
+                    }
+                    nextGrade.marks = numericMarks;
+                }
+
+                acc[questionId] = nextGrade;
+                return acc;
+            }, {});
+
+            if (Object.keys(sanitizedManualGrades).length > 0) {
+                updateData.manualGrades = {
+                    ...(submissionData?.manualGrades || {}),
+                    ...sanitizedManualGrades
+                };
+            }
         }
 
         if (Object.keys(updateData).length === 1) {

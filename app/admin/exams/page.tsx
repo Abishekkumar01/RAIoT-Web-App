@@ -52,6 +52,7 @@ export default function AdminExamsPage() {
     submissionId: string;
     questionId: string;
     status: 'correct' | 'incorrect' | 'unattempted';
+    marks: string;
     questionNo: number;
     questionText: string;
     userAnswer: string;
@@ -64,6 +65,7 @@ export default function AdminExamsPage() {
     submissionId: "", 
     questionId: "", 
     status: 'unattempted',
+    marks: '0',
     questionNo: 0, 
     questionText: "",
     userAnswer: "",
@@ -887,7 +889,7 @@ export default function AdminExamsPage() {
         QuestionType: q.questionType,
         Question: q.questionText,
         Status: q.status,
-        MarksObtained: q.status === 'correct' ? (q.points ?? 0) : q.status === 'incorrect' ? -(q.negativePoints ?? 0) : 0,
+        MarksObtained: Number(q.obtainedMarks ?? 0),
         UserAnswer: q.userAnswer || "",
         CorrectAnswer: q.correctAnswer || "",
         Points: q.points ?? 0,
@@ -952,15 +954,15 @@ export default function AdminExamsPage() {
 
     breakdown.forEach((question: any) => {
       const status = question?.status;
+      const questionMarks = Number(question?.obtainedMarks || 0);
       if (status === 'correct') {
         attemptedCount += 1;
         correctCount += 1;
-        recalculatedMarks += Number(question?.points || 0);
       } else if (status === 'incorrect') {
         attemptedCount += 1;
         incorrectCount += 1;
-        recalculatedMarks -= Math.abs(Number(question?.negativePoints || 0));
       }
+      recalculatedMarks += questionMarks;
     });
 
     return {
@@ -975,7 +977,18 @@ export default function AdminExamsPage() {
     };
   };
 
-  const markQuestionManually = async (status: 'correct' | 'incorrect' | 'unattempted') => {
+  const markQuestionManually = async (
+    status: 'correct' | 'incorrect' | 'unattempted',
+    marksInput?: number
+  ) => {
+    const hasExplicitMarks = typeof marksInput === 'number' && Number.isFinite(marksInput);
+    const fallbackMarks = status === 'correct'
+      ? Number(manualQuestionGradeDialog.points || 0)
+      : status === 'incorrect'
+        ? -Math.abs(Number(manualQuestionGradeDialog.negativePoints || 0))
+        : 0;
+    const marks = hasExplicitMarks ? Number(marksInput) : fallbackMarks;
+
     try {
       const auth = (await import("@/lib/firebase")).auth;
       const token = await auth.currentUser?.getIdToken(true);
@@ -986,6 +999,7 @@ export default function AdminExamsPage() {
           manualGrades: {
             [manualQuestionGradeDialog.questionId]: {
               status,
+              marks,
               markedAt: new Date().toISOString()
             }
           }
@@ -1010,6 +1024,7 @@ export default function AdminExamsPage() {
               status,
               attempted: status !== 'unattempted',
               isCorrect: status === 'correct',
+              obtainedMarks: marks,
             };
           });
 
@@ -1025,6 +1040,7 @@ export default function AdminExamsPage() {
         submissionId: "", 
         questionId: "",
         status: 'unattempted',
+        marks: '0',
         questionNo: 0,
         questionText: "",
         userAnswer: "",
@@ -1032,11 +1048,20 @@ export default function AdminExamsPage() {
         points: 0,
         negativePoints: 0
       });
-      showNotice(`Question marked as ${status}.`, 'Updated');
+      showNotice(`Question updated (${status}, ${marks} marks).`, 'Updated');
     } catch (err) {
       console.error(err);
       showNotice("Failed to update question grade", 'Update Failed');
     }
+  };
+
+  const saveManualQuestionCustomMarks = async () => {
+    const parsed = Number(manualQuestionGradeDialog.marks);
+    if (!Number.isFinite(parsed)) {
+      showNotice("Enter a valid numeric mark for this question.", 'Invalid Marks');
+      return;
+    }
+    await markQuestionManually(manualQuestionGradeDialog.status, parsed);
   };
 
   const deleteSubmissionData = async (examId: string, submissionId: string) => {
@@ -1150,6 +1175,36 @@ export default function AdminExamsPage() {
                 Incorrect: -{manualQuestionGradeDialog.negativePoints} marks | 
                 Unattempted: 0 marks
               </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-zinc-500 mb-1 text-xs">Grade Status</p>
+                  <Select
+                    value={manualQuestionGradeDialog.status}
+                    onValueChange={(val: 'correct' | 'incorrect' | 'unattempted') =>
+                      setManualQuestionGradeDialog((prev) => ({ ...prev, status: val }))
+                    }
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="correct">Correct</SelectItem>
+                      <SelectItem value="incorrect">Incorrect</SelectItem>
+                      <SelectItem value="unattempted">Unattempted</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="text-zinc-500 mb-1 text-xs">Manual Marks for this Question</p>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={manualQuestionGradeDialog.marks}
+                    onChange={(e) => setManualQuestionGradeDialog((prev) => ({ ...prev, marks: e.target.value }))}
+                    placeholder="Enter marks (can be negative)"
+                  />
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter className="flex-wrap gap-2">
@@ -1161,22 +1216,23 @@ export default function AdminExamsPage() {
             </Button>
             <Button
               variant="secondary"
-              onClick={() => markQuestionManually('unattempted')}
+              onClick={() => markQuestionManually('unattempted', 0)}
             >
               Mark Unattempted
             </Button>
             <Button 
               variant="destructive"
-              onClick={() => markQuestionManually('incorrect')}
+              onClick={() => markQuestionManually('incorrect', -Math.abs(Number(manualQuestionGradeDialog.negativePoints || 0)))}
             >
               Mark Incorrect
             </Button>
             <Button 
               className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => markQuestionManually('correct')}
+              onClick={() => markQuestionManually('correct', Number(manualQuestionGradeDialog.points || 0))}
             >
               Mark Correct
             </Button>
+            <Button onClick={saveManualQuestionCustomMarks}>Save Custom Marks</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1415,7 +1471,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                   <p className="text-xs text-muted-foreground">
                     {q.type === 'mcq'
                       ? 'Select one correct option.'
-                      : 'Select all correct options. Exact match is required for full marks.'}
+                      : 'Select all correct options. Checkbox scoring is proportional: correct selections add partial marks, wrong selections apply proportional negative marks.'}
                   </p>
                   <Button variant="outline" size="sm" onClick={() => addOption(qIndex)} className="mt-2 text-xs">
                     <Plus className="w-3 h-3 mr-1" /> Add Option
@@ -1722,7 +1778,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                       <p className="text-zinc-300"><span className="text-zinc-500">Correct Answer:</span> {detail.correctAnswer || '-'}</p>
                                       <p className={`text-zinc-300 font-medium ${detail.status === 'correct' ? 'text-emerald-400' : detail.status === 'incorrect' ? 'text-red-400' : 'text-zinc-400'}`}>
                                         <span className="text-zinc-500">Marks: </span>
-                                        {detail.status === 'correct' ? `+${detail.points || 0}` : detail.status === 'incorrect' ? `-${detail.negativePoints || 0}` : '0'}
+                                        {Number(detail.obtainedMarks ?? 0) > 0 ? `+${Number(detail.obtainedMarks ?? 0)}` : `${Number(detail.obtainedMarks ?? 0)}`}
                                       </p>
                                       
                                       <div className="flex items-center gap-2 mt-2 pt-2 border-t border-zinc-800">
@@ -1736,6 +1792,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                             submissionId: row.id,
                                             questionId: detail.questionId,
                                             status: detail.status,
+                                            marks: String(Number(detail.obtainedMarks ?? 0)),
                                             questionNo: detail.questionNo,
                                             questionText: detail.questionText,
                                             userAnswer: detail.userAnswer,
