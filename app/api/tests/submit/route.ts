@@ -58,6 +58,10 @@ const evaluateKeywordAnswer = (
     return expected.some((kw) => answer.includes(kw));
 };
 
+const roundMarks = (value: number): number => {
+    return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+};
+
 const computeCheckboxMarks = (
     selectedAnswer: unknown,
     correctAnswer: unknown,
@@ -227,13 +231,15 @@ export async function POST(request: Request) {
             }
         }
 
+        const finalScore = roundMarks(score);
+
         // Create submission
         const submissionRef = await adminDb.collection('examSubmissions').add({
             testId,
             userId: authUser.uid,
             answers,
-            autoScore: score,
-            score: requiresManualGrading ? null : score,
+            autoScore: finalScore,
+            score: requiresManualGrading ? null : finalScore,
             requiresManualReview: requiresManualGrading,
             manualReviewRequired,
             submittedAt: new Date().toISOString()
@@ -242,7 +248,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ 
             success: true, 
              message: 'Submitted successfully',
-            score: requiresManualGrading ? null : score
+            score: requiresManualGrading ? null : finalScore
         });
     } catch (error: any) {
         console.error('Error submitting test:', error);

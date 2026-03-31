@@ -58,6 +58,10 @@ const formatChoiceAnswer = (value: unknown, options?: string[]): string => {
         .join(' | ');
 };
 
+const roundMarks = (value: number): number => {
+    return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+};
+
 const computeCheckboxMarks = (
     selectedAnswer: unknown,
     correctAnswer: unknown,
@@ -241,7 +245,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
                     correctAnswer: correctAnswerText,
                     points: Number(question.points || 0),
                     negativePoints: Math.abs(Number(question.negativePoints || 0)),
-                    obtainedMarks
+                    obtainedMarks: roundMarks(obtainedMarks)
                 };
             });
 
@@ -261,7 +265,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 unattemptedCount: Math.max(0, totalQuestions - attemptedCount),
                 correctCount,
                 incorrectCount,
-                obtainedMarks: typeof data?.score === 'number' ? data.score : calculatedObtainedMarks,
+                obtainedMarks: typeof data?.score === 'number' ? roundMarks(data.score) : roundMarks(calculatedObtainedMarks),
                 questionBreakdown
             };
         }).sort((a: any, b: any) => {

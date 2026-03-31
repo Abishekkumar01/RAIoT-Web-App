@@ -93,6 +93,14 @@ export default function AdminExamsPage() {
   const [keywordDraftByQuestion, setKeywordDraftByQuestion] = useState<Record<string, string>>({});
   const [importingQuestions, setImportingQuestions] = useState(false);
 
+  const roundMarks = (value: number) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+  const formatMarks = (value: number | string | null | undefined) => {
+    const num = Number(value ?? 0);
+    if (!Number.isFinite(num)) return '0';
+    const rounded = roundMarks(num);
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+  };
+
   useEffect(() => {
     fetchExams();
     fetchMyTestState();
@@ -889,7 +897,7 @@ export default function AdminExamsPage() {
         QuestionType: q.questionType,
         Question: q.questionText,
         Status: q.status,
-        MarksObtained: Number(q.obtainedMarks ?? 0),
+        MarksObtained: roundMarks(Number(q.obtainedMarks ?? 0)),
         UserAnswer: q.userAnswer || "",
         CorrectAnswer: q.correctAnswer || "",
         Points: q.points ?? 0,
@@ -972,7 +980,7 @@ export default function AdminExamsPage() {
       correctCount,
       incorrectCount,
       // If final manual score is already set, keep it as source of truth.
-      obtainedMarks: typeof row?.score === 'number' ? row.score : recalculatedMarks,
+      obtainedMarks: typeof row?.score === 'number' ? roundMarks(row.score) : roundMarks(recalculatedMarks),
       questionBreakdown: breakdown,
     };
   };
@@ -1698,7 +1706,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                             <div className="col-span-2 capitalize text-zinc-400">{row.userRole || '-'}</div>
                             <div className="col-span-2">
                               <div className="text-sm font-semibold text-zinc-100">
-                                {row.obtainedMarks ?? 0}/{row.totalMarks ?? 0}
+                                {formatMarks(row.obtainedMarks)}/{formatMarks(row.totalMarks)}
                               </div>
                             </div>
                             <div className="col-span-2 flex flex-wrap items-center gap-1 text-[10px]">
@@ -1738,7 +1746,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                     <span className="px-2 py-0.5 rounded border border-red-500/70 bg-red-500/15 text-red-300">Unattempted: {row.unattemptedCount ?? 0}</span>
                                     <span className="px-2 py-0.5 rounded border border-cyan-500/70 bg-cyan-500/15 text-cyan-300">Correct: {row.correctCount ?? 0}</span>
                                     <span className="px-2 py-0.5 rounded border border-amber-500/70 bg-amber-500/15 text-amber-300">Incorrect: {row.incorrectCount ?? 0}</span>
-                                    <span className="px-2 py-0.5 rounded border border-violet-500/70 bg-violet-500/15 text-violet-300">Overall: {row.obtainedMarks ?? 0}/{row.totalMarks ?? 0}</span>
+                                    <span className="px-2 py-0.5 rounded border border-violet-500/70 bg-violet-500/15 text-violet-300">Overall: {formatMarks(row.obtainedMarks)}/{formatMarks(row.totalMarks)}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <span className="text-zinc-400">Question-wise Responses</span>
@@ -1778,7 +1786,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                       <p className="text-zinc-300"><span className="text-zinc-500">Correct Answer:</span> {detail.correctAnswer || '-'}</p>
                                       <p className={`text-zinc-300 font-medium ${detail.status === 'correct' ? 'text-emerald-400' : detail.status === 'incorrect' ? 'text-red-400' : 'text-zinc-400'}`}>
                                         <span className="text-zinc-500">Marks: </span>
-                                        {Number(detail.obtainedMarks ?? 0) > 0 ? `+${Number(detail.obtainedMarks ?? 0)}` : `${Number(detail.obtainedMarks ?? 0)}`}
+                                        {Number(detail.obtainedMarks ?? 0) > 0 ? `+${formatMarks(detail.obtainedMarks)}` : `${formatMarks(detail.obtainedMarks)}`}
                                       </p>
                                       
                                       <div className="flex items-center gap-2 mt-2 pt-2 border-t border-zinc-800">
@@ -1792,7 +1800,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                             submissionId: row.id,
                                             questionId: detail.questionId,
                                             status: detail.status,
-                                            marks: String(Number(detail.obtainedMarks ?? 0)),
+                                            marks: formatMarks(detail.obtainedMarks),
                                             questionNo: detail.questionNo,
                                             questionText: detail.questionText,
                                             userAnswer: detail.userAnswer,
