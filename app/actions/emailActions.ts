@@ -19,6 +19,12 @@ interface EmailOptions {
     html?: string;
 }
 
+interface ResourceRecipient {
+    uid: string;
+    email: string;
+    displayName: string;
+}
+
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     try {
         if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
@@ -130,4 +136,44 @@ export const sendWarningEmail = async (to: string, componentNames: string, timeR
             </div>
         `
     });
+};
+
+export const sendResourceUploadedEmail = async (params: {
+    recipients: ResourceRecipient[];
+    title: string;
+    description?: string;
+    fileUrl: string;
+    fileName?: string;
+    storageType?: 'cloudinary' | 'mongodb' | 'link';
+    uploadedByName?: string;
+}) => {
+    const { recipients, title, description, fileUrl, fileName, storageType, uploadedByName } = params;
+
+    const sentResults = await Promise.allSettled(
+        recipients.map((recipient) =>
+            sendEmail({
+                to: recipient.email,
+                subject: `New Learning Resource: ${title}`,
+                html: `
+                    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                        <h2 style="color: #7c3aed;">New Resource Available</h2>
+                        <p>Hello ${recipient.displayName || 'there'},</p>
+                        <p>A new learning resource has been uploaded for you${storageType === 'link' ? ' as an external learning link' : ''}.</p>
+                        <p><strong>Title:</strong> ${title}</p>
+                        ${fileName ? `<p><strong>Label:</strong> ${fileName}</p>` : ''}
+                        ${description ? `<p><strong>Description:</strong> ${description}</p>` : ''}
+                        <p><strong>Uploaded By:</strong> ${uploadedByName || 'RAIoT Admin'}</p>
+                        <p><a href="${fileUrl}" target="_blank" rel="noopener noreferrer">Open Resource</a></p>
+                        <br/>
+                        <p>Regards,<br/>RAIoT Learning Team</p>
+                    </div>
+                `
+            })
+        )
+    );
+
+    const sentCount = sentResults.filter((result) => result.status === 'fulfilled').length;
+    const failedCount = sentResults.length - sentCount;
+
+    return { sentCount, failedCount };
 };

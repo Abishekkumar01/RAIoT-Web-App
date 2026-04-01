@@ -150,7 +150,7 @@ export default function AdminResourcesPage() {
 
     try {
       setIsSubmitting(true)
-      await addDoc(collection(db, "member_resources"), {
+      const resourceRef = await addDoc(collection(db, "member_resources"), {
         userId: selectedUserId,
         title,
         description,
@@ -162,8 +162,76 @@ export default function AdminResourcesPage() {
         uploadedAt: Date.now(),
         uploadedBy: currentUser?.uid || "Admin"
       })
+
+      let finalToast = {
+        title: "Success",
+        description: "Resource uploaded successfully!",
+        variant: undefined as "default" | "destructive" | undefined,
+      }
+
+      try {
+        const token = await auth.currentUser?.getIdToken(true)
+        if (token) {
+          const notifyResponse = await fetch('/api/admin/resources/notify', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              resourceId: resourceRef.id,
+              title,
+              description,
+              fileUrl,
+              fileName: storageType === 'link' ? (fileName || undefined) : fileName,
+              storageType,
+              userId: selectedUserId,
+              notifyAll: selectedUserId === 'all',
+              uploadedByName: currentUser?.displayName || currentUser?.email || 'RAIoT Admin',
+            }),
+          })
+
+          const notifyData = await notifyResponse.json().catch(() => ({}))
+          if (!notifyResponse.ok) {
+            finalToast = {
+              title: "Resource uploaded",
+              description: notifyData.error || 'Saved successfully, but notification emails could not be sent.',
+              variant: "destructive",
+            }
+          } else if (notifyData.failedCount > 0) {
+            finalToast = {
+              title: "Resource uploaded with partial notifications",
+              description: `${notifyData.notifiedCount || 0} emails sent, ${notifyData.failedCount} failed.`,
+              variant: "destructive",
+            }
+          } else if (notifyData.notifiedCount > 0) {
+            finalToast = {
+              title: "Success",
+              description: `Resource uploaded and ${notifyData.notifiedCount} notification email(s) sent.`,
+              variant: undefined,
+            }
+          } else {
+            finalToast = {
+              title: "Success",
+              description: "Resource uploaded successfully. No email recipients were found.",
+              variant: undefined,
+            }
+          }
+        }
+      } catch (notifyError: any) {
+        console.error('Resource notification failed:', notifyError)
+        finalToast = {
+          title: "Resource uploaded",
+          description: notifyError.message || 'Saved successfully, but notification could not be sent.',
+          variant: "destructive",
+        }
+      }
       
-      toast({ title: "Success", description: "Resource uploaded successfully!" })
+      toast({
+        title: finalToast.title,
+        description: finalToast.description,
+        variant: finalToast.variant,
+      })
       setIsAddModalOpen(false)
       // Reset form
       setSelectedUserId("")
