@@ -155,7 +155,7 @@ export default function AdminResourcesPage() {
         title,
         description,
         fileUrl,
-        fileName: storageType === 'link' ? (fileName || undefined) : fileName,
+        fileName: storageType === 'link' ? (fileName || null) : (fileName || null),
         storageType,
         mongoFileId: storageType === 'mongodb' ? mongoFileId : null,
         mimeType: storageType === 'link' ? null : (mimeType || null),
