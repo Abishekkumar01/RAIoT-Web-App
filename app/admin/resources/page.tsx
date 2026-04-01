@@ -33,6 +33,11 @@ export default function AdminResourcesPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   
+  // Queue management state
+  const [queueStatus, setQueueStatus] = useState({ pending: 0, sent: 0, failed: 0, total: 0 })
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false)
+  const [showQueueStatus, setShowQueueStatus] = useState(false)
+  
   // New Resource Form State
   const [selectedUserId, setSelectedUserId] = useState("")
   const [title, setTitle] = useState("")
@@ -80,6 +85,66 @@ export default function AdminResourcesPage() {
     res.fileName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     getUserName(res.userId).toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  // Check email queue status
+  const checkQueueStatus = async () => {
+    try {
+      const token = await currentUser?.getIdToken(true)
+      if (!token) return
+
+      const response = await fetch('/api/admin/resources/process-queue', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      const data = await response.json()
+      if (data.queueStatus) {
+        setQueueStatus(data.queueStatus)
+      }
+    } catch (error: any) {
+      console.error('Failed to check queue status:', error)
+    }
+  }
+
+  // Process next email in queue
+  const processNextEmail = async () => {
+    setIsProcessingQueue(true)
+    try {
+      const token = await currentUser?.getIdToken(true)
+      if (!token) {
+        toast({ title: "Error", description: "Not authenticated", variant: "destructive" })
+        return
+      }
+
+      const response = await fetch('/api/admin/resources/process-queue', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        toast({ title: "Error", description: data.error || 'Failed to process queue', variant: "destructive" })
+      } else {
+        toast({ title: "Queue Updated", description: data.message })
+        await checkQueueStatus()
+      }
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" })
+    } finally {
+      setIsProcessingQueue(false)
+    }
+  }
+
+  // Auto-check queue status on component mount and every 30 seconds
+  useEffect(() => {
+    checkQueueStatus()
+    const interval = setInterval(checkQueueStatus, 30000) // Check every 30 seconds
+    return () => clearInterval(interval)
+  }, [currentUser])
 
   const handleUploadSuccess = (payload: {
     fileUrl: string
@@ -195,19 +260,13 @@ export default function AdminResourcesPage() {
           if (!notifyResponse.ok) {
             finalToast = {
               title: "Resource uploaded",
-              description: notifyData.error || 'Saved successfully, but notification emails could not be sent.',
+              description: notifyData.error || 'Saved successfully, but notification emails could not be queued.',
               variant: "destructive",
             }
-          } else if (notifyData.failedCount > 0) {
+          } else if (notifyData.queuedCount > 0) {
             finalToast = {
-              title: "Resource uploaded with partial notifications",
-              description: `${notifyData.notifiedCount || 0} emails sent, ${notifyData.failedCount} failed.`,
-              variant: "destructive",
-            }
-          } else if (notifyData.notifiedCount > 0) {
-            finalToast = {
-              title: "Success",
-              description: `Resource uploaded and ${notifyData.notifiedCount} notification email(s) sent.`,
+              title: "Success - Emails Queued",
+              description: `Resource uploaded and ${notifyData.queuedCount} notification email(s) queued. Emails will be sent automatically at 5-minute intervals.`,
               variant: undefined,
             }
           } else {
@@ -271,24 +330,67 @@ export default function AdminResourcesPage() {
           <h1 className="text-3xl font-bold text-white tracking-tight">Manage Resources</h1>
           <p className="text-zinc-400 mt-2">Upload and manage test papers and materials for members.</p>
         </div>
-        <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-purple-600 hover:bg-purple-700 text-white">
-              <Plus className="mr-2 h-4 w-4" /> Upload Resource
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-zinc-900 border-zinc-800 text-white sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle className="text-xl">Upload New Resource</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Select Member *</Label>
-                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                    <SelectValue placeholder="Select a member..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-800 border-zinc-700 text-white max-h-64">
+        <div className="flex gap-3">
+          <Dialog open={showQueueStatus} onOpenChange={setShowQueueStatus}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="border-zinc-700 hover:bg-zinc-800 text-white"
+                onClick={checkQueueStatus}
+              >
+                📨 Queue: {queueStatus.pending} Pending{queueStatus.failed > 0 && ` | ${queueStatus.failed} Failed`}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-zinc-900 border-zinc-800 text-white">
+              <DialogHeader>
+                <DialogTitle>Email Queue Status</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-zinc-800 p-4 rounded">
+                    <p className="text-zinc-400 text-sm">Pending</p>
+                    <p className="text-2xl font-bold text-yellow-400">{queueStatus.pending}</p>
+                  </div>
+                  <div className="bg-zinc-800 p-4 rounded">
+                    <p className="text-zinc-400 text-sm">Sent</p>
+                    <p className="text-2xl font-bold text-green-400">{queueStatus.sent}</p>
+                  </div>
+                  <div className="bg-zinc-800 p-4 rounded">
+                    <p className="text-zinc-400 text-sm">Failed</p>
+                    <p className="text-2xl font-bold text-red-400">{queueStatus.failed}</p>
+                  </div>
+                </div>
+                <p className="text-zinc-400 text-sm">
+                  Emails are automatically sent at 5-minute intervals. You can manually trigger the next email below.
+                </p>
+                <Button 
+                  onClick={processNextEmail} 
+                  disabled={isProcessingQueue || queueStatus.pending === 0}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {isProcessingQueue ? 'Processing...' : 'Process Next Email'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+                <Plus className="mr-2 h-4 w-4" /> Upload Resource
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-zinc-900 border-zinc-800 text-white sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle className="text-xl">Upload New Resource</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Select Member *</Label>
+                  <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700">
+                      <SelectValue placeholder="Select a member..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-800 border-zinc-700 text-white max-h-64">
                     <SelectItem value="all">All Members (Visible to everyone)</SelectItem>
                     {users.map(u => (
                       <SelectItem key={u.uid} value={u.uid}>{u.displayName} ({u.email})</SelectItem>

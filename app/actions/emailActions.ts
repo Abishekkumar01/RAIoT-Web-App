@@ -138,6 +138,13 @@ export const sendWarningEmail = async (to: string, componentNames: string, timeR
     });
 };
 
+// Simple email validation helper
+const isValidEmail = (email: string): boolean => {
+    if (!email || typeof email !== 'string') return false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+};
+
 export const sendResourceUploadedEmail = async (params: {
     recipients: ResourceRecipient[];
     title: string;
@@ -149,8 +156,27 @@ export const sendResourceUploadedEmail = async (params: {
 }) => {
     const { recipients, title, description, fileUrl, fileName, storageType, uploadedByName } = params;
 
+    // Validate recipients before sending
+    const validRecipients: ResourceRecipient[] = [];
+    const invalidRecipients: { recipient: ResourceRecipient; reason: string }[] = [];
+
+    for (const recipient of recipients) {
+        if (!isValidEmail(recipient.email)) {
+            invalidRecipients.push({
+                recipient,
+                reason: `Invalid email format: "${recipient.email}"`,
+            });
+        } else {
+            validRecipients.push(recipient);
+        }
+    }
+
+    if (invalidRecipients.length > 0) {
+        console.warn(`⚠️ Skipping ${invalidRecipients.length} invalid email addresses:`, invalidRecipients.map(r => ({ email: r.recipient.email, reason: r.reason })));
+    }
+
     const sentResults = await Promise.allSettled(
-        recipients.map((recipient) =>
+        validRecipients.map((recipient) =>
             sendEmail({
                 to: recipient.email,
                 subject: `New Learning Resource: ${title}`,
@@ -169,11 +195,32 @@ export const sendResourceUploadedEmail = async (params: {
                     </div>
                 `
             })
+                .catch((error) => {
+                    console.error(`❌ Failed to send email to ${recipient.email}:`, {
+                        displayName: recipient.displayName,
+                        error: error instanceof Error ? error.message : String(error),
+                    });
+                    throw error; // Re-throw to preserve rejection in allSettled
+                })
         )
     );
 
     const sentCount = sentResults.filter((result) => result.status === 'fulfilled').length;
     const failedCount = sentResults.length - sentCount;
 
-    return { sentCount, failedCount };
+    const failedRecipients = validRecipients.filter((_, index) => sentResults[index].status === 'rejected');
+    if (failedRecipients.length > 0) {
+        console.error(`❌ Email delivery failed for ${failedRecipients.length} recipients:`, failedRecipients.map(r => ({ email: r.email, name: r.displayName })));
+    }
+
+    const result = {
+        sentCount,
+        failedCount,
+        invalidCount: invalidRecipients.length,
+        totalAttempted: recipients.length,
+    };
+
+    console.log(`📧 Email notification summary:`, result);
+
+    return result;
 };

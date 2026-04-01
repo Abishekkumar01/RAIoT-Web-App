@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb, verifySuperAdmin } from '@/lib/firebase-admin';
-import { sendResourceUploadedEmail } from '@/app/actions/emailActions';
+import * as admin from 'firebase-admin';
 
 interface ResourceNotifyBody {
     resourceId?: string;
@@ -12,6 +12,22 @@ interface ResourceNotifyBody {
     userId?: string | string[];
     notifyAll?: boolean;
     uploadedByName?: string;
+}
+
+interface QueuedEmail {
+    resourceId: string;
+    recipientEmail: string;
+    recipientName: string;
+    title: string;
+    description?: string;
+    fileUrl: string;
+    fileName?: string;
+    storageType: 'cloudinary' | 'mongodb' | 'link';
+    uploadedByName: string;
+    status: 'pending' | 'sent' | 'failed';
+    createdAt: FirebaseFirestore.Timestamp;
+    sentAt?: FirebaseFirestore.Timestamp;
+    error?: string;
 }
 
 const normalizeTargetIds = (userId: string | string[] | undefined, notifyAll?: boolean) => {
@@ -40,6 +56,7 @@ export async function POST(request: Request) {
         }
 
         const body = (await request.json()) as ResourceNotifyBody;
+        const resourceId = String(body.resourceId || '').trim() || 'unknown';
         const title = String(body.title || '').trim();
         const fileUrl = String(body.fileUrl || '').trim();
         const storageType = body.storageType || 'cloudinary';
@@ -80,27 +97,39 @@ export async function POST(request: Request) {
         const recipients = Array.from(recipientsMap.values());
 
         if (recipients.length === 0) {
-            return NextResponse.json({ success: true, message: 'No email recipients found for this resource.' });
+            return NextResponse.json({ success: true, message: 'No email recipients found for this resource.', queuedCount: 0 });
         }
 
-        const result = await sendResourceUploadedEmail({
-            recipients,
+        // Queue all emails instead of sending immediately
+        const queuedEmails: QueuedEmail[] = recipients.map((recipient) => ({
+            resourceId,
+            recipientEmail: recipient.email,
+            recipientName: recipient.displayName,
             title,
             description: body.description,
             fileUrl,
             fileName: body.fileName,
             storageType,
             uploadedByName: body.uploadedByName || 'RAIoT Admin',
-        });
+            status: 'pending',
+            createdAt: admin.firestore.Timestamp.now(),
+        }));
+
+        // Add all emails to the queue collection
+        const queueCollection = adminDb.collection('resourceEmailQueue');
+        for (const email of queuedEmails) {
+            await queueCollection.add(email);
+        }
+
+        console.log(`📧 Queued ${queuedEmails.length} email notifications for processing (5-min intervals)`);
 
         return NextResponse.json({
             success: true,
-            message: 'Resource notification sent',
-            notifiedCount: result.sentCount,
-            failedCount: result.failedCount,
+            message: `Queued ${queuedEmails.length} email notification(s) for processing. Emails will be sent automatically at 5-minute intervals.`,
+            queuedCount: queuedEmails.length,
         });
     } catch (error: any) {
-        console.error('Error sending resource notifications:', error);
-        return NextResponse.json({ error: 'Failed to send resource notifications' }, { status: 500 });
+        console.error('Error queuing resource notifications:', error);
+        return NextResponse.json({ error: 'Failed to queue resource notifications' }, { status: 500 });
     }
 }
