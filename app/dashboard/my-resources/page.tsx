@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { collection, onSnapshot, query, where } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
 import { useAuth } from "@/lib/contexts/AuthContext"
-import { FileText, Download, Calendar } from "lucide-react"
+import { FileText, Download, Calendar, Link2 } from "lucide-react"
 import { MemberResource } from "@/lib/types/resource"
 import { Button } from "@/components/ui/button"
 
@@ -15,6 +15,11 @@ export default function MyResourcesPage() {
 
   const handleDownload = async (res: MemberResource) => {
     try {
+      if ((res.storageType || 'cloudinary') === 'link') {
+        window.open(res.fileUrl, '_blank', 'noopener,noreferrer')
+        return
+      }
+
       if ((res.storageType || 'cloudinary') === 'cloudinary') {
         window.open(res.fileUrl, '_blank', 'noopener,noreferrer')
         return
@@ -157,6 +162,13 @@ export default function MyResourcesPage() {
                     {res.fileName}
                   </div>
                 )}
+
+                {res.storageType === 'link' && (
+                  <div className="text-xs text-zinc-400 flex items-center gap-2 mb-2">
+                    <Link2 className="h-3.5 w-3.5" />
+                    <span className="truncate" title={res.fileUrl}>External learning link</span>
+                  </div>
+                )}
               </div>
               
               <div className="p-4 bg-zinc-950/50 border-t border-zinc-800 mt-auto">
@@ -165,7 +177,15 @@ export default function MyResourcesPage() {
                   variant="secondary"
                   onClick={() => handleDownload(res)}
                 >
-                  <Download className="mr-2 h-4 w-4" /> Download File
+                  {res.storageType === 'link' ? (
+                    <>
+                      <Link2 className="mr-2 h-4 w-4" /> Open Link
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" /> Download File
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

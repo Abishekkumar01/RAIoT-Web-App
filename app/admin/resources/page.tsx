@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, FileText, Search } from "lucide-react"
+import { Plus, Trash2, FileText, Search, Link2 } from "lucide-react"
 import { CloudinaryRMSUpload } from "@/components/ui/CloudinaryRMSUpload"
 import { MemberResource } from "@/lib/types/resource"
 
@@ -39,7 +39,7 @@ export default function AdminResourcesPage() {
   const [description, setDescription] = useState("")
   const [fileUrl, setFileUrl] = useState("")
   const [fileName, setFileName] = useState("")
-  const [storageType, setStorageType] = useState<'cloudinary' | 'mongodb'>('cloudinary')
+  const [storageType, setStorageType] = useState<'cloudinary' | 'mongodb' | 'link'>('cloudinary')
   const [mongoFileId, setMongoFileId] = useState("")
   const [mimeType, setMimeType] = useState("")
 
@@ -84,7 +84,7 @@ export default function AdminResourcesPage() {
   const handleUploadSuccess = (payload: {
     fileUrl: string
     fileName: string
-    storageType: 'cloudinary' | 'mongodb'
+    storageType: 'cloudinary' | 'mongodb' | 'link'
     mongoFileId?: string
     mimeType?: string
   }) => {
@@ -97,6 +97,11 @@ export default function AdminResourcesPage() {
 
   const handleDownload = async (res: MemberResource) => {
     try {
+      if ((res.storageType || 'cloudinary') === 'link') {
+        window.open(res.fileUrl, '_blank', 'noopener,noreferrer')
+        return
+      }
+
       if ((res.storageType || 'cloudinary') === 'cloudinary') {
         window.open(res.fileUrl, '_blank', 'noopener,noreferrer')
         return
@@ -150,10 +155,10 @@ export default function AdminResourcesPage() {
         title,
         description,
         fileUrl,
-        fileName,
+        fileName: storageType === 'link' ? (fileName || undefined) : fileName,
         storageType,
         mongoFileId: storageType === 'mongodb' ? mongoFileId : null,
-        mimeType: mimeType || null,
+        mimeType: storageType === 'link' ? null : (mimeType || null),
         uploadedAt: Date.now(),
         uploadedBy: currentUser?.uid || "Admin"
       })
@@ -244,10 +249,57 @@ export default function AdminResourcesPage() {
                 />
               </div>
 
-              <div className="space-y-2 pt-2">
-                <Label>Resource File *</Label>
-                <CloudinaryRMSUpload onUploadSuccess={handleUploadSuccess} userId={selectedUserId} currentFileUrl={fileUrl} />
+              <div className="space-y-2">
+                <Label>Resource Type *</Label>
+                <Select
+                  value={storageType}
+                  onValueChange={(value: 'cloudinary' | 'mongodb' | 'link') => {
+                    setStorageType(value)
+                    setFileUrl("")
+                    setFileName("")
+                    setMongoFileId("")
+                    setMimeType("")
+                  }}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700">
+                    <SelectValue placeholder="Choose resource type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectItem value="cloudinary">Uploaded File / Image</SelectItem>
+                    <SelectItem value="mongodb">Uploaded Document</SelectItem>
+                    <SelectItem value="link">External Learning Link</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              {storageType === 'link' ? (
+                <div className="space-y-2 pt-2">
+                  <Label>Learning Link *</Label>
+                  <Input 
+                    value={fileUrl}
+                    onChange={e => setFileUrl(e.target.value)}
+                    placeholder="https://github.com/... or https://docs..."
+                    className="bg-zinc-800 border-zinc-700"
+                  />
+                  <div className="space-y-2">
+                    <Label>Link Label (Optional)</Label>
+                    <Input
+                      value={fileName}
+                      onChange={e => setFileName(e.target.value)}
+                      placeholder="Example: GitHub repo, tutorial, docs link"
+                      className="bg-zinc-800 border-zinc-700"
+                    />
+                  </div>
+                  <p className="text-xs text-zinc-400 flex items-center gap-2">
+                    <Link2 className="h-3.5 w-3.5" /> External links open in a new tab.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 pt-2">
+                  <Label>Resource File *</Label>
+                  <CloudinaryRMSUpload onUploadSuccess={handleUploadSuccess} userId={selectedUserId} currentFileUrl={fileUrl} />
+                </div>
+              )}
 
               <Button 
                 onClick={handleAddResource} 
@@ -302,14 +354,26 @@ export default function AdminResourcesPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <button
-                      type="button"
-                      onClick={() => handleDownload(res)}
-                      className="flex items-center text-blue-400 hover:text-blue-300 text-sm"
-                    >
-                      <FileText className="h-4 w-4 mr-1" />
-                      {res.fileName || "View File"}
-                    </button>
+                    {res.storageType === 'link' ? (
+                      <button
+                        type="button"
+                        onClick={() => handleDownload(res)}
+                        className="flex items-center text-blue-400 hover:text-blue-300 text-sm"
+                        title={res.fileUrl}
+                      >
+                        <Link2 className="h-4 w-4 mr-1" />
+                        {res.fileName || 'Open Link'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleDownload(res)}
+                        className="flex items-center text-blue-400 hover:text-blue-300 text-sm"
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        {res.fileName || "View File"}
+                      </button>
+                    )}
                   </TableCell>
                   <TableCell className="text-zinc-400">
                     {res.uploadedAt ? new Date(res.uploadedAt).toLocaleDateString() : "N/A"}
