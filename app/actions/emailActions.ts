@@ -4,10 +4,11 @@ import nodemailer from 'nodemailer';
 
 // Since the user didn't specify the exact SMTP provider, we assume standard SMTP via Gmail or similar.
 // Ensure SMTP_EMAIL and SMTP_PASSWORD are set in .env.local
+const MAIL_FROM = 'theraiot.tech@gmail.com';
 const transporter = nodemailer.createTransport({
     service: 'gmail', // Assuming gmail for simplicity, or change to host/port
     auth: {
-        user: process.env.SMTP_EMAIL || 'websitelelo.in@gmail.com',
+        user: process.env.SMTP_EMAIL || MAIL_FROM,
         pass: process.env.SMTP_PASSWORD || '' // Needs an App Password if using Gmail
     }
 });
@@ -27,9 +28,8 @@ interface ResourceRecipient {
 
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     try {
-        if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
+        if (!process.env.SMTP_PASSWORD) {
             console.error("CRITICAL SMTP ERROR: Missing Credentials in Production Environment.", {
-                email: !!process.env.SMTP_EMAIL,
                 password: !!process.env.SMTP_PASSWORD
             });
             console.warn("⚠️ SMTP credentials not set. Simulated email sending:", options.subject, "to", options.to);
@@ -39,7 +39,7 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
         console.log("Attempting to send real email to:", options.to, "Subject:", options.subject);
 
         const info = await transporter.sendMail({
-            from: `"RAIoT Dashboard" <${process.env.SMTP_EMAIL}>`,
+            from: `"RAIoT Dashboard" <${MAIL_FROM}>`,
             ...options
         });
 
