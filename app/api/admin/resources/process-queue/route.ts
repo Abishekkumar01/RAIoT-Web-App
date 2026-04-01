@@ -9,11 +9,35 @@ const isValidEmail = (email: string): boolean => {
     return emailRegex.test(email.trim());
 };
 
+// Verify request comes from Vercel Crons or authenticated user
+const verifyAuth = async (request: Request): Promise<boolean> => {
+    // Check for Vercel Cron secret header
+    const cronSecret = request.headers.get('x-vercel-cron-secret');
+    if (cronSecret === process.env.CRON_SECRET) {
+        return true;
+    }
+
+    // Fall back to checking user authentication
+    const authHeader = request.headers.get('authorization');
+    if (authHeader) {
+        // For direct API calls with auth token
+        return true;
+    }
+
+    return false;
+};
+
 export async function POST(request: Request) {
     try {
-        const authUser = await verifySuperAdmin(request);
-        if (!authUser) {
-            return NextResponse.json({ error: 'Unauthorized: Superadmin access required' }, { status: 401 });
+        const isAuthorized = await verifyAuth(request);
+        
+        // If not a Vercel cron call, verify superadmin
+        const cronSecret = request.headers.get('x-vercel-cron-secret');
+        if (cronSecret !== process.env.CRON_SECRET) {
+            const authUser = await verifySuperAdmin(request);
+            if (!authUser) {
+                return NextResponse.json({ error: 'Unauthorized: Superadmin access required' }, { status: 401 });
+            }
         }
 
         const adminDb = getAdminDb();

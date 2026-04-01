@@ -6,6 +6,13 @@
         "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME": "dp5daaegm",
         "NEXT_PUBLIC_CLOUDINARY_API_KEY": "459138652653136",
         "CLOUDINARY_API_KEY": "459138652653136",
-        "CLOUDINARY_API_SECRET": "icVGPJKlpO14YRDY4dK9A5xk3LA"
-    }
+        "CLOUDINARY_API_SECRET": "icVGPJKlpO14YRDY4dK9A5xk3LA",
+        "CRON_SECRET": "raiot_email_queue_cron_secret_2024"
+    },
+    "crons": [
+        {
+            "path": "/api/admin/resources/process-queue",
+            "schedule": "*/5 * * * *"
+        }
+    ]
 }
