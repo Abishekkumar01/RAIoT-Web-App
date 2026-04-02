@@ -1,0 +1,31 @@
+name: Process Email Queue
+
+# Run every 5 minutes
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  # Also allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  process-queue:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Process Email Queue
+        run: |
+          curl -X POST \
+            -H "x-api-key: ${{ secrets.QUEUE_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.APP_URL }}/api/admin/resources/process-queue"
+        continue-on-error: true
+        timeout-minutes: 5
+
+      - name: Check Queue Status
+        run: |
+          curl -X GET \
+            -H "x-api-key: ${{ secrets.QUEUE_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.APP_URL }}/api/admin/resources/process-queue"
+        continue-on-error: true
+        timeout-minutes: 5

@@ -9,35 +9,28 @@ const isValidEmail = (email: string): boolean => {
     return emailRegex.test(email.trim());
 };
 
-// Verify request comes from Vercel Crons or authenticated user
+// Verify authentication (Firebase or API key for webhooks)
 const verifyAuth = async (request: Request): Promise<boolean> => {
-    // Check for Vercel Cron secret header
-    const cronSecret = request.headers.get('x-vercel-cron-secret');
-    if (cronSecret === process.env.CRON_SECRET) {
+    // Check for API key (for GitHub Actions / webhooks)
+    const apiKey = request.headers.get('x-api-key');
+    if (apiKey === process.env.QUEUE_API_KEY && process.env.QUEUE_API_KEY) {
         return true;
     }
 
-    // Fall back to checking user authentication
-    const authHeader = request.headers.get('authorization');
-    if (authHeader) {
-        // For direct API calls with auth token
-        return true;
+    // Fall back to Firebase superadmin verification
+    try {
+        const authUser = await verifySuperAdmin(request);
+        return !!authUser;
+    } catch {
+        return false;
     }
-
-    return false;
 };
 
 export async function POST(request: Request) {
     try {
         const isAuthorized = await verifyAuth(request);
-        
-        // If not a Vercel cron call, verify superadmin
-        const cronSecret = request.headers.get('x-vercel-cron-secret');
-        if (cronSecret !== process.env.CRON_SECRET) {
-            const authUser = await verifySuperAdmin(request);
-            if (!authUser) {
-                return NextResponse.json({ error: 'Unauthorized: Superadmin access required' }, { status: 401 });
-            }
+        if (!isAuthorized) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const adminDb = getAdminDb();
@@ -142,9 +135,9 @@ export async function POST(request: Request) {
 // GET endpoint to check queue status
 export async function GET(request: Request) {
     try {
-        const authUser = await verifySuperAdmin(request);
-        if (!authUser) {
-            return NextResponse.json({ error: 'Unauthorized: Superadmin access required' }, { status: 401 });
+        const isAuthorized = await verifyAuth(request);
+        if (!isAuthorized) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const adminDb = getAdminDb();
