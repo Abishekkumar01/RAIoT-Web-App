@@ -248,7 +248,7 @@ export default function AdminResourcesPage() {
               title,
               description,
               fileUrl,
-              fileName: storageType === 'link' ? (fileName || undefined) : fileName,
+              fileName: storageType === 'link' ? (fileName || null) : (fileName || null),
               storageType,
               userId: selectedUserId,
               notifyAll: selectedUserId === 'all',
@@ -330,67 +330,24 @@ export default function AdminResourcesPage() {
           <h1 className="text-3xl font-bold text-white tracking-tight">Manage Resources</h1>
           <p className="text-zinc-400 mt-2">Upload and manage test papers and materials for members.</p>
         </div>
-        <div className="flex gap-3">
-          <Dialog open={showQueueStatus} onOpenChange={setShowQueueStatus}>
-            <DialogTrigger asChild>
-              <Button 
-                variant="outline" 
-                className="border-zinc-700 hover:bg-zinc-800 text-white"
-                onClick={checkQueueStatus}
-              >
-                📨 Queue: {queueStatus.pending} Pending{queueStatus.failed > 0 && ` | ${queueStatus.failed} Failed`}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-zinc-900 border-zinc-800 text-white">
-              <DialogHeader>
-                <DialogTitle>Email Queue Status</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-zinc-800 p-4 rounded">
-                    <p className="text-zinc-400 text-sm">Pending</p>
-                    <p className="text-2xl font-bold text-yellow-400">{queueStatus.pending}</p>
-                  </div>
-                  <div className="bg-zinc-800 p-4 rounded">
-                    <p className="text-zinc-400 text-sm">Sent</p>
-                    <p className="text-2xl font-bold text-green-400">{queueStatus.sent}</p>
-                  </div>
-                  <div className="bg-zinc-800 p-4 rounded">
-                    <p className="text-zinc-400 text-sm">Failed</p>
-                    <p className="text-2xl font-bold text-red-400">{queueStatus.failed}</p>
-                  </div>
-                </div>
-                <p className="text-zinc-400 text-sm">
-                  Emails are automatically sent at 5-minute intervals. You can manually trigger the next email below.
-                </p>
-                <Button 
-                  onClick={processNextEmail} 
-                  disabled={isProcessingQueue || queueStatus.pending === 0}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  {isProcessingQueue ? 'Processing...' : 'Process Next Email'}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-          <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white">
-                <Plus className="mr-2 h-4 w-4" /> Upload Resource
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-zinc-900 border-zinc-800 text-white sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle className="text-xl">Upload New Resource</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Select Member *</Label>
-                  <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                      <SelectValue placeholder="Select a member..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-zinc-800 border-zinc-700 text-white max-h-64">
+        <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+              <Plus className="mr-2 h-4 w-4" /> Upload Resource
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-zinc-900 border-zinc-800 text-white sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Upload New Resource</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Select Member *</Label>
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700">
+                    <SelectValue placeholder="Select a member..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700 text-white max-h-64">
                     <SelectItem value="all">All Members (Visible to everyone)</SelectItem>
                     {users.map(u => (
                       <SelectItem key={u.uid} value={u.uid}>{u.displayName} ({u.email})</SelectItem>
