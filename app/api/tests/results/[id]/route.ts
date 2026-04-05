@@ -25,14 +25,24 @@ export async function GET(request: Request, { params }: { params: { id: string }
         const subSnapshot = await adminDb.collection('examSubmissions')
             .where('userId', '==', authUser.uid)
             .where('testId', '==', testId)
-            .limit(1)
             .get();
 
         if (subSnapshot.empty) {
             return NextResponse.json({ error: 'No submission found for this test.' }, { status: 404 });
         }
 
-        const submission = subSnapshot.docs[0].data();
+        const submissions = subSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as any[];
+        submissions.sort((a, b) => {
+            const aFinal = typeof a?.score === 'number' ? 1 : 0;
+            const bFinal = typeof b?.score === 'number' ? 1 : 0;
+            if (aFinal !== bFinal) return bFinal - aFinal;
+
+            const aUpdated = new Date(a?.updatedAt || a?.submittedAt || 0).getTime();
+            const bUpdated = new Date(b?.updatedAt || b?.submittedAt || 0).getTime();
+            return bUpdated - aUpdated;
+        });
+
+        const submission = submissions[0];
         return NextResponse.json({
             submission: {
                 ...submission,
