@@ -54,12 +54,16 @@ export default function TestResultsPage() {
   const hasFinalScore = typeof submission.score === "number";
   const hasAutoScore = typeof submission.autoScore === "number";
   const isFinalized = submission.resultState === "final" || hasFinalScore;
+  const totalMarks = Number(submission.totalMarks || submission.maxMarks || submission.totalPossibleMarks || 0);
   const displayedScore = hasFinalScore
     ? submission.score
     : hasAutoScore
       ? submission.autoScore
       : null;
   const isProvisionalScore = !isFinalized && hasAutoScore;
+  const displayedPercentage = displayedScore !== null && totalMarks > 0
+    ? ((Number(displayedScore) / totalMarks) * 100).toFixed(2)
+    : null;
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-8">
@@ -76,8 +80,11 @@ export default function TestResultsPage() {
         <div className="text-right">
           <p className="text-sm font-semibold text-zinc-400 uppercase tracking-widest">Score</p>
           <p className="text-4xl font-black text-primary">
-            {displayedScore !== null ? displayedScore : "Pending Grading"}
+            {displayedScore !== null ? `${displayedScore}/${totalMarks || "-"}` : "Pending Grading"}
           </p>
+          {displayedPercentage && (
+            <p className="text-xs text-cyan-300 mt-1">{displayedPercentage}%</p>
+          )}
           {isProvisionalScore && (
             <p className="text-xs text-amber-400 mt-1">Provisional (auto-evaluated)</p>
           )}

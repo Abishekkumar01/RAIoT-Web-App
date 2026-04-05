@@ -152,6 +152,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
         }
 
         const examData = examDoc.data();
+        const examQuestions = Array.isArray(examData?.questions) ? examData.questions : [];
+        const totalMarks = examQuestions.reduce((sum: number, question: any) => sum + Number(question?.points || 0), 0);
         if (!examData?.resultPublished) {
             return NextResponse.json({ error: 'Results are not published yet.' }, { status: 403 });
         }
@@ -179,7 +181,6 @@ export async function GET(request: Request, { params }: { params: { id: string }
         });
 
         const submission = submissions[0];
-        const examQuestions = Array.isArray(examData?.questions) ? examData.questions : [];
         const finalScore = computeFinalScore(examQuestions, submission);
         const hasFinalManualReview = !!submission?.manualReviewedAt || submission?.requiresManualReview === false || (!!submission?.manualGrades && Object.keys(submission.manualGrades).length > 0);
         return NextResponse.json({
@@ -187,6 +188,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 ...submission,
                 score: finalScore !== null ? finalScore : submission?.score ?? null,
                 finalScore: finalScore !== null ? finalScore : submission?.score ?? null,
+                totalMarks,
                 resultState: hasFinalManualReview ? 'final' : 'provisional',
                 resultPublished: true
             }

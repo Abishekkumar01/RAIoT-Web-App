@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CloudinaryUpload } from "@/components/ui/CloudinaryUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp, FileSpreadsheet } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp, FileSpreadsheet, Trophy, Sparkles } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ExamTest, KeywordMatchMode, Question, QuestionType } from "@/types/examination";
 
@@ -103,6 +103,12 @@ export default function AdminExamsPage() {
     if (!Number.isFinite(num)) return '0';
     const rounded = roundMarks(num);
     return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+  };
+  const formatPercent = (score: number | string | null | undefined, total: number | string | null | undefined) => {
+    const scoreNum = Number(score ?? 0);
+    const totalNum = Number(total ?? 0);
+    if (!Number.isFinite(scoreNum) || !Number.isFinite(totalNum) || totalNum <= 0) return '0.00';
+    return ((scoreNum / totalNum) * 100).toFixed(2);
   };
 
   useEffect(() => {
@@ -1823,6 +1829,140 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                       </SelectContent>
                     </Select>
                   </div>
+                  {(() => {
+                    const selectedRoleFilter = roleFilterByExam[exam.id!] || 'both';
+                    const leaderboardRows = (resultsByExam[exam.id!] || [])
+                      .filter((row: any) => {
+                        const role = String(row.userRole || '').toLowerCase();
+                        const isMember = ['member', 'junior_developer', 'senior_developer'].includes(role);
+                        const isTrainee = role === 'trainee';
+                        if (selectedRoleFilter === 'member') return isMember;
+                        if (selectedRoleFilter === 'trainee') return isTrainee;
+                        return isMember || isTrainee;
+                      })
+                      .slice()
+                      .sort((a: any, b: any) => {
+                        const scoreDiff = Number(b.obtainedMarks ?? 0) - Number(a.obtainedMarks ?? 0);
+                        if (scoreDiff !== 0) return scoreDiff;
+                        return new Date(a.submittedAt || 0).getTime() - new Date(b.submittedAt || 0).getTime();
+                      });
+                    const topThree = leaderboardRows.slice(0, 3);
+
+                    if (leaderboardRows.length === 0) return null;
+
+                    const podiumMeta = [
+                      {
+                        label: 'Gold',
+                        rank: 1,
+                        border: 'border-amber-400/70',
+                        bg: 'bg-gradient-to-br from-amber-500/20 via-amber-400/10 to-zinc-950',
+                        glow: 'shadow-[0_0_25px_rgba(251,191,36,0.28)]',
+                        badge: 'text-amber-300',
+                        accent: 'from-amber-300 via-yellow-200 to-amber-500',
+                      },
+                      {
+                        label: 'Silver',
+                        rank: 2,
+                        border: 'border-slate-300/70',
+                        bg: 'bg-gradient-to-br from-slate-300/15 via-slate-200/10 to-zinc-950',
+                        glow: 'shadow-[0_0_22px_rgba(148,163,184,0.22)]',
+                        badge: 'text-slate-200',
+                        accent: 'from-slate-100 via-slate-300 to-slate-500',
+                      },
+                      {
+                        label: 'Bronze',
+                        rank: 3,
+                        border: 'border-orange-600/70',
+                        bg: 'bg-gradient-to-br from-orange-600/20 via-orange-500/10 to-zinc-950',
+                        glow: 'shadow-[0_0_22px_rgba(249,115,22,0.22)]',
+                        badge: 'text-orange-300',
+                        accent: 'from-orange-200 via-orange-400 to-orange-700',
+                      },
+                    ];
+
+                    return (
+                      <div className="mb-4 space-y-4">
+                        <div className="flex items-center gap-2 text-zinc-200">
+                          <Trophy className="w-4 h-4 text-amber-300" />
+                          <span className="font-semibold">Leaderboard</span>
+                          <span className="text-xs text-zinc-500">Ranked by marks, then submission time</span>
+                        </div>
+
+                        <div className="grid gap-3 md:grid-cols-3">
+                          {topThree.map((row: any, index: number) => {
+                            const meta = podiumMeta[index];
+                            return (
+                              <div
+                                key={`podium-${row.id}`}
+                                className={`relative overflow-hidden rounded-xl border ${meta.border} ${meta.bg} ${meta.glow} p-4 transition-transform duration-300 hover:-translate-y-1`}
+                              >
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[pulse_3s_ease-in-out_infinite]" />
+                                <div className="relative flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className={`text-[10px] uppercase tracking-[0.3em] ${meta.badge}`}>{meta.label}</p>
+                                    <div className="mt-1 flex items-center gap-2">
+                                      <div className={`h-10 w-10 rounded-full bg-gradient-to-br ${meta.accent} text-zinc-950 font-black flex items-center justify-center shadow-lg`}>{index + 1}</div>
+                                      <div>
+                                        <p className="font-semibold text-zinc-100">{row.userName || 'Unknown User'}</p>
+                                        <p className="text-xs text-zinc-400">{row.userRole || '-'}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-2xl font-black text-zinc-50">{formatMarks(row.obtainedMarks)}</p>
+                                    <p className="text-xs text-zinc-400">/{formatMarks(row.totalMarks)}</p>
+                                    <p className="text-xs text-cyan-300 mt-1">{formatPercent(row.obtainedMarks, row.totalMarks)}%</p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="rounded-md border border-zinc-800 overflow-hidden">
+                          <div className="grid grid-cols-12 gap-2 p-3 bg-zinc-900 text-xs uppercase tracking-wide text-zinc-400">
+                            <div className="col-span-1">Rank</div>
+                            <div className="col-span-3">Member</div>
+                            <div className="col-span-3">Email</div>
+                            <div className="col-span-2">Score</div>
+                            <div className="col-span-1">%</div>
+                            <div className="col-span-2 text-right">Status</div>
+                          </div>
+                          {leaderboardRows.map((row: any, index: number) => {
+                            const rank = index + 1;
+                            const isTopThree = rank <= 3;
+                            const rowTone = rank === 1
+                              ? 'border-l-4 border-amber-400 bg-amber-500/5'
+                              : rank === 2
+                                ? 'border-l-4 border-slate-300 bg-slate-500/5'
+                                : rank === 3
+                                  ? 'border-l-4 border-orange-600 bg-orange-500/5'
+                                  : 'border-l-4 border-zinc-800 bg-zinc-950/40';
+
+                            return (
+                              <div key={`leader-${row.id}`} className={`grid grid-cols-12 gap-2 p-3 items-center text-sm ${rowTone}`}>
+                                <div className="col-span-1 flex items-center gap-2">
+                                  <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-black ${rank === 1 ? 'bg-amber-400 text-zinc-950' : rank === 2 ? 'bg-slate-300 text-zinc-950' : rank === 3 ? 'bg-orange-500 text-zinc-950' : 'bg-zinc-800 text-zinc-200'}`}>
+                                    {rank}
+                                  </span>
+                                </div>
+                                <div className="col-span-3 truncate text-zinc-100">{row.userName || 'Unknown User'}</div>
+                                <div className="col-span-3 truncate text-zinc-400">{row.userEmail || '-'}</div>
+                                <div className="col-span-2 text-zinc-100 font-semibold">{formatMarks(row.obtainedMarks)}/{formatMarks(row.totalMarks)}</div>
+                                <div className="col-span-1 text-cyan-300 font-semibold">{formatPercent(row.obtainedMarks, row.totalMarks)}%</div>
+                                <div className="col-span-2 text-right">
+                                  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${isTopThree ? 'border-cyan-400/50 text-cyan-200' : 'border-zinc-700 text-zinc-400'}`}>
+                                    {rank <= 3 && <Sparkles className="w-3 h-3" />}
+                                    {rank <= 3 ? ['Gold', 'Silver', 'Bronze'][rank - 1] : 'Ranked'}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div className="rounded-md border border-zinc-800 overflow-hidden">
                     <div className="grid grid-cols-16 gap-2 p-3 bg-zinc-900 text-xs uppercase tracking-wide text-zinc-400">
                       <div className="col-span-2">Member</div>
