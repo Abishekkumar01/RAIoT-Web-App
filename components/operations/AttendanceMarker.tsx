@@ -103,11 +103,11 @@ export function AttendanceMarker() {
                     return;
                 }
                 
-                let studentStats = statsMap[studentId] || { present: 0, total: 0, rate: 0 };
+                let studentStats = statsMap[studentId] || { present: 0, late: 0, absent: 0, leave: 0, total: 0, rate: 0 };
                 
                 // For trainees, if they have no attendance logged yet, default to 1/1 as requested
                 if (normalizedRole === 'trainee' && studentStats.total === 0) {
-                    studentStats = { present: 1, total: 1, rate: 100 };
+                    studentStats = { present: 1, late: 0, absent: 0, leave: 0, total: 1, rate: 100 };
                 }
 
                 // If user is trainee, try to augment their information from the trainees database
@@ -213,7 +213,7 @@ export function AttendanceMarker() {
         }
     }, [date, students.length])
 
-    const handleStatusChange = (studentId: string, status: 'present' | 'absent' | 'late') => {
+    const handleStatusChange = (studentId: string, status: 'present' | 'absent' | 'late' | 'leave') => {
         setAttendanceState(prev => ({
             ...prev,
             [studentId]: status

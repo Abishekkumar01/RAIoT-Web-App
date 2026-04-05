@@ -22,7 +22,9 @@ interface AttendanceSummary {
     date: { toDate: () => Date }
     totalStudents: number
     totalPresent: number
+    totalLate: number
     totalAbsent: number
+    totalLeave: number
     type?: 'regular' | 'holiday'
 }
 
@@ -117,6 +119,8 @@ export function AttendanceHistory() {
                             <TableHead>Type</TableHead>
                             <TableHead>Total Students</TableHead>
                             <TableHead className="text-green-600">Present</TableHead>
+                            <TableHead className="text-orange-500">Late</TableHead>
+                            <TableHead className="text-purple-500">Leave</TableHead>
                             <TableHead className="text-red-600">Absent</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -124,13 +128,13 @@ export function AttendanceHistory() {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center">
+                                <TableCell colSpan={8} className="h-24 text-center">
                                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                                 </TableCell>
                             </TableRow>
                         ) : summaries.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                                     No attendance records found in MongoDB.
                                 </TableCell>
                             </TableRow>
@@ -143,6 +147,8 @@ export function AttendanceHistory() {
                                     <TableCell className="capitalize">{item.type || 'regular'}</TableCell>
                                     <TableCell>{item.totalStudents}</TableCell>
                                     <TableCell className="text-green-600 font-medium">{item.totalPresent}</TableCell>
+                                    <TableCell className="text-orange-500 font-medium">{item.totalLate}</TableCell>
+                                    <TableCell className="text-purple-500 font-medium">{item.totalLeave}</TableCell>
                                     <TableCell className="text-red-600 font-medium">{item.totalAbsent}</TableCell>
                                     <TableCell className="text-right">
                                         <Button

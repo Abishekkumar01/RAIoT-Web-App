@@ -23,7 +23,7 @@ export default function DashboardPage() {
   const { user } = useAuth()
   const [recentEvents, setRecentEvents] = useState<Event[]>([])
   const [globalStats, setGlobalStats] = useState({ events: 0, students: 0 })
-  const [attendanceStats, setAttendanceStats] = useState({ present: 0, late: 0, absent: 0, total: 0 })
+  const [attendanceStats, setAttendanceStats] = useState({ present: 0, late: 0, absent: 0, leave: 0, total: 0, attendancePercentage: 0 })
   const [uniqueClassDates, setUniqueClassDates] = useState(0)
   const [loading, setLoading] = useState(true)
 
@@ -77,7 +77,9 @@ export default function DashboardPage() {
           present: result.data.present,
           late: result.data.late,
           absent: result.data.absent,
-          total: result.data.total
+          leave: result.data.leave,
+          total: result.data.total,
+          attendancePercentage: result.data.attendancePercentage
         });
       }
     }
@@ -171,10 +173,15 @@ export default function DashboardPage() {
                 <p className="text-xs text-muted-foreground mt-1">
                   Events Attended
                 </p>
+                <p className="text-xs font-medium text-primary mt-1">
+                  {attendanceStats.attendancePercentage}% Attendance
+                </p>
                 <div className="flex gap-2 mt-3 text-[10px] text-muted-foreground">
                   <span className="text-green-500">{attendanceStats.present} Present</span>
                   <span>•</span>
                   <span className="text-orange-500">{attendanceStats.late} Late</span>
+                  <span>•</span>
+                  <span className="text-purple-500">{attendanceStats.leave} Leave</span>
                   <span>•</span>
                   <span className="text-red-500">{attendanceStats.absent} Absent</span>
                 </div>

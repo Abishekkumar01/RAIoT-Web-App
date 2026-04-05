@@ -121,17 +121,42 @@ export async function getAttendanceStats() {
                             $cond: [{ $in: ['$records.status', ['present', 'late']] }, 1, 0]
                         }
                     },
+                    lateCount: {
+                        $sum: {
+                            $cond: [{ $eq: ['$records.status', 'late'] }, 1, 0]
+                        }
+                    },
+                    absentCount: {
+                        $sum: {
+                            $cond: [{ $eq: ['$records.status', 'absent'] }, 1, 0]
+                        }
+                    },
+                    leaveCount: {
+                        $sum: {
+                            $cond: [{ $eq: ['$records.status', 'leave'] }, 1, 0]
+                        }
+                    },
                     totalSessions: { $sum: 1 }
                 }
             }
         ]);
 
-        const statsMap: Record<string, { present: number, total: number, rate: number }> = {};
+        const statsMap: Record<string, {
+            present: number,
+            late: number,
+            absent: number,
+            leave: number,
+            total: number,
+            rate: number
+        }> = {};
 
         stats.forEach(item => {
             if (item._id) {
                 statsMap[item._id] = {
                     present: item.presentCount,
+                    late: item.lateCount,
+                    absent: item.absentCount,
+                    leave: item.leaveCount,
                     total: item.totalSessions,
                     rate: item.totalSessions > 0
                         ? parseFloat(((item.presentCount / item.totalSessions) * 100).toFixed(1))
@@ -174,6 +199,11 @@ export async function getStudentAttendanceStats(studentId: string) {
                             $cond: [{ $eq: ['$records.status', 'absent'] }, 1, 0]
                         }
                     },
+                    leave: {
+                        $sum: {
+                            $cond: [{ $eq: ['$records.status', 'leave'] }, 1, 0]
+                        }
+                    },
                     total: { $sum: 1 }
                 }
             }
@@ -182,11 +212,22 @@ export async function getStudentAttendanceStats(studentId: string) {
         if (!stats || stats.length === 0) {
             return {
                 success: true,
-                data: { present: 0, late: 0, absent: 0, total: 0 }
+                data: { present: 0, late: 0, absent: 0, leave: 0, total: 0, attendancePercentage: 0 }
             };
         }
 
-        return { success: true, data: stats[0] };
+        const studentStats = stats[0];
+        const attendancePercentage = studentStats.total > 0
+            ? parseFloat(((studentStats.present / studentStats.total) * 100).toFixed(1))
+            : 0;
+
+        return {
+            success: true,
+            data: {
+                ...studentStats,
+                attendancePercentage
+            }
+        };
     } catch (error: any) {
         console.error('Error fetching student stats:', error);
         return { success: false, error: error.message };
@@ -235,7 +276,9 @@ export async function getAttendanceSummaries() {
             dateStr: doc.date,
             totalStudents: doc.records.length,
             totalPresent: doc.records.filter((r: any) => r.status === 'present' || r.status === 'late').length,
+            totalLate: doc.records.filter((r: any) => r.status === 'late').length,
             totalAbsent: doc.records.filter((r: any) => r.status === 'absent').length,
+            totalLeave: doc.records.filter((r: any) => r.status === 'leave').length,
             type: doc.type || 'regular'
         }));
 

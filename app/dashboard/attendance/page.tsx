@@ -5,10 +5,8 @@ import { useAuth } from "@/lib/contexts/AuthContext"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, MapPin, TrendingUp, CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react"
-import { collection, getDocs, getCountFromServer } from "firebase/firestore"
-import { db } from "@/lib/firebase"
 import { AttendanceChart } from "./AttendanceChart"
-import { getStudentAttendanceRecords, getStudentAttendanceStats } from "@/app/actions/attendanceActions"
+import { getStudentAttendanceRecords } from "@/app/actions/attendanceActions"
 
 interface AttendanceRecord {
   eventId: string
@@ -16,7 +14,7 @@ interface AttendanceRecord {
   date: string
   time: string
   location: string
-  status: "present" | "absent" | "late"
+  status: "present" | "absent" | "late" | "leave"
   type: string
 }
 
@@ -66,19 +64,22 @@ export default function AttendancePage() {
   const presentCount = attendanceRecords.filter((record) => record.status === "present").length
   const lateCount = attendanceRecords.filter((record) => record.status === "late").length
   const absentCount = attendanceRecords.filter((record) => record.status === "absent").length
+  const leaveCount = attendanceRecords.filter((record) => record.status === "leave").length
 
   const getStatusIcon = (status: string) => {
     return status === "present" ? (
       <CheckCircle className="h-4 w-4 text-green-500" />
     ) : status === "late" ? (
       <AlertCircle className="h-4 w-4 text-orange-500" />
+    ) : status === "leave" ? (
+      <AlertCircle className="h-4 w-4 text-purple-500" />
     ) : (
       <XCircle className="h-4 w-4 text-red-500" />
     )
   }
 
   const getStatusColor = (status: string) => {
-    return status === "present" ? "bg-green-500" : status === "late" ? "bg-orange-500" : "bg-red-500"
+    return status === "present" ? "bg-green-500" : status === "late" ? "bg-orange-500" : status === "leave" ? "bg-purple-500" : "bg-red-500"
   }
 
   const getTypeColor = (type: string) => {
@@ -148,6 +149,7 @@ export default function AttendancePage() {
         present={presentCount}
         late={lateCount}
         absent={absentCount}
+        leave={leaveCount}
         total={totalEvents}
       />
 

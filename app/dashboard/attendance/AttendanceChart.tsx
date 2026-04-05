@@ -8,13 +8,15 @@ interface AttendanceChartProps {
     present: number
     late: number
     absent: number
+    leave: number
     total: number
 }
 
-export function AttendanceChart({ present, late, absent, total }: AttendanceChartProps) {
+export function AttendanceChart({ present, late, absent, leave, total }: AttendanceChartProps) {
     const data = [
         { name: "Present", value: present, color: "#22c55e" }, // green-500
         { name: "Late", value: late, color: "#f97316" },    // orange-500
+        { name: "Leave", value: leave, color: "#a855f7" },   // purple-500
         { name: "Absent", value: absent, color: "#ef4444" },   // red-500
     ]
 
@@ -24,6 +26,7 @@ export function AttendanceChart({ present, late, absent, total }: AttendanceChar
 
     // Calculate attended count (Present + Late)
     const attendedCount = present + late
+    const attendancePercentage = total > 0 ? ((attendedCount / total) * 100).toFixed(1) : "0.0"
 
     // If no data at all, show a gray ring
     if (total === 0) {
@@ -68,6 +71,7 @@ export function AttendanceChart({ present, late, absent, total }: AttendanceChar
                                 {attendedCount}<span className="text-slate-400 font-normal">/{total}</span>
                             </span>
                             <span className="text-sm text-muted-foreground font-medium mt-1">Attended</span>
+                            <span className="text-xs text-primary font-semibold mt-1">{attendancePercentage}%</span>
                         </div>
                     </div>
 
@@ -109,6 +113,19 @@ export function AttendanceChart({ present, late, absent, total }: AttendanceChar
                                 value={total > 0 ? (absent / total) * 100 : 0}
                                 className="h-2 bg-red-100 dark:bg-red-950/30"
                                 indicatorClassName="bg-red-500"
+                            />
+                        </div>
+
+                        {/* Leave */}
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-purple-500 font-medium">Leave</span>
+                                <span className="text-slate-600 dark:text-slate-400">{leave}</span>
+                            </div>
+                            <Progress
+                                value={total > 0 ? (leave / total) * 100 : 0}
+                                className="h-2 bg-purple-100 dark:bg-purple-950/30"
+                                indicatorClassName="bg-purple-500"
                             />
                         </div>
                     </div>

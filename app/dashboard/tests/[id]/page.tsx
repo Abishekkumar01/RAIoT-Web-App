@@ -7,10 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ArrowLeft, Send, Clock, ChevronLeft, ChevronRight, Eraser } from "lucide-react";
+import { Loader2, ArrowLeft, Send, Clock, ChevronLeft, ChevronRight, Eraser, Calculator, X } from "lucide-react";
 import { ExamTest, Question } from "@/types/examination";
 
 type AnswerValue = string | string[];
+
+const calculatorButtons = [
+  ["7", "8", "9", "/"],
+  ["4", "5", "6", "*"],
+  ["1", "2", "3", "-"],
+  ["0", ".", "=", "+"],
+];
 
 // Fisher-Yates shuffle algorithm to randomize question order
 const shuffleQuestions = (questions: Question[]): Question[] => {
@@ -40,6 +47,9 @@ export default function TakeTestPage() {
   const [violationWarning, setViolationWarning] = useState<string | null>(null);
   const [violationCount, setViolationCount] = useState(0);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(true);
+  const [calculatorInput, setCalculatorInput] = useState("");
+  const [calculatorResult, setCalculatorResult] = useState("0");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const hasAutoSubmitted = useRef(false);
   const lastViolationTsRef = useRef(0);
@@ -412,6 +422,43 @@ export default function TakeTestPage() {
     return base;
   };
 
+  const evaluateCalculatorExpression = (expression: string) => {
+    const cleaned = expression.replace(/\s+/g, "");
+    if (!cleaned) return "0";
+    if (!/^[0-9+\-*/.()]+$/.test(cleaned)) return "Error";
+
+    try {
+      // The regex whitelist above limits characters to numeric math tokens.
+      const computed = Function(`"use strict"; return (${cleaned});`)();
+      if (typeof computed !== "number" || !Number.isFinite(computed)) return "Error";
+      return Number.isInteger(computed) ? String(computed) : String(Number(computed.toFixed(6)));
+    } catch {
+      return "Error";
+    }
+  };
+
+  const handleCalculatorButton = (value: string) => {
+    if (value === "=") {
+      const evaluated = evaluateCalculatorExpression(calculatorInput);
+      setCalculatorResult(evaluated);
+      if (evaluated !== "Error") {
+        setCalculatorInput(evaluated);
+      }
+      return;
+    }
+
+    setCalculatorInput((prev) => `${prev}${value}`);
+  };
+
+  const handleCalculatorClear = () => {
+    setCalculatorInput("");
+    setCalculatorResult("0");
+  };
+
+  const handleCalculatorBackspace = () => {
+    setCalculatorInput((prev) => prev.slice(0, -1));
+  };
+
   if (loading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
 
   if (error) {
@@ -474,6 +521,65 @@ export default function TakeTestPage() {
         </div>
       ) : (
         <>
+          {/* Floating Calculator Utility */}
+          <div className="fixed bottom-6 left-6 z-[115]">
+            {!showCalculator ? (
+              <Button
+                type="button"
+                onClick={() => setShowCalculator(true)}
+                className="bg-zinc-900 border border-zinc-700 text-zinc-100 hover:bg-zinc-800"
+              >
+                <Calculator className="w-4 h-4 mr-2" />
+                Calculator
+              </Button>
+            ) : (
+              <Card className="w-72 bg-zinc-900/95 border-zinc-700 shadow-2xl">
+                <CardHeader className="py-3 px-4 border-b border-zinc-800">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm flex items-center gap-2 text-zinc-100">
+                      <Calculator className="w-4 h-4" />
+                      Calculator
+                    </CardTitle>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => setShowCalculator(false)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-3 space-y-3">
+                  <div className="rounded-md border border-zinc-700 bg-zinc-950 p-2">
+                    <p className="text-[11px] text-zinc-400 min-h-4 break-all">{calculatorInput || "0"}</p>
+                    <p className="text-lg font-semibold text-zinc-100 break-all">{calculatorResult}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button type="button" variant="outline" className="border-zinc-700" onClick={handleCalculatorClear}>C</Button>
+                    <Button type="button" variant="outline" className="border-zinc-700" onClick={handleCalculatorBackspace}>DEL</Button>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2">
+                    {calculatorButtons.flat().map((btn) => (
+                      <Button
+                        key={btn}
+                        type="button"
+                        variant={btn === "=" ? "default" : "outline"}
+                        className={btn === "=" ? "bg-primary hover:bg-primary/90" : "border-zinc-700"}
+                        onClick={() => handleCalculatorButton(btn)}
+                      >
+                        {btn}
+                      </Button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
           {/* Fullscreen Enforcer Overlay */}
           {!isFullscreen && (
             <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">

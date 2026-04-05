@@ -60,7 +60,7 @@ export interface AttendanceRecord {
   eventId: string
   eventName: string
   date: Date
-  status: 'present' | 'absent' | 'late'
+  status: 'present' | 'absent' | 'late' | 'leave'
 }
 
 export interface Event {
