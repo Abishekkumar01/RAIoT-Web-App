@@ -51,6 +51,15 @@ export default function TestResultsPage() {
     );
   }
 
+  const hasFinalScore = typeof submission.score === "number";
+  const hasAutoScore = typeof submission.autoScore === "number";
+  const displayedScore = hasFinalScore
+    ? submission.score
+    : hasAutoScore
+      ? submission.autoScore
+      : null;
+  const isProvisionalScore = !hasFinalScore && hasAutoScore;
+
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-8">
       <div className="flex justify-between items-center bg-zinc-900 border border-zinc-800 p-6 rounded-lg">
@@ -66,8 +75,11 @@ export default function TestResultsPage() {
         <div className="text-right">
           <p className="text-sm font-semibold text-zinc-400 uppercase tracking-widest">Score</p>
           <p className="text-4xl font-black text-primary">
-            {submission.score !== null ? submission.score : "Pending Grading"}
+            {displayedScore !== null ? displayedScore : "Pending Grading"}
           </p>
+          {isProvisionalScore && (
+            <p className="text-xs text-amber-400 mt-1">Provisional (auto-evaluated)</p>
+          )}
         </div>
       </div>
 
@@ -77,9 +89,14 @@ export default function TestResultsPage() {
           <CardDescription>Your responses have been recorded successfully.</CardDescription>
         </CardHeader>
         <CardContent>
-           <p className="text-sm text-muted-foreground">
-             Note: If the test contained short or long answers, the final score will be updated by an administrator. Auto-grading was applied to MCQs.
-           </p>
+          <p className="text-sm text-muted-foreground">
+            Note: If the test contained short or long answers, the final score may be updated by an administrator. Auto-grading was applied to objective questions.
+          </p>
+          {isProvisionalScore && (
+            <p className="text-sm text-amber-400 mt-2">
+              Your current score is auto-evaluated and will be replaced once manual grading is completed.
+            </p>
+          )}
         </CardContent>
       </Card>
 
