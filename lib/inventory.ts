@@ -156,12 +156,18 @@ export const updateRequestStatus = async (id: string, status: RequestStatus, rej
             if (!requestSnap.exists()) throw new Error("Request not found");
 
             const requestData = requestSnap.data() as IInventoryRequest;
+            const componentRefs = requestData.items.map(item => doc(db, INVENTORY_COLLECTION, item.componentId));
+
+            // Firestore transactions require all reads to happen before any writes.
+            // Read every component snapshot first, then perform updates.
+            const componentSnapshots = await Promise.all(componentRefs.map(ref => transaction.get(ref)));
 
             // 1. If Approving: We must check stock again and DEDUCT it now
             if (status === 'approved' && requestData.status === 'pending') {
-                for (const item of requestData.items) {
-                    const componentRef = doc(db, INVENTORY_COLLECTION, item.componentId);
-                    const componentSnap = await transaction.get(componentRef);
+                for (let index = 0; index < requestData.items.length; index++) {
+                    const item = requestData.items[index];
+                    const componentRef = componentRefs[index];
+                    const componentSnap = componentSnapshots[index];
                     if (!componentSnap.exists()) throw new Error(`Component ${item.componentName} was deleted.`);
 
                     const compData = componentSnap.data() as IComponent;
@@ -177,9 +183,10 @@ export const updateRequestStatus = async (id: string, status: RequestStatus, rej
 
             // 2. If Returning: We must RESTORE the items (only if they were actually issued/approved)
             if (status === 'returned' && requestData.status === 'approved') {
-                for (const item of requestData.items) {
-                    const componentRef = doc(db, INVENTORY_COLLECTION, item.componentId);
-                    const componentSnap = await transaction.get(componentRef);
+                for (let index = 0; index < requestData.items.length; index++) {
+                    const item = requestData.items[index];
+                    const componentRef = componentRefs[index];
+                    const componentSnap = componentSnapshots[index];
                     if (componentSnap.exists()) {
                         transaction.update(componentRef, {
                             availableQuantity: increment(Math.floor(item.quantity))
