@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Download, FileSpreadsheet, Users, Calendar } from 'lucide-react'
 import { query, where, getDocs, doc, getDoc, collection } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { auth, db } from '@/lib/firebase'
 import { useToast } from '@/hooks/use-toast'
 
 interface Event {
@@ -47,7 +47,13 @@ export default function AdminEventExport() {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const response = await fetch('/api/events', { cache: 'no-store' })
+        const token = await auth.currentUser?.getIdToken(true)
+        if (!token) return
+
+        const response = await fetch('/api/admin/events', {
+          cache: 'no-store',
+          headers: { Authorization: `Bearer ${token}` },
+        })
         const payload = await response.json().catch(() => ({}))
         const eventsData = Array.isArray(payload?.data) ? payload.data as Event[] : []
         setEvents(eventsData)
@@ -340,7 +346,7 @@ export default function AdminEventExport() {
               <SelectTrigger>
                 <SelectValue placeholder="Choose an event" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[9999]">
                 {events.map((event) => (
                   <SelectItem key={event.id} value={event.id}>
                     {event.title} ({event.date})
@@ -356,7 +362,7 @@ export default function AdminEventExport() {
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[9999]">
                 <SelectItem value="teams">
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-2" />

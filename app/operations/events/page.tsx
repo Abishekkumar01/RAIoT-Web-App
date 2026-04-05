@@ -22,8 +22,8 @@ import { Switch } from "@/components/ui/switch"
 import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, Upload, X } from "lucide-react"
 import { logAuditAction } from '@/lib/audit'
 import { useAuth } from '@/lib/contexts/AuthContext'
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
-import { auth, storage } from '@/lib/firebase'
+import { auth } from '@/lib/firebase'
+import { getCloudinarySignature } from '@/app/actions/uploadAction'
 import { useToast } from '@/hooks/use-toast'
 import AdminEventExport from '@/components/AdminEventExport'
 
@@ -300,97 +300,61 @@ export default function OperationsEventsPage() {
             setUploadingImage(true)
             setUploadProgress(10)
 
-            // Create a unique filename
-            const timestamp = Date.now()
-            const randomId = Math.random().toString(36).substring(2, 9)
-            const filename = `events/${timestamp}_${randomId}_${imageFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '')}`
-            const storageRef = ref(storage, filename)
+            const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dvjvbonjb'
+            const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY || '789299399652629'
+            const { signature, timestamp } = await getCloudinarySignature('raiot_events')
 
-            console.log('🚀 Starting upload to:', filename)
-            console.log('📦 File size:', (imageFile.size / 1024).toFixed(2), 'KB')
-
-            // Use resumable upload for real progress tracking
-            const uploadTaskInstance = uploadBytesResumable(storageRef, imageFile)
-            setUploadTask(uploadTaskInstance)
-
-            // Create a promise wrapper for the upload
             const uploadPromise = new Promise<string>((resolve, reject) => {
-                let lastProgress = 10
-                let progressInterval: NodeJS.Timeout | null = null
+                const xhr = new XMLHttpRequest()
+                setUploadTask(xhr)
 
-                // Fallback progress simulation (in case callback doesn't fire)
-                progressInterval = setInterval(() => {
-                    if (lastProgress < 90) {
-                        lastProgress += 2
-                        setUploadProgress(lastProgress)
+                xhr.upload.onprogress = (event) => {
+                    if (!event.lengthComputable) return
+                    const uploadProgress = (event.loaded / event.total) * 80
+                    const totalProgress = 10 + Math.round(uploadProgress)
+                    setUploadProgress(Math.min(totalProgress, 90))
+                }
+
+                xhr.onerror = () => {
+                    setUploadTask(null)
+                    reject(new Error('Failed to upload image to Cloudinary'))
+                }
+
+                xhr.onabort = () => {
+                    setUploadTask(null)
+                    reject(new Error('Upload was canceled'))
+                }
+
+                xhr.onload = () => {
+                    setUploadTask(null)
+                    if (xhr.status < 200 || xhr.status >= 300) {
+                        reject(new Error('Cloudinary upload failed'))
+                        return
                     }
-                }, 200)
 
-                // Track upload progress
-                uploadTaskInstance.on(
-                    'state_changed',
-                    (snapshot) => {
-                        // Clear the fallback interval since we have real progress
-                        if (progressInterval) {
-                            clearInterval(progressInterval)
-                            progressInterval = null
+                    try {
+                        const response = JSON.parse(xhr.responseText)
+                        const secureUrl = response?.secure_url
+                        if (!secureUrl) {
+                            reject(new Error('Cloudinary upload succeeded but URL was missing'))
+                            return
                         }
-
-                        // Calculate real progress (10% to 90% range)
-                        const uploadProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 80
-                        const totalProgress = 10 + Math.round(uploadProgress)
-                        setUploadProgress(Math.min(totalProgress, 90))
-                        lastProgress = totalProgress
-
-                        console.log('📊 Upload progress:', totalProgress + '%',
-                            `(${(snapshot.bytesTransferred / 1024).toFixed(2)} KB / ${(snapshot.totalBytes / 1024).toFixed(2)} KB)`)
-                    },
-                    (error) => {
-                        // Clear interval on error
-                        if (progressInterval) {
-                            clearInterval(progressInterval)
-                        }
-
-                        console.error('❌ Upload error:', error)
-                        console.error('Error code:', error.code)
-                        console.error('Error message:', error.message)
-
-                        let errorMessage = 'Failed to upload image'
-                        if (error.code === 'storage/unauthorized') {
-                            errorMessage = 'Permission denied. Please deploy Storage rules: firebase deploy --only storage'
-                        } else if (error.code === 'storage/canceled') {
-                            errorMessage = 'Upload was canceled'
-                        } else if (error.code === 'storage/quota-exceeded') {
-                            errorMessage = 'Storage quota exceeded. Please check Firebase Storage limits.'
-                        } else if (error.message) {
-                            errorMessage = error.message
-                        }
-
-                        setUploadTask(null)
-                        reject(new Error(errorMessage))
-                    },
-                    async () => {
-                        // Clear interval on success
-                        if (progressInterval) {
-                            clearInterval(progressInterval)
-                        }
-
-                        // Upload completed successfully
-                        console.log('✅ Upload completed, getting download URL...')
                         setUploadProgress(95)
-
-                        try {
-                            // Get download URL
-                            const downloadURL = await getDownloadURL(uploadTaskInstance.snapshot.ref)
-                            console.log('🔗 Download URL:', downloadURL)
-
-                            resolve(downloadURL)
-                        } catch (urlError) {
-                            console.error('❌ Error getting download URL:', urlError)
-                            reject(new Error('Upload completed but failed to get download URL'))
-                        }
+                        resolve(secureUrl)
+                    } catch {
+                        reject(new Error('Invalid Cloudinary response received'))
                     }
-                )
+                }
+
+                const formData = new FormData()
+                formData.append('file', imageFile)
+                formData.append('timestamp', String(timestamp))
+                formData.append('signature', signature)
+                formData.append('api_key', apiKey)
+                formData.append('folder', 'raiot_events')
+
+                xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`)
+                xhr.send(formData)
             })
 
             // Wait for upload to complete
@@ -431,7 +395,9 @@ export default function OperationsEventsPage() {
     const handleCancelUpload = () => {
         if (uploadTask) {
             try {
-                uploadTask.cancel()
+                if (typeof uploadTask.abort === 'function') {
+                    uploadTask.abort()
+                }
                 console.log('Upload canceled')
             } catch (error) {
                 console.error('Error canceling upload:', error)
@@ -452,7 +418,9 @@ export default function OperationsEventsPage() {
         // Cancel any ongoing upload
         if (uploadTask) {
             try {
-                uploadTask.cancel()
+                if (typeof uploadTask.abort === 'function') {
+                    uploadTask.abort()
+                }
             } catch (error) {
                 console.error('Error canceling upload:', error)
             }
