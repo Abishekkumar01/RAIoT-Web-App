@@ -61,6 +61,18 @@ const roundMarks = (value: number): number => {
     return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 };
 
+const getRankedScore = (submission: any): number => {
+    const hasManualGrades = !!submission?.manualGrades && Object.keys(submission.manualGrades).length > 0;
+    const hasFinalReview = !!submission?.manualReviewedAt || submission?.requiresManualReview === false || hasManualGrades;
+    if (hasFinalReview) {
+        return roundMarks(Number(submission?.finalScore ?? submission?.score ?? 0));
+    }
+    if (typeof submission?.score === 'number') {
+        return roundMarks(submission.score);
+    }
+    return 0;
+};
+
 const computeFinalScore = (examQuestions: any[], submission: any): number | null => {
     const answers = submission?.answers || {};
     const manualGrades = submission?.manualGrades || {};
@@ -159,7 +171,6 @@ export async function GET(request: Request, { params }: { params: { id: string }
         }
 
         const subSnapshot = await adminDb.collection('examSubmissions')
-            .where('userId', '==', authUser.uid)
             .where('testId', '==', testId)
             .get();
 
@@ -167,8 +178,68 @@ export async function GET(request: Request, { params }: { params: { id: string }
             return NextResponse.json({ error: 'No submission found for this test.' }, { status: 404 });
         }
 
-        const submissions = subSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as any[];
-        submissions.sort((a, b) => {
+        const userIds = new Set<string>();
+        subSnapshot.docs.forEach((doc) => {
+            const data = doc.data();
+            if (data?.userId) {
+                userIds.add(String(data.userId));
+            }
+        });
+
+        const userMap = new Map<string, { name: string; email: string; role: string }>();
+        await Promise.all(Array.from(userIds).map(async (uid) => {
+            try {
+                const userDoc = await adminDb.collection('users').doc(uid).get();
+                const userData = userDoc.data();
+                userMap.set(uid, {
+                    name: userData?.displayName || userData?.name || userData?.profileData?.name || 'Unknown User',
+                    email: userData?.email || '',
+                    role: userData?.role || 'guest'
+                });
+            } catch {
+                userMap.set(uid, { name: 'Unknown User', email: '', role: 'guest' });
+            }
+        }));
+
+        const submissions = subSnapshot.docs.map((doc) => {
+            const data = doc.data();
+            const userInfo = userMap.get(data.userId) || { name: 'Unknown User', email: '', role: 'guest' };
+            const finalScore = computeFinalScore(examQuestions, data);
+            const hasManualGrades = !!data?.manualGrades && Object.keys(data.manualGrades).length > 0;
+            const hasFinalManualReview = !!data?.manualReviewedAt || data?.requiresManualReview === false || hasManualGrades;
+
+            return {
+                id: doc.id,
+                ...data,
+                userName: userInfo.name,
+                userEmail: userInfo.email,
+                userRole: userInfo.role,
+                finalScore: finalScore !== null ? finalScore : null,
+                score: finalScore !== null ? finalScore : (typeof data?.score === 'number' ? roundMarks(data.score) : null),
+                totalMarks,
+                resultState: hasFinalManualReview ? 'final' : 'provisional',
+                resultPublished: true
+            };
+        }) as any[];
+
+        const leaderboard = submissions
+            .slice()
+            .sort((a: any, b: any) => {
+                const scoreDiff = getRankedScore(b) - getRankedScore(a);
+                if (scoreDiff !== 0) return scoreDiff;
+
+                const aTime = new Date(a.submittedAt || 0).getTime();
+                const bTime = new Date(b.submittedAt || 0).getTime();
+                return aTime - bTime;
+            })
+            .map((submission: any, index: number) => ({
+                ...submission,
+                rank: index + 1,
+                percentage: totalMarks > 0 ? roundMarks((getRankedScore(submission) / totalMarks) * 100) : 0
+            }));
+        const userSubmissions = submissions.filter((submission: any) => String(submission.userId) === authUser.uid);
+
+        userSubmissions.sort((a, b) => {
             const aHasManualGrades = !!a?.manualGrades && Object.keys(a.manualGrades).length > 0;
             const bHasManualGrades = !!b?.manualGrades && Object.keys(b.manualGrades).length > 0;
             const aFinal = typeof a?.score === 'number' || aHasManualGrades || a?.manualReviewedAt || a?.requiresManualReview === false ? 1 : 0;
@@ -180,9 +251,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
             return bUpdated - aUpdated;
         });
 
-        const submission = submissions[0];
+        const submission = userSubmissions[0] || submissions.find((row: any) => String(row.userId) === authUser.uid) || submissions[0];
         const finalScore = computeFinalScore(examQuestions, submission);
         const hasFinalManualReview = !!submission?.manualReviewedAt || submission?.requiresManualReview === false || (!!submission?.manualGrades && Object.keys(submission.manualGrades).length > 0);
+        const currentUserRank = leaderboard.find((row) => row.userId === authUser.uid)?.rank ?? null;
         return NextResponse.json({
             submission: {
                 ...submission,
@@ -190,8 +262,22 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 finalScore: finalScore !== null ? finalScore : submission?.score ?? null,
                 totalMarks,
                 resultState: hasFinalManualReview ? 'final' : 'provisional',
-                resultPublished: true
-            }
+                resultPublished: true,
+                rank: currentUserRank
+            },
+            leaderboard: leaderboard.map(({ rank, percentage, userName, userEmail, userRole, finalScore, score, totalMarks, submittedAt, userId }) => ({
+                rank,
+                percentage,
+                userName,
+                userEmail,
+                userRole,
+                finalScore,
+                score,
+                totalMarks,
+                submittedAt,
+                userId
+            })),
+            currentUserRank
         });
     } catch (error: any) {
         console.error('Error fetching test result:', error);
