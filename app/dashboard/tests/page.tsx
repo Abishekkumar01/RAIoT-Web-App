@@ -72,7 +72,11 @@ export default function TestsDashboard() {
 
   const upcomingTests = exams.filter(e => e.status === 'upcoming');
   const liveTests = exams.filter(e => e.status === 'live');
-  const previousTests = exams.filter(e => e.status === 'previous');
+  const previousTests = exams.filter(e => {
+    if (e.status === 'previous') return true;
+    if (!e.id) return false;
+    return isSubmitted(e.id);
+  });
 
   if (loading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
 

@@ -2,6 +2,56 @@ import { NextResponse } from 'next/server';
 import { getAdminDb, verifyUser } from '@/lib/firebase-admin';
 import { ExamTest } from '@/types/examination';
 
+const toDateSafe = (value: any): Date | null => {
+    if (!value) return null;
+
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : value;
+    }
+
+    if (typeof value?.toDate === 'function') {
+        const parsed = value.toDate();
+        return parsed instanceof Date && !Number.isNaN(parsed.getTime()) ? parsed : null;
+    }
+
+    if (typeof value === 'string' || typeof value === 'number') {
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime())) return parsed;
+
+        // Legacy fallback: dd/mm/yyyy[, hh:mm[:ss]] or dd-mm-yyyy[, hh:mm[:ss]]
+        if (typeof value === 'string') {
+            const match = value.trim().match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})(?:[\s,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+            if (match) {
+                const day = Number(match[1]);
+                const month = Number(match[2]);
+                const year = Number(match[3]);
+                const hour = Number(match[4] || 0);
+                const minute = Number(match[5] || 0);
+                const second = Number(match[6] || 0);
+                const fallback = new Date(year, month - 1, day, hour, minute, second);
+                return Number.isNaN(fallback.getTime()) ? null : fallback;
+            }
+        }
+        return null;
+    }
+
+    if (typeof value === 'object') {
+        const seconds = value.seconds ?? value._seconds;
+        const nanoseconds = value.nanoseconds ?? value._nanoseconds ?? 0;
+        if (typeof seconds === 'number') {
+            const parsed = new Date(seconds * 1000 + Math.floor(nanoseconds / 1000000));
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+    }
+
+    return null;
+};
+
+const toIsoOrEmpty = (value: any): string => {
+    const parsed = toDateSafe(value);
+    return parsed ? parsed.toISOString() : '';
+};
+
 const isExamVisibleToUser = (
     examData: any,
     uid: string,
@@ -21,8 +71,8 @@ const isExamVisibleToUser = (
 
 function computeStatus(data: any): 'upcoming' | 'live' | 'previous' {
     const now = new Date();
-    const examStart = data.examStartTime ? new Date(data.examStartTime) : null;
-    const examEnd = data.examEndTime ? new Date(data.examEndTime) : null;
+    const examStart = toDateSafe(data?.examStartTime);
+    const examEnd = toDateSafe(data?.examEndTime);
     if (examStart && examEnd) {
         if (now < examStart) return 'upcoming';
         if (now >= examStart && now <= examEnd) return 'live';
@@ -45,13 +95,25 @@ export async function GET(request: Request) {
         const userDoc = await adminDb.collection('users').doc(authUser.uid).get();
         const userRole = String(userDoc.data()?.role || '').toLowerCase();
 
+        // Fetch user submissions first so already-attempted tests remain visible even if audience was changed later.
+        const userSubmissionsSnapshot = await adminDb
+            .collection('examSubmissions')
+            .where('userId', '==', authUser.uid)
+            .get();
+        const submittedTestIds = new Set<string>();
+        userSubmissionsSnapshot.docs.forEach((doc) => {
+            const data = doc.data();
+            if (data?.testId) submittedTestIds.add(String(data.testId));
+        });
+
         // Fetch all exams
         const snapshot = await adminDb.collection('exams').orderBy('createdAt', 'desc').get();
         const exams: Partial<ExamTest>[] = [];
         const publishedResultTestIds = new Set<string>();
         snapshot.forEach(doc => {
             const data = doc.data();
-            if (!isExamVisibleToUser(data, authUser.uid, userRole)) {
+            const hasSubmitted = submittedTestIds.has(doc.id);
+            if (!isExamVisibleToUser(data, authUser.uid, userRole) && !hasSubmitted) {
                 return;
             }
             // Remove questions so users cannot see them until test starts
@@ -61,16 +123,23 @@ export async function GET(request: Request) {
             if (data.resultPublished === true) {
                 publishedResultTestIds.add(doc.id);
             }
-            exams.push({ id: doc.id, ...data, status: effectiveStatus } as Partial<ExamTest>);
+            exams.push({
+                id: doc.id,
+                ...data,
+                startTime: toIsoOrEmpty(data?.startTime),
+                endTime: toIsoOrEmpty(data?.endTime),
+                examStartTime: toIsoOrEmpty(data?.examStartTime),
+                examEndTime: toIsoOrEmpty(data?.examEndTime),
+                status: effectiveStatus,
+            } as Partial<ExamTest>);
         });
 
         // Fetch user registrations
         const regSnapshot = await adminDb.collection('examRegistrations').where('userId', '==', authUser.uid).get();
         const registrations = regSnapshot.docs.map(doc => doc.data());
 
-        // Fetch user submissions (to know if they completed previous tests)
-        const subSnapshot = await adminDb.collection('examSubmissions').where('userId', '==', authUser.uid).get();
-        const submissions = subSnapshot.docs.map(doc => {
+        // Build user submissions list (to know if they completed previous tests)
+        const submissions = userSubmissionsSnapshot.docs.map(doc => {
             const sub = doc.data();
             const isPublished = publishedResultTestIds.has(sub.testId);
             return {

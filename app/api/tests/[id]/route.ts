@@ -2,6 +2,50 @@ import { NextResponse } from 'next/server';
 import { getAdminDb, verifyUser } from '@/lib/firebase-admin';
 import { ExamTest } from '@/types/examination';
 
+const toDateSafe = (value: any): Date | null => {
+    if (!value) return null;
+
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : value;
+    }
+
+    if (typeof value?.toDate === 'function') {
+        const parsed = value.toDate();
+        return parsed instanceof Date && !Number.isNaN(parsed.getTime()) ? parsed : null;
+    }
+
+    if (typeof value === 'string' || typeof value === 'number') {
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime())) return parsed;
+
+        if (typeof value === 'string') {
+            const match = value.trim().match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})(?:[\s,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+            if (match) {
+                const day = Number(match[1]);
+                const month = Number(match[2]);
+                const year = Number(match[3]);
+                const hour = Number(match[4] || 0);
+                const minute = Number(match[5] || 0);
+                const second = Number(match[6] || 0);
+                const fallback = new Date(year, month - 1, day, hour, minute, second);
+                return Number.isNaN(fallback.getTime()) ? null : fallback;
+            }
+        }
+        return null;
+    }
+
+    if (typeof value === 'object') {
+        const seconds = value.seconds ?? value._seconds;
+        const nanoseconds = value.nanoseconds ?? value._nanoseconds ?? 0;
+        if (typeof seconds === 'number') {
+            const parsed = new Date(seconds * 1000 + Math.floor(nanoseconds / 1000000));
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+    }
+
+    return null;
+};
+
 const isExamVisibleToUser = (
     examData: any,
     uid: string,
@@ -67,8 +111,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
         }
 
         const now = new Date();
-        const examStart = testData.examStartTime ? new Date(testData.examStartTime) : null;
-        const examEnd = testData.examEndTime ? new Date(testData.examEndTime) : null;
+        const examStart = toDateSafe(testData?.examStartTime);
+        const examEnd = toDateSafe(testData?.examEndTime);
 
         // For backward-compat with old tests that don't have examStartTime
         const effectiveStatus = examStart && examEnd
