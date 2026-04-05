@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { PublicNavbar } from '@/components/layout/PublicNavbar'
 import { EventCard } from '@/components/EventCard'
 import { Calendar } from 'lucide-react'
-import { collection, onSnapshot, query, where, doc, increment, writeBatch } from 'firebase/firestore'
+import { collection, onSnapshot, query, where, doc, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { useProfileValidation } from '@/hooks/use-profile-validation'
@@ -40,30 +40,35 @@ export default function EventsPage() {
   const [registeringEventId, setRegisteringEventId] = useState<string | null>(null)
 
   useEffect(() => {
-    // Subscribe to events
-    const eventsQuery = collection(db, 'events')
-    const eventsUnsub = onSnapshot(eventsQuery, (snap) => {
-      const items: EventItem[] = snap.docs.map((d) => {
-        const data = d.data() as any
-        console.log(`📥 Received event "${data.title}":`, {
-          id: d.id,
-          imageUrl: data.imageUrl,
-          hasImageUrl: !!data.imageUrl,
-          imageUrlType: typeof data.imageUrl
-        })
-        return { id: d.id, ...data }
-      })
-      setEvents(items)
-      setLoading(false)
-    }, (error) => {
-      console.error("Error fetching events:", error);
-      setLoading(false);
-      toast({
-        title: "Error loading events",
-        description: "Please check your internet connection.",
-        variant: "destructive"
-      })
-    })
+    let mounted = true
+
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch('/api/events', { cache: 'no-store' })
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch events')
+        }
+
+        const items: EventItem[] = Array.isArray(data.data) ? data.data : []
+        if (mounted) {
+          setEvents(items)
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Error fetching events:', error)
+        if (mounted) {
+          setLoading(false)
+          toast({
+            title: 'Error loading events',
+            description: 'Please check your internet connection.',
+            variant: 'destructive'
+          })
+        }
+      }
+    }
+
+    fetchEvents()
 
     // Subscribe to user registrations if user is logged in
     let registrationsUnsub: (() => void) | null = null
@@ -91,7 +96,7 @@ export default function EventsPage() {
     }
 
     return () => {
-      eventsUnsub()
+      mounted = false
       if (registrationsUnsub) registrationsUnsub()
     }
   }, [user])
@@ -193,15 +198,20 @@ export default function EventsPage() {
         createdAt: new Date(),
       })
 
-      // Update event participant count
-      console.log('🔍 Updating event count...')
-      const eventRef = doc(db, 'events', event.id)
-      batch.update(eventRef, {
-        registered: increment(1)
-      })
-
       // Commit the batch
       await batch.commit()
+      await fetch(`/api/events/${event.id}/registration`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delta: 1 }),
+      })
+
+      // Refresh events after successful registration to update registered count
+      const eventsResponse = await fetch('/api/events', { cache: 'no-store' })
+      const eventsData = await eventsResponse.json().catch(() => ({}))
+      if (eventsResponse.ok && Array.isArray(eventsData.data)) {
+        setEvents(eventsData.data)
+      }
       console.log('🔍 Registration and count update successful')
 
       // Only show success message if we reach here

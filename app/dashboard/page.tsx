@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Calendar, Users, Trophy, Bot, Target, Image as ImageIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { collection, query, where, onSnapshot, doc, getDoc, getCountFromServer, orderBy, limit, getDocs } from 'firebase/firestore'
+import { collection, getCountFromServer, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import Link from 'next/link'
 import MyClasses from '@/components/dashboard/MyClasses'
@@ -31,14 +31,15 @@ export default function DashboardPage() {
     // 1. Fetch Global Stats (One-time fetch is fine for these)
     const fetchGlobalStats = async () => {
       try {
-        const eventsColl = collection(db, "events");
         const studentsColl = collection(db, "students");
-        const [eventsSnap, studentsSnap] = await Promise.all([
-          getCountFromServer(eventsColl),
+        const [studentsSnap, eventsResponse] = await Promise.all([
           getCountFromServer(studentsColl)
+          ,fetch('/api/events', { cache: 'no-store' })
         ]);
+        const eventsPayload = await eventsResponse.json().catch(() => ({}))
+        const events = Array.isArray(eventsPayload?.data) ? eventsPayload.data : []
         setGlobalStats({
-          events: eventsSnap.data().count,
+          events: events.length,
           students: studentsSnap.data().count
         });
 
@@ -85,23 +86,21 @@ export default function DashboardPage() {
   }, [user])
 
   useEffect(() => {
-    // Listen to global events
-    const eventsRef = collection(db, 'events')
-    const q = query(eventsRef, orderBy('date', 'desc'), limit(5))
+    const fetchRecentEvents = async () => {
+      try {
+        const response = await fetch('/api/events', { cache: 'no-store' })
+        const payload = await response.json().catch(() => ({}))
+        const events = Array.isArray(payload?.data) ? payload.data as Event[] : []
+        const sorted = [...events].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 5)
+        setRecentEvents(sorted)
+      } catch (error) {
+        console.error('Error fetching recent events:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-    const unsubscribeEvents = onSnapshot(q, (snap) => {
-      const events = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Event[]
-      setRecentEvents(events)
-      setLoading(false)
-    }, (error) => {
-      console.error("Error fetching recent events:", error);
-      setLoading(false);
-    })
-
-    return () => unsubscribeEvents()
+    fetchRecentEvents()
   }, [])
 
   if (loading) {

@@ -6,7 +6,7 @@ import { PublicNavbar } from '@/components/layout/PublicNavbar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calendar, Clock, MapPin, Users, ArrowLeft, CheckCircle } from 'lucide-react'
-import { doc, getDoc, collection, query, where, onSnapshot, writeBatch, increment } from 'firebase/firestore'
+import { doc, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { useProfileValidation } from '@/hooks/use-profile-validation'
@@ -54,10 +54,11 @@ export default function EventDetailPage() {
     const fetchEvent = async () => {
       try {
         const eventId = params.id as string
-        const eventDoc = await getDoc(doc(db, 'events', eventId))
+        const response = await fetch(`/api/events/${eventId}`, { cache: 'no-store' })
+        const data = await response.json().catch(() => ({}))
 
-        if (eventDoc.exists()) {
-          const eventData = { id: eventDoc.id, ...eventDoc.data() } as EventDetail
+        if (response.ok && data?.data) {
+          const eventData = data.data as EventDetail
           console.log('📥 Fetched event data:', {
             id: eventData.id,
             title: eventData.title,
@@ -109,20 +110,24 @@ export default function EventDetailPage() {
     return () => unsubscribe()
   }, [user, event])
 
-  // Subscribe to event updates for registration count
+  // Refresh event details periodically so registration counts stay fresh from MongoDB
   useEffect(() => {
-    if (!event) return
+    if (!event?.id) return
 
-    const unsubscribe = onSnapshot(doc(db, 'events', event.id), (doc) => {
-      if (doc.exists()) {
-        const updatedData = doc.data()
-        setEvent(prev => prev ? { ...prev, registered: updatedData.registered } : null)
-        console.log('🔄 Event registration count updated:', updatedData.registered)
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/events/${event.id}`, { cache: 'no-store' })
+        const data = await response.json().catch(() => ({}))
+        if (response.ok && data?.data?.registered !== undefined) {
+          setEvent(prev => (prev ? { ...prev, registered: data.data.registered } : prev))
+        }
+      } catch {
+        // Silent refresh failure; UI can continue with current state.
       }
-    })
+    }, 15000)
 
-    return () => unsubscribe()
-  }, [event])
+    return () => clearInterval(interval)
+  }, [event?.id])
 
   const formatDate = (dateString: string) => {
     try {
@@ -225,14 +230,20 @@ export default function EventDetailPage() {
         createdAt: new Date(),
       })
 
-      // Update event participant count
-      const eventRef = doc(db, 'events', event.id)
-      batch.update(eventRef, {
-        registered: increment(1)
-      })
-
       // Commit the batch
       await batch.commit()
+      await fetch(`/api/events/${event.id}/registration`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delta: 1 }),
+      })
+
+      // Refresh event once after registration
+      const refresh = await fetch(`/api/events/${event.id}`, { cache: 'no-store' })
+      const refreshData = await refresh.json().catch(() => ({}))
+      if (refresh.ok && refreshData?.data) {
+        setEvent(refreshData.data as EventDetail)
+      }
 
       toast({
         title: "Registration Successful",

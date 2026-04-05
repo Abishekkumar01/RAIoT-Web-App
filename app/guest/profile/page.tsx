@@ -93,12 +93,21 @@ export default function GuestProfilePage() {
           setProfile(userDoc.data() as GuestProfile)
         }
 
-        // 1. Subscribe to Active Events first
-        const eventsRef = collection(db, 'events')
-        const eventsUnsub = onSnapshot(eventsRef, (snap) => {
-          const ids = new Set(snap.docs.map(doc => doc.id))
-          setActiveEventIds(ids)
-        }, (error) => console.error("Error fetching events:", error))
+        // 1. Load Active Events from MongoDB events API
+        let eventsInterval: NodeJS.Timeout | null = null
+        const loadActiveEvents = async () => {
+          try {
+            const response = await fetch('/api/events', { cache: 'no-store' })
+            const payload = await response.json().catch(() => ({}))
+            const events = Array.isArray(payload?.data) ? payload.data : []
+            const ids = new Set(events.map((event: any) => String(event.id)))
+            setActiveEventIds(ids)
+          } catch (error) {
+            console.error('Error fetching events:', error)
+          }
+        }
+        await loadActiveEvents()
+        eventsInterval = setInterval(loadActiveEvents, 20000)
 
         // 2. Subscribe to Registrations
         const registrationsRef = collection(db, 'registrations')
@@ -123,7 +132,7 @@ export default function GuestProfilePage() {
 
         return () => {
           registrationsUnsub()
-          eventsUnsub()
+          if (eventsInterval) clearInterval(eventsInterval)
         }
       } catch (error) {
         console.error('Error fetching profile:', error)

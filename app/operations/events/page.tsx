@@ -20,11 +20,10 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, Upload, X } from "lucide-react"
-import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, getDoc } from 'firebase/firestore'
 import { logAuditAction } from '@/lib/audit'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
-import { db, storage } from '@/lib/firebase'
+import { auth, storage } from '@/lib/firebase'
 import { useToast } from '@/hooks/use-toast'
 import AdminEventExport from '@/components/AdminEventExport'
 
@@ -498,13 +497,25 @@ export default function OperationsEventsPage() {
         }, 100)
     }
 
+    const fetchEvents = async () => {
+        try {
+            const token = await auth.currentUser?.getIdToken(true)
+            if (!token) return
+
+            const response = await fetch('/api/admin/events', {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            const data = await response.json().catch(() => ({}))
+            if (response.ok && Array.isArray(data.data)) {
+                setEvents(data.data)
+            }
+        } catch (error) {
+            console.error('Failed to fetch operations events:', error)
+        }
+    }
+
     useEffect(() => {
-        const colRef = collection(db, 'events')
-        const unsub = onSnapshot(colRef, (snap) => {
-            const list = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }))
-            setEvents(list)
-        })
-        return () => unsub()
+        fetchEvents()
     }, [])
 
     const handleCreateEvent = async () => {
@@ -572,7 +583,6 @@ export default function OperationsEventsPage() {
                 registered: 0,
                 status: 'active',
                 isOnline: formData.isOnline === true, // Explicitly save as boolean
-                createdAt: serverTimestamp(),
             }
 
             // ALWAYS set imageUrl field (even if null) for clarity
@@ -593,27 +603,29 @@ export default function OperationsEventsPage() {
                 console.log('✅ Image URL will be saved:', eventData.imageUrl)
             }
 
-            const docRef = await addDoc(collection(db, 'events'), eventData)
-            console.log('✅ Event created with ID:', docRef.id)
-            console.log('📸 Saved imageUrl:', eventData.imageUrl)
+            const token = await auth.currentUser?.getIdToken(true)
+            if (!token) {
+                throw new Error('Authentication required')
+            }
 
-            // Verify the saved data
-            const savedDoc = await getDoc(docRef)
-            const savedData = savedDoc.data()
-            console.log('🔍 Verification - Saved event data:', {
-                id: docRef.id,
-                title: savedData?.title,
-                imageUrl: savedData?.imageUrl,
-                hasImageUrl: !!savedData?.imageUrl
+            const createResponse = await fetch('/api/admin/events', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(eventData),
             })
 
-            if (eventData.imageUrl && !savedData?.imageUrl) {
-                toast({
-                    title: 'Event created',
-                    description: 'Warning: Image URL was not saved. Please check console.',
-                    variant: 'destructive'
-                })
-            } else if (eventData.imageUrl) {
+            const createData = await createResponse.json().catch(() => ({}))
+            if (!createResponse.ok) {
+                throw new Error(createData.error || 'Failed to create event')
+            }
+
+            console.log('✅ Event created with ID:', createData?.data?.id)
+            console.log('📸 Saved imageUrl:', eventData.imageUrl)
+
+            if (eventData.imageUrl) {
                 toast({
                     title: 'Event created successfully',
                     description: `Image URL saved: ${eventData.imageUrl.substring(0, 50)}...`
@@ -640,6 +652,7 @@ export default function OperationsEventsPage() {
             setIsCreateDialogOpen(false)
             setSelectedImage(null)
             setImagePreview(null)
+            await fetchEvents()
         } catch (e) {
             console.error('Failed to create event', e)
             toast({ title: 'Failed to create event', description: (e as Error).message, variant: 'destructive' })
@@ -713,26 +726,26 @@ export default function OperationsEventsPage() {
                 formDataImageUrl: formData.imageUrl
             })
 
-            const eventRef = doc(db, 'events', editingEvent.id)
-            await updateDoc(eventRef, updateData)
+            const token = await auth.currentUser?.getIdToken(true)
+            if (!token) {
+                throw new Error('Authentication required')
+            }
 
-            // Verify the update
-            const updatedDoc = await getDoc(eventRef)
-            const updatedData = updatedDoc.data()
-            console.log('🔍 Verification - Updated event data:', {
-                id: editingEvent.id,
-                title: updatedData?.title,
-                imageUrl: updatedData?.imageUrl,
-                hasImageUrl: !!updatedData?.imageUrl
+            const updateResponse = await fetch(`/api/admin/events/${editingEvent.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(updateData),
             })
 
-            if (updateData.imageUrl && !updatedData?.imageUrl) {
-                toast({
-                    title: 'Event updated',
-                    description: 'Warning: Image URL was not saved. Please check console.',
-                    variant: 'destructive'
-                })
-            } else if (updateData.imageUrl) {
+            const updateResult = await updateResponse.json().catch(() => ({}))
+            if (!updateResponse.ok) {
+                throw new Error(updateResult.error || 'Failed to update event')
+            }
+
+            if (updateData.imageUrl) {
                 toast({
                     title: 'Event updated successfully',
                     description: `Image URL saved: ${updateData.imageUrl.substring(0, 50)}...`
@@ -757,8 +770,9 @@ export default function OperationsEventsPage() {
                 registrationDeadline: "",
                 imageUrl: "",
                 detailedContent: "",
-                isOnline: false
+                isOnline: true
             })
+            await fetchEvents()
         } catch (e) {
             console.error('Failed to update event', e)
             toast({ title: 'Failed to update event', description: (e as Error).message, variant: 'destructive' })
@@ -767,14 +781,30 @@ export default function OperationsEventsPage() {
 
     const handleToggleOnlineStatus = async (eventId: string, currentStatus: boolean) => {
         try {
-            const eventRef = doc(db, 'events', eventId)
-            await updateDoc(eventRef, {
-                isOnline: !currentStatus
+            const token = await auth.currentUser?.getIdToken(true)
+            if (!token) {
+                throw new Error('Authentication required')
+            }
+
+            const response = await fetch(`/api/admin/events/${eventId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ isOnline: !currentStatus }),
             })
+
+            const result = await response.json().catch(() => ({}))
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to update event status')
+            }
+
             toast({
                 title: 'Status updated',
                 description: `Event is now ${!currentStatus ? 'ONLINE' : 'OFFLINE'}`
             })
+            await fetchEvents()
         } catch (e) {
             console.error('Failed to toggle online status', e)
             toast({
@@ -802,8 +832,23 @@ export default function OperationsEventsPage() {
                 }
             })
 
-            await deleteDoc(doc(db, 'events', eventId))
+            const token = await auth.currentUser?.getIdToken(true)
+            if (!token) {
+                throw new Error('Authentication required')
+            }
+
+            const response = await fetch(`/api/admin/events/${eventId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+            })
+
+            const result = await response.json().catch(() => ({}))
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to delete event')
+            }
+
             toast({ title: 'Event deleted' })
+            await fetchEvents()
         } catch (e) {
             console.error('Failed to delete event', e)
             toast({ title: 'Failed to delete event', description: (e as Error).message, variant: 'destructive' })

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { db } from '@/lib/firebase';
-import { collection, getCountFromServer } from 'firebase/firestore';
+import dbConnect from '@/lib/mongodb';
+import Event from '@/lib/models/Event';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,17 +29,13 @@ export async function GET() {
             }
         }
 
-        // If Admin SDK failed or is not available, try Client SDK for Events atleast (Public Readable)
-        if (!adminDb || eventsCount === 0) {
+        // Fallback to MongoDB events source when Firestore count is unavailable
+        if (eventsCount === 0) {
             try {
-                // Note: Client SDK in Next.js API route acts as unauthenticated client usually
-                const eventsColl = collection(db, "events");
-                const eventsSnap = await getCountFromServer(eventsColl);
-                eventsCount = eventsSnap.data().count;
-
-                // We CANNOT fetch students with Client SDK as Unauthenticated/Guest due to rules
+                await dbConnect();
+                eventsCount = await Event.countDocuments({ status: { $ne: 'inactive' } });
             } catch (e) {
-                console.error("Client SDK fallback failed:", e);
+                console.error("MongoDB fallback failed:", e);
             }
         }
 
@@ -47,7 +43,7 @@ export async function GET() {
         return NextResponse.json({
             events: eventsCount,
             students: studentsCount,
-            source: adminDb ? 'admin' : 'client-fallback'
+            source: adminDb ? 'admin' : 'mongo-fallback'
         });
 
     } catch (error) {

@@ -25,7 +25,7 @@ import {
   FileText
 } from "lucide-react"
 import Link from "next/link"
-import { collection, getCountFromServer, query, where, getDocs, orderBy, limit } from "firebase/firestore"
+import { collection, getCountFromServer, query, getDocs, orderBy, limit } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import {
   DropdownMenu,
@@ -86,23 +86,25 @@ export default function AdminDashboard() {
         const totalMembersSnap = await getCountFromServer(studentsColl)
         const totalMembers = totalMembersSnap.data().count
 
-        const eventsColl = collection(db, "events")
-        const totalEventsSnap = await getCountFromServer(eventsColl)
-        const totalEvents = totalEventsSnap.data().count
+        const eventsResponse = await fetch('/api/events', { cache: 'no-store' })
+        const eventsPayload = await eventsResponse.json().catch(() => ({}))
+        const eventsData = Array.isArray(eventsPayload?.data) ? eventsPayload.data : []
+        const totalEvents = eventsData.length
 
-        const todayStr = new Date().toISOString().split('T')[0]
-        const upcomingQuery = query(eventsColl, where("date", ">=", todayStr), orderBy("date", "asc"))
-        const upcomingSnap = await getDocs(upcomingQuery)
-        const upcomingEventsCount = upcomingSnap.size
+        const now = new Date()
+        const upcomingEvents = eventsData.filter((event: any) => {
+          const eventDate = new Date(event.date)
+          return !Number.isNaN(eventDate.getTime()) && eventDate >= now
+        })
+        const upcomingEventsCount = upcomingEvents.length
 
         // Generate Notifications from real data
         const newNotifications: { id: string, title: string, time: string, type: 'alert' | 'info' }[] = []
 
         // 1. Upcoming Events Notifications
-        upcomingSnap.docs.forEach(doc => {
-          const data = doc.data()
+        upcomingEvents.forEach((data: any) => {
           newNotifications.push({
-            id: `evt-${doc.id}`,
+            id: `evt-${data.id}`,
             title: `Upcoming Event: ${data.title}`,
             time: data.date,
             type: 'info'

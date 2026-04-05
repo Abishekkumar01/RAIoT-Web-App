@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Download, FileSpreadsheet, Users, Calendar } from 'lucide-react'
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore'
+import { query, where, getDocs, doc, getDoc, collection } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useToast } from '@/hooks/use-toast'
 
@@ -47,12 +47,9 @@ export default function AdminEventExport() {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const eventsRef = collection(db, 'events')
-        const snapshot = await getDocs(eventsRef)
-        const eventsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Event[]
+        const response = await fetch('/api/events', { cache: 'no-store' })
+        const payload = await response.json().catch(() => ({}))
+        const eventsData = Array.isArray(payload?.data) ? payload.data as Event[] : []
         setEvents(eventsData)
       } catch (error) {
         console.error('Error fetching events:', error)

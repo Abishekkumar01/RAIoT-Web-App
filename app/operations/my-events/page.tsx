@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { collection, onSnapshot, query, where, addDoc, doc, updateDoc, increment, deleteDoc } from 'firebase/firestore'
+import { collection, onSnapshot, query, where, doc, deleteDoc, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import {
     Card,
@@ -65,16 +65,23 @@ export default function OperationsMyEventsPage() {
     useEffect(() => {
         if (!user) return
 
-        // Subscribe to events
-        const eventsQuery = collection(db, 'events')
-        const eventsUnsub = onSnapshot(eventsQuery, (snap) => {
-            const eventsData: Event[] = snap.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })) as Event[]
-            setEvents(eventsData)
-            setLoading(false)
-        })
+        let mounted = true
+
+        const fetchEvents = async () => {
+            try {
+                const response = await fetch('/api/events', { cache: 'no-store' })
+                const data = await response.json().catch(() => ({}))
+                if (response.ok && Array.isArray(data.data) && mounted) {
+                    setEvents(data.data as Event[])
+                    setLoading(false)
+                }
+            } catch (error) {
+                console.error('Error fetching operations my-events:', error)
+                if (mounted) setLoading(false)
+            }
+        }
+
+        fetchEvents()
 
         // Subscribe to user's registrations
         const registrationsQuery = query(
@@ -91,7 +98,7 @@ export default function OperationsMyEventsPage() {
         })
 
         return () => {
-            eventsUnsub()
+            mounted = false
             registrationsUnsub()
         }
     }, [user])
@@ -101,8 +108,6 @@ export default function OperationsMyEventsPage() {
 
         setRegistering(event.id)
         try {
-            // Use a batch write to ensure atomicity
-            const { writeBatch } = await import('firebase/firestore')
             const batch = writeBatch(db)
 
             // Create registration document
@@ -117,14 +122,19 @@ export default function OperationsMyEventsPage() {
                 createdAt: new Date(),
             })
 
-            // Update event participant count
-            const eventRef = doc(db, 'events', event.id)
-            batch.update(eventRef, {
-                registered: increment(1)
-            })
-
             // Commit the batch
             await batch.commit()
+            await fetch(`/api/events/${event.id}/registration`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ delta: 1 }),
+            })
+
+            const refresh = await fetch('/api/events', { cache: 'no-store' })
+            const refreshData = await refresh.json().catch(() => ({}))
+            if (refresh.ok && Array.isArray(refreshData.data)) {
+                setEvents(refreshData.data as Event[])
+            }
 
             toast({
                 title: "Registration Successful",
@@ -151,13 +161,16 @@ export default function OperationsMyEventsPage() {
             if (registration) {
                 // Delete registration
                 await deleteDoc(doc(db, 'registrations', registration.id))
+                await fetch(`/api/events/${eventId}/registration`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ delta: -1 }),
+                })
 
-                // Update event participant count
-                const event = events.find(e => e.id === eventId)
-                if (event && event.registered) {
-                    await updateDoc(doc(db, 'events', eventId), {
-                        registered: increment(-1)
-                    })
+                const refresh = await fetch('/api/events', { cache: 'no-store' })
+                const refreshData = await refresh.json().catch(() => ({}))
+                if (refresh.ok && Array.isArray(refreshData.data)) {
+                    setEvents(refreshData.data as Event[])
                 }
 
                 toast({
