@@ -53,12 +53,13 @@ export default function TestResultsPage() {
 
   const hasFinalScore = typeof submission.score === "number";
   const hasAutoScore = typeof submission.autoScore === "number";
+  const isFinalized = submission.resultState === "final" || hasFinalScore;
   const displayedScore = hasFinalScore
     ? submission.score
     : hasAutoScore
       ? submission.autoScore
       : null;
-  const isProvisionalScore = !hasFinalScore && hasAutoScore;
+  const isProvisionalScore = !isFinalized && hasAutoScore;
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-8">
