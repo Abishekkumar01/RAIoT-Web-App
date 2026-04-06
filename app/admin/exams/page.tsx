@@ -1134,6 +1134,12 @@ export default function AdminExamsPage() {
     status: 'correct' | 'incorrect' | 'unattempted',
     marksInput?: number
   ) => {
+    const deriveStatusFromMarks = (value: number): 'correct' | 'incorrect' | 'unattempted' => {
+      if (value > 0) return 'correct';
+      if (value < 0) return 'incorrect';
+      return 'unattempted';
+    };
+
     const hasExplicitMarks = typeof marksInput === 'number' && Number.isFinite(marksInput);
     const fallbackMarks = status === 'correct'
       ? Number(manualQuestionGradeDialog.points || 0)
@@ -1141,6 +1147,7 @@ export default function AdminExamsPage() {
         ? -Math.abs(Number(manualQuestionGradeDialog.negativePoints || 0))
         : 0;
     const marks = hasExplicitMarks ? Number(marksInput) : fallbackMarks;
+    const effectiveStatus = hasExplicitMarks ? deriveStatusFromMarks(marks) : status;
 
     try {
       const auth = (await import("@/lib/firebase")).auth;
@@ -1151,7 +1158,7 @@ export default function AdminExamsPage() {
         body: JSON.stringify({
           manualGrades: {
             [manualQuestionGradeDialog.questionId]: {
-              status,
+              status: effectiveStatus,
               marks,
               markedAt: new Date().toISOString()
             }
@@ -1174,9 +1181,9 @@ export default function AdminExamsPage() {
             if (detail.questionId !== manualQuestionGradeDialog.questionId) return detail;
             return {
               ...detail,
-              status,
-              attempted: status !== 'unattempted',
-              isCorrect: status === 'correct',
+              status: effectiveStatus,
+              attempted: effectiveStatus !== 'unattempted',
+              isCorrect: effectiveStatus === 'correct',
               obtainedMarks: marks,
             };
           });
@@ -1201,7 +1208,7 @@ export default function AdminExamsPage() {
         points: 0,
         negativePoints: 0
       });
-      showNotice(`Question updated (${status}, ${marks} marks).`, 'Updated');
+      showNotice(`Question updated (${effectiveStatus}, ${marks} marks).`, 'Updated');
     } catch (err) {
       console.error(err);
       showNotice("Failed to update question grade", 'Update Failed');
@@ -1214,7 +1221,7 @@ export default function AdminExamsPage() {
       showNotice("Enter a valid numeric mark for this question.", 'Invalid Marks');
       return;
     }
-    await markQuestionManually(manualQuestionGradeDialog.status, parsed);
+    await markQuestionManually('unattempted', parsed);
   };
 
   const deleteSubmissionData = async (examId: string, submissionId: string) => {
@@ -1353,7 +1360,17 @@ export default function AdminExamsPage() {
                     type="number"
                     step="0.01"
                     value={manualQuestionGradeDialog.marks}
-                    onChange={(e) => setManualQuestionGradeDialog((prev) => ({ ...prev, marks: e.target.value }))}
+                    onChange={(e) => {
+                      const nextMarks = e.target.value;
+                      const parsedMarks = Number(nextMarks);
+                      setManualQuestionGradeDialog((prev) => ({
+                        ...prev,
+                        marks: nextMarks,
+                        status: Number.isFinite(parsedMarks)
+                          ? (parsedMarks > 0 ? 'correct' : parsedMarks < 0 ? 'incorrect' : 'unattempted')
+                          : prev.status,
+                      }));
+                    }}
                     placeholder="Enter marks (can be negative)"
                   />
                 </div>
