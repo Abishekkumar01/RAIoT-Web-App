@@ -1901,9 +1901,8 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[pulse_3s_ease-in-out_infinite]" />
                                     <div className="relative flex items-start justify-between gap-3">
                                       <div>
-                                        <p className={`text-[10px] uppercase tracking-[0.3em] ${meta.badge}`}>Top Rank</p>
                                         <div className="mt-1 flex items-center gap-2">
-                                          <div className={`h-10 w-10 rounded-full bg-gradient-to-br ${meta.accent} text-zinc-950 font-black flex items-center justify-center shadow-lg`}>{index + 1}</div>
+                                          <div className={`h-10 w-10 min-w-10 aspect-square rounded-full bg-gradient-to-br ${meta.accent} text-zinc-950 font-black flex items-center justify-center shadow-lg`}>{index + 1}</div>
                                           <div>
                                             <p className="font-semibold text-zinc-100">{row.userName || 'Unknown User'}</p>
                                             <p className="text-xs text-zinc-400">{row.userRole || '-'}</p>
@@ -1944,7 +1943,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                 return (
                                   <div key={`leader-${row.id}`} className={`grid grid-cols-12 gap-2 p-3 items-center text-sm ${rowTone}`}>
                                     <div className="col-span-1 flex items-center gap-2">
-                                      <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-black ${rank === 1 ? 'bg-amber-400 text-zinc-950' : rank === 2 ? 'bg-slate-300 text-zinc-950' : rank === 3 ? 'bg-orange-500 text-zinc-950' : 'bg-zinc-800 text-zinc-200'}`}>
+                                      <span className={`inline-flex h-7 w-7 min-w-7 aspect-square items-center justify-center rounded-full text-xs font-black ${rank === 1 ? 'bg-amber-400 text-zinc-950' : rank === 2 ? 'bg-slate-300 text-zinc-950' : rank === 3 ? 'bg-orange-500 text-zinc-950' : 'bg-zinc-800 text-zinc-200'}`}>
                                         {rank}
                                       </span>
                                     </div>
