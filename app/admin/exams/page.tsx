@@ -1100,13 +1100,20 @@ export default function AdminExamsPage() {
   };
 
   const recomputeSubmissionFromBreakdown = (row: any, breakdown: any[]) => {
+    const deriveStatusFromMarks = (question: any): 'correct' | 'incorrect' | 'unattempted' => {
+      const marks = Number(question?.obtainedMarks ?? 0);
+      if (marks > 0) return 'correct';
+      if (marks < 0) return 'incorrect';
+      return 'unattempted';
+    };
+
     let attemptedCount = 0;
     let correctCount = 0;
     let incorrectCount = 0;
     let recalculatedMarks = 0;
 
     breakdown.forEach((question: any) => {
-      const status = question?.status;
+      const status = deriveStatusFromMarks(question);
       const questionMarks = Number(question?.obtainedMarks || 0);
       if (status === 'correct') {
         attemptedCount += 1;
@@ -1126,7 +1133,12 @@ export default function AdminExamsPage() {
       incorrectCount,
       // If final manual score is already set, keep it as source of truth.
       obtainedMarks: typeof row?.score === 'number' ? roundMarks(row.score) : roundMarks(recalculatedMarks),
-      questionBreakdown: breakdown,
+      questionBreakdown: breakdown.map((question: any) => ({
+        ...question,
+        status: deriveStatusFromMarks(question),
+        attempted: deriveStatusFromMarks(question) !== 'unattempted',
+        isCorrect: deriveStatusFromMarks(question) === 'correct',
+      })),
     };
   };
 
@@ -2105,18 +2117,25 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                   {filteredQuestionBreakdown.length === 0 && (
                                     <div className="p-4 text-xs text-zinc-500">No questions found for selected type.</div>
                                   )}
-                                  {filteredQuestionBreakdown.map((detail: any) => (
+                                  {filteredQuestionBreakdown.map((detail: any) => {
+                                    const derivedStatus: 'correct' | 'incorrect' | 'unattempted' = Number(detail.obtainedMarks ?? 0) > 0
+                                      ? 'correct'
+                                      : Number(detail.obtainedMarks ?? 0) < 0
+                                        ? 'incorrect'
+                                        : 'unattempted';
+
+                                    return (
                                     <div key={`${row.id}-${detail.questionId}`} className="border-b border-zinc-800/70 p-3 text-xs space-y-1">
                                       <div className="flex items-center justify-between gap-2">
                                         <p className="text-zinc-100 font-medium">Q{detail.questionNo}. {detail.questionText}</p>
-                                        <span className={`uppercase font-semibold tracking-wide text-[10px] px-2 py-0.5 rounded border ${detail.status === 'correct' ? 'bg-emerald-900/40 text-emerald-300 border-emerald-700/70' : detail.status === 'incorrect' ? 'bg-red-900/40 text-red-300 border-red-700/70' : 'bg-zinc-800 text-zinc-300 border-zinc-700'}`}>
-                                          {detail.status}
+                                        <span className={`uppercase font-semibold tracking-wide text-[10px] px-2 py-0.5 rounded border ${derivedStatus === 'correct' ? 'bg-emerald-900/40 text-emerald-300 border-emerald-700/70' : derivedStatus === 'incorrect' ? 'bg-red-900/40 text-red-300 border-red-700/70' : 'bg-zinc-800 text-zinc-300 border-zinc-700'}`}>
+                                          {derivedStatus}
                                         </span>
                                       </div>
                                       <p className="text-zinc-400">Type: {detail.questionType}</p>
                                       <p className="text-zinc-300"><span className="text-zinc-500">User Answer:</span> {detail.userAnswer || '-'}</p>
                                       <p className="text-zinc-300"><span className="text-zinc-500">Correct Answer:</span> {detail.correctAnswer || '-'}</p>
-                                      <p className={`text-zinc-300 font-medium ${detail.status === 'correct' ? 'text-emerald-400' : detail.status === 'incorrect' ? 'text-red-400' : 'text-zinc-400'}`}>
+                                      <p className={`text-zinc-300 font-medium ${derivedStatus === 'correct' ? 'text-emerald-400' : derivedStatus === 'incorrect' ? 'text-red-400' : 'text-zinc-400'}`}>
                                         <span className="text-zinc-500">Marks: </span>
                                         {Number(detail.obtainedMarks ?? 0) > 0 ? `+${formatMarks(detail.obtainedMarks)}` : `${formatMarks(detail.obtainedMarks)}`}
                                       </p>
@@ -2131,7 +2150,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                             examId: exam.id || "",
                                             submissionId: row.id,
                                             questionId: detail.questionId,
-                                            status: detail.status,
+                                            status: derivedStatus,
                                             marks: formatMarks(detail.obtainedMarks),
                                             questionNo: detail.questionNo,
                                             questionText: detail.questionText,
@@ -2143,12 +2162,12 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                         >
                                           Manual Grade
                                         </Button>
-                                        <span className={`text-[10px] font-medium ${detail.status === 'correct' ? 'text-emerald-300' : detail.status === 'incorrect' ? 'text-red-300' : 'text-zinc-400'}`}>
-                                          Current: {String(detail.status || 'unattempted').toUpperCase()}
+                                        <span className={`text-[10px] font-medium ${derivedStatus === 'correct' ? 'text-emerald-300' : derivedStatus === 'incorrect' ? 'text-red-300' : 'text-zinc-400'}`}>
+                                          Current: {String(derivedStatus).toUpperCase()}
                                         </span>
                                       </div>
                                     </div>
-                                  ))}
+                                  );})}
                                 </div>
                               </div>
                             </div>
