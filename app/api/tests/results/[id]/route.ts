@@ -73,6 +73,13 @@ const getRankedScore = (submission: any): number => {
     return 0;
 };
 
+const isLeaderboardEligibleRole = (role: unknown): boolean => {
+    const normalized = String(role || '').toLowerCase();
+    const isMember = ['member', 'junior_developer', 'senior_developer'].includes(normalized);
+    const isTrainee = normalized === 'trainee';
+    return isMember || isTrainee;
+};
+
 const computeFinalScore = (examQuestions: any[], submission: any): number | null => {
     const answers = submission?.answers || {};
     const manualGrades = submission?.manualGrades || {};
@@ -227,6 +234,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
         const leaderboard = submissions
             .slice()
+            .filter((submission: any) => isLeaderboardEligibleRole(submission?.userRole))
             .sort((a: any, b: any) => {
                 const scoreDiff = getRankedScore(b) - getRankedScore(a);
                 if (scoreDiff !== 0) return scoreDiff;

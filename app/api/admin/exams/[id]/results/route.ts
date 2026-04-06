@@ -94,6 +94,80 @@ const computeCheckboxMarks = (
     return positive - negative;
 };
 
+const computeFinalScore = (examQuestions: any[], submission: any): number | null => {
+    const answers = submission?.answers || {};
+    const manualGrades = submission?.manualGrades || {};
+    const hasManualGrades = manualGrades && Object.keys(manualGrades).length > 0;
+
+    if (!hasManualGrades && typeof submission?.score === 'number') {
+        return roundMarks(submission.score);
+    }
+
+    let total = 0;
+
+    for (const question of examQuestions || []) {
+        const questionId = String(question?.id || '');
+        if (!questionId) continue;
+
+        const manualGrade = manualGrades?.[questionId];
+        if (manualGrade && Number.isFinite(Number(manualGrade.marks))) {
+            total += Number(manualGrade.marks);
+            continue;
+        }
+
+        if (manualGrade && ['correct', 'incorrect', 'unattempted'].includes(String(manualGrade.status || ''))) {
+            const overrideStatus = String(manualGrade.status);
+            total += overrideStatus === 'correct'
+                ? Number(question.points || 0)
+                : overrideStatus === 'incorrect'
+                    ? -Math.abs(Number(question.negativePoints || 0))
+                    : 0;
+            continue;
+        }
+
+        const userAnswer = answers?.[questionId];
+        const hasAnswer = Array.isArray(userAnswer)
+            ? userAnswer.length > 0
+            : typeof userAnswer === 'string'
+                ? userAnswer.trim().length > 0
+                : userAnswer !== undefined && userAnswer !== null;
+
+        if (!hasAnswer) continue;
+
+        if (question.type === 'mcq') {
+            const isCorrect = String(userAnswer ?? '').trim() === String(question.correctAnswer ?? '').trim();
+            total += isCorrect ? Number(question.points || 0) : -Math.abs(Number(question.negativePoints || 0));
+            continue;
+        }
+
+        if (question.type === 'checkbox') {
+            total += computeCheckboxMarks(userAnswer, question.correctAnswer, Number(question.points || 0), Number(question.negativePoints || 0));
+            continue;
+        }
+
+        if (question.type === 'short_answer' || question.type === 'long_answer') {
+            const keywords = Array.isArray(question.keywords)
+                ? question.keywords.map((v: any) => String(v).trim()).filter(Boolean)
+                : [];
+            const matchMode: 'any' | 'all' = question.keywordMatchMode === 'all' ? 'all' : 'any';
+            const allowManualReview = question.allowManualReview !== false;
+
+            if (keywords.length > 0) {
+                const isKeywordMatch = evaluateKeywordAnswer(userAnswer, keywords, matchMode);
+                if (isKeywordMatch) {
+                    total += Number(question.points || 0);
+                } else if (!allowManualReview) {
+                    total -= Math.abs(Number(question.negativePoints || 0));
+                }
+            } else if (!allowManualReview) {
+                total -= Math.abs(Number(question.negativePoints || 0));
+            }
+        }
+    }
+
+    return roundMarks(total);
+};
+
 export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
         const authUser = await verifySuperAdmin(request);
@@ -251,9 +325,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 };
             });
 
-            const calculatedObtainedMarks = questionBreakdown.reduce((sum: number, question: any) => {
-                return sum + Number(question.obtainedMarks || 0);
-            }, 0);
+            const storedScore = typeof data?.score === 'number' ? roundMarks(data.score) : null;
+            const resolvedScore = storedScore !== null ? storedScore : computeFinalScore(examQuestions, data);
 
             return {
                 id: doc.id,
@@ -267,7 +340,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 unattemptedCount: Math.max(0, totalQuestions - attemptedCount),
                 correctCount,
                 incorrectCount,
-                obtainedMarks: typeof data?.score === 'number' ? roundMarks(data.score) : roundMarks(calculatedObtainedMarks),
+                score: resolvedScore,
+                finalScore: resolvedScore,
+                obtainedMarks: resolvedScore,
                 questionBreakdown
             };
         }).sort((a: any, b: any) => {
