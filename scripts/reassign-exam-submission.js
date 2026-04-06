@@ -88,6 +88,30 @@ async function findUsers(db, nameOrEmail) {
     });
 }
 
+async function getUserProfile(db, uid) {
+  const userDoc = await db.collection('users').doc(uid).get();
+  const userData = userDoc.data() || {};
+  return {
+    uid,
+    displayName: userData.displayName || userData.name || userData.profileData?.name || 'Unknown User',
+    email: userData.email || '',
+    role: userData.role || 'guest'
+  };
+}
+
+async function archiveSubmission(db, submissionDoc, reason, replacedByUid) {
+  const data = submissionDoc.data() || {};
+  await db.collection('deletedExamSubmissions').add({
+    ...data,
+    originalSubmissionId: submissionDoc.id,
+    deletedAt: new Date().toISOString(),
+    deletedBy: 'script',
+    deletionReason: reason,
+    replacedByUid: replacedByUid || null,
+  });
+  await submissionDoc.ref.delete();
+}
+
 async function discover(db) {
   const name = getArg('name');
   const fromEmail = getArg('fromEmail');
@@ -137,6 +161,7 @@ async function reassign(db) {
   const toEmail = getArg('toEmail');
   const toName = getArg('toName');
   const fromUid = getArg('fromUid');
+  const replace = process.argv.includes('--replace');
 
   if (!submissionId) {
     throw new Error('Missing --submissionId');
@@ -155,6 +180,8 @@ async function reassign(db) {
     throw new Error('Missing target user. Provide --toUid or unique --toEmail/--toName');
   }
 
+  const targetProfile = await getUserProfile(db, targetUid);
+
   const submissionRef = db.collection('examSubmissions').doc(submissionId);
   const submissionDoc = await submissionRef.get();
   if (!submissionDoc.exists) {
@@ -171,16 +198,30 @@ async function reassign(db) {
     .where('userId', '==', targetUid)
     .get();
 
-  if (!duplicateSnap.empty && !duplicateSnap.docs.some((d) => d.id === submissionId)) {
-    throw new Error(`Target user already has a submission for this test (testId=${submission.testId}). Aborting.`);
+  const duplicateDocs = duplicateSnap.docs.filter((d) => d.id !== submissionId);
+  if (duplicateDocs.length > 0 && !replace) {
+    throw new Error(`Target user already has a submission for this test (testId=${submission.testId}). Use --replace to archive the duplicate and continue.`);
+  }
+
+  if (duplicateDocs.length > 0 && replace) {
+    for (const duplicateDoc of duplicateDocs) {
+      await archiveSubmission(db, duplicateDoc, `Replaced by reassigned submission ${submissionId}`, targetUid);
+      console.log(`Archived duplicate submission ${duplicateDoc.id} for target uid ${targetUid}`);
+    }
   }
 
   await submissionRef.update({
     userId: targetUid,
+    userName: targetProfile.displayName,
+    userEmail: targetProfile.email,
+    userRole: targetProfile.role,
     updatedAt: new Date().toISOString(),
     reassignedByScriptAt: new Date().toISOString(),
     reassignedFromUserId: String(submission.userId || ''),
     reassignedToUserId: targetUid,
+    reassignedToUserName: targetProfile.displayName,
+    reassignedToUserEmail: targetProfile.email,
+    reassignedToUserRole: targetProfile.role,
   });
 
   console.log(`Reassigned submission ${submissionId} from ${submission.userId} to ${targetUid}`);
