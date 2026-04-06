@@ -83,7 +83,6 @@ export default function TestResultsPage() {
   };
   const podiumMeta = [
     {
-      label: "Gold",
       border: "border-amber-400/70",
       bg: "bg-gradient-to-br from-amber-500/20 via-amber-400/10 to-zinc-950",
       glow: "shadow-[0_0_25px_rgba(251,191,36,0.28)]",
@@ -91,7 +90,6 @@ export default function TestResultsPage() {
       accent: "from-amber-300 via-yellow-200 to-amber-500",
     },
     {
-      label: "Silver",
       border: "border-slate-300/70",
       bg: "bg-gradient-to-br from-slate-300/15 via-slate-200/10 to-zinc-950",
       glow: "shadow-[0_0_22px_rgba(148,163,184,0.22)]",
@@ -99,7 +97,6 @@ export default function TestResultsPage() {
       accent: "from-slate-100 via-slate-300 to-slate-500",
     },
     {
-      label: "Bronze",
       border: "border-orange-600/70",
       bg: "bg-gradient-to-br from-orange-600/20 via-orange-500/10 to-zinc-950",
       glow: "shadow-[0_0_22px_rgba(249,115,22,0.22)]",
@@ -162,7 +159,7 @@ export default function TestResultsPage() {
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[pulse_3s_ease-in-out_infinite]" />
                       <div className="relative flex items-start justify-between gap-3">
                         <div>
-                          <p className={`text-[10px] uppercase tracking-[0.3em] ${meta.badge}`}>{meta.label}</p>
+                          <p className={`text-[10px] uppercase tracking-[0.3em] ${meta.badge}`}>Top Rank</p>
                           <div className="mt-1 flex items-center gap-2">
                             <div className={`h-10 w-10 rounded-full bg-gradient-to-br ${meta.accent} text-zinc-950 font-black flex items-center justify-center shadow-lg`}>
                               {index + 1}

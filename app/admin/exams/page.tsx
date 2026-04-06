@@ -1852,7 +1852,6 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
 
                     const podiumMeta = [
                       {
-                        label: 'Gold',
                         rank: 1,
                         border: 'border-amber-400/70',
                         bg: 'bg-gradient-to-br from-amber-500/20 via-amber-400/10 to-zinc-950',
@@ -1861,7 +1860,6 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                         accent: 'from-amber-300 via-yellow-200 to-amber-500',
                       },
                       {
-                        label: 'Silver',
                         rank: 2,
                         border: 'border-slate-300/70',
                         bg: 'bg-gradient-to-br from-slate-300/15 via-slate-200/10 to-zinc-950',
@@ -1870,7 +1868,6 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                         accent: 'from-slate-100 via-slate-300 to-slate-500',
                       },
                       {
-                        label: 'Bronze',
                         rank: 3,
                         border: 'border-orange-600/70',
                         bg: 'bg-gradient-to-br from-orange-600/20 via-orange-500/10 to-zinc-950',
@@ -1904,7 +1901,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[pulse_3s_ease-in-out_infinite]" />
                                     <div className="relative flex items-start justify-between gap-3">
                                       <div>
-                                        <p className={`text-[10px] uppercase tracking-[0.3em] ${meta.badge}`}>{meta.label}</p>
+                                        <p className={`text-[10px] uppercase tracking-[0.3em] ${meta.badge}`}>Top Rank</p>
                                         <div className="mt-1 flex items-center gap-2">
                                           <div className={`h-10 w-10 rounded-full bg-gradient-to-br ${meta.accent} text-zinc-950 font-black flex items-center justify-center shadow-lg`}>{index + 1}</div>
                                           <div>
@@ -1958,7 +1955,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                                     <div className="col-span-2 text-right">
                                       <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${isTopThree ? 'border-cyan-400/50 text-cyan-200' : 'border-zinc-700 text-zinc-400'}`}>
                                         {rank <= 3 && <Sparkles className="w-3 h-3" />}
-                                        {rank <= 3 ? ['Gold', 'Silver', 'Bronze'][rank - 1] : 'Ranked'}
+                                        {rank <= 3 ? `Top ${rank}` : 'Ranked'}
                                       </span>
                                     </div>
                                   </div>
