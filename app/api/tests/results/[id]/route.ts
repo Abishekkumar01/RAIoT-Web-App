@@ -212,8 +212,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
             const data = doc.data();
             const userInfo = userMap.get(data.userId) || { name: '', email: '', role: 'guest' };
             const storedScore = typeof data?.score === 'number' ? roundMarks(data.score) : null;
-            const finalScore = storedScore !== null ? storedScore : computeFinalScore(examQuestions, data);
             const hasManualGrades = !!data?.manualGrades && Object.keys(data.manualGrades).length > 0;
+            const computedScore = computeFinalScore(examQuestions, data);
+            const finalScore = hasManualGrades
+                ? computedScore
+                : (storedScore !== null ? storedScore : computedScore);
             const hasFinalManualReview = !!data?.manualReviewedAt || data?.requiresManualReview === false || hasManualGrades;
             const displayName = userInfo.name || data?.userName || data?.displayName || data?.name || 'Unknown User';
             const displayEmail = userInfo.email || data?.userEmail || data?.email || '';

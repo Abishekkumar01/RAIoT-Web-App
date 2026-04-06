@@ -269,27 +269,32 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
                 // Manual override supports three states: correct | incorrect | unattempted.
                 if (manualGrade) {
+                    const hasNumericManualMarks = Number.isFinite(Number(manualGrade.marks));
                     if (manualGrade.status === 'correct' || manualGrade.status === 'incorrect' || manualGrade.status === 'unattempted') {
                         status = manualGrade.status;
                     } else if (typeof manualGrade.isCorrect === 'boolean') {
                         // Backward compatibility with older manualGrades format.
                         status = manualGrade.isCorrect ? 'correct' : 'incorrect';
+                    } else if (hasNumericManualMarks) {
+                        // If only manual marks are provided, infer status from marks.
+                        const numericMarks = Number(manualGrade.marks);
+                        status = numericMarks > 0 ? 'correct' : (numericMarks < 0 ? 'incorrect' : 'unattempted');
                     }
 
-                    if (Number.isFinite(Number(manualGrade.marks))) {
+                    if (hasNumericManualMarks) {
                         obtainedMarks = Number(manualGrade.marks);
                     }
 
                     if (status === 'unattempted') {
                         attempted = false;
                         isCorrect = false;
-                        if (!Number.isFinite(Number(manualGrade.marks))) {
+                        if (!hasNumericManualMarks) {
                             obtainedMarks = 0;
                         }
                     } else {
                         attempted = true;
                         isCorrect = status === 'correct';
-                        if (!Number.isFinite(Number(manualGrade.marks))) {
+                        if (!hasNumericManualMarks) {
                             obtainedMarks = status === 'correct'
                                 ? Number(question.points || 0)
                                 : -Math.abs(Number(question.negativePoints || 0));
@@ -326,7 +331,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
             });
 
             const storedScore = typeof data?.score === 'number' ? roundMarks(data.score) : null;
-            const resolvedScore = storedScore !== null ? storedScore : computeFinalScore(examQuestions, data);
+            const hasManualGradesForSubmission = !!data?.manualGrades && Object.keys(data.manualGrades).length > 0;
+            const computedScore = computeFinalScore(examQuestions, data);
+            const resolvedScore = hasManualGradesForSubmission
+                ? computedScore
+                : (storedScore !== null ? storedScore : computedScore);
 
             return {
                 id: doc.id,
