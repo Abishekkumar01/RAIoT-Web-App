@@ -270,15 +270,15 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 // Manual override supports three states: correct | incorrect | unattempted.
                 if (manualGrade) {
                     const hasNumericManualMarks = Number.isFinite(Number(manualGrade.marks));
-                    if (manualGrade.status === 'correct' || manualGrade.status === 'incorrect' || manualGrade.status === 'unattempted') {
+                    if (hasNumericManualMarks) {
+                        // Manual marks are authoritative for status.
+                        const numericMarks = Number(manualGrade.marks);
+                        status = numericMarks > 0 ? 'correct' : (numericMarks < 0 ? 'incorrect' : 'unattempted');
+                    } else if (manualGrade.status === 'correct' || manualGrade.status === 'incorrect' || manualGrade.status === 'unattempted') {
                         status = manualGrade.status;
                     } else if (typeof manualGrade.isCorrect === 'boolean') {
                         // Backward compatibility with older manualGrades format.
                         status = manualGrade.isCorrect ? 'correct' : 'incorrect';
-                    } else if (hasNumericManualMarks) {
-                        // If only manual marks are provided, infer status from marks.
-                        const numericMarks = Number(manualGrade.marks);
-                        status = numericMarks > 0 ? 'correct' : (numericMarks < 0 ? 'incorrect' : 'unattempted');
                     }
 
                     if (hasNumericManualMarks) {

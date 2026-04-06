@@ -185,6 +185,9 @@ export async function PUT(
                         return acc;
                     }
                     nextGrade.marks = numericMarks;
+                    // Manual marks are authoritative for status.
+                    nextGrade.status = numericMarks > 0 ? 'correct' : (numericMarks < 0 ? 'incorrect' : 'unattempted');
+                    delete nextGrade.isCorrect;
                 }
 
                 acc[questionId] = nextGrade;
