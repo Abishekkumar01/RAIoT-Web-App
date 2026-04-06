@@ -75,7 +75,20 @@ const getRankedScore = (submission: any): number => {
 
 const isLeaderboardEligibleRole = (role: unknown): boolean => {
     const normalized = String(role || '').toLowerCase();
-    const isMember = ['member', 'junior_developer', 'senior_developer', 'student_coordinator', 'operations', 'operation'].includes(normalized);
+    const isMember = [
+        'member',
+        'junior_developer',
+        'senior_developer',
+        'student_coordinator',
+        'operations',
+        'operation',
+        'operations_head',
+        'public_relation_head',
+        'management_head',
+        'technical_head',
+        'inventory_head',
+        'content_creation_head'
+    ].includes(normalized);
     const isTrainee = normalized === 'trainee';
     return isMember || isTrainee;
 };

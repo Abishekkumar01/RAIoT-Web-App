@@ -82,6 +82,7 @@ function LoginContent() {
             const allowedOpsRoles = [
               'student_coordinator',
               'operations',
+              'operations_head',
               'inventory_head',
               'public_relation_head',
               'content_creation_head',

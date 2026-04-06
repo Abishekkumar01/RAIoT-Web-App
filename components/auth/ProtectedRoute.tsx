@@ -22,6 +22,7 @@ const roleHierarchy: Record<UserRole | string, number> = {
   student_coordinator: 5,
   inventory_head: 6,
   public_relation_head: 7,
+  operations_head: 7,
   content_creation_head: 8,
   management_head: 9,
   technical_head: 10,

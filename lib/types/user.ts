@@ -12,6 +12,7 @@ export type UserRole =
   | 'vice_president'
   | 'president'
   | 'public_relation_head'
+  | 'operations_head'
   | 'content_creation_head'
   | 'management_head'
   | 'technical_head'

@@ -1863,7 +1863,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                     const leaderboardRows = (resultsByExam[exam.id!] || [])
                       .filter((row: any) => {
                         const role = String(row.userRole || '').toLowerCase();
-                        const isMember = ['member', 'junior_developer', 'senior_developer', 'student_coordinator', 'operations', 'operation'].includes(role);
+                        const isMember = ['member', 'junior_developer', 'senior_developer', 'student_coordinator', 'operations', 'operation', 'operations_head', 'public_relation_head', 'management_head', 'technical_head', 'inventory_head', 'content_creation_head'].includes(role);
                         const isTrainee = role === 'trainee';
                         if (selectedRoleFilter === 'member') return isMember;
                         if (selectedRoleFilter === 'trainee') return isTrainee;
@@ -2014,7 +2014,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                       const selectedRoleFilter = roleFilterByExam[exam.id!] || 'both';
                       const filteredRows = (resultsByExam[exam.id!] || []).filter((row: any) => {
                         const role = String(row.userRole || '').toLowerCase();
-                        const isMember = ['member', 'junior_developer', 'senior_developer', 'student_coordinator', 'operations', 'operation'].includes(role);
+                        const isMember = ['member', 'junior_developer', 'senior_developer', 'student_coordinator', 'operations', 'operation', 'operations_head', 'public_relation_head', 'management_head', 'technical_head', 'inventory_head', 'content_creation_head'].includes(role);
                         const isTrainee = role === 'trainee';
                         if (selectedRoleFilter === 'member') return isMember;
                         if (selectedRoleFilter === 'trainee') return isTrainee;
@@ -2028,7 +2028,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                       .filter((row: any) => {
                         const selectedRoleFilter = roleFilterByExam[exam.id!] || 'both';
                         const role = String(row.userRole || '').toLowerCase();
-                        const isMember = ['member', 'junior_developer', 'senior_developer', 'student_coordinator', 'operations', 'operation'].includes(role);
+                        const isMember = ['member', 'junior_developer', 'senior_developer', 'student_coordinator', 'operations', 'operation', 'operations_head', 'public_relation_head', 'management_head', 'technical_head', 'inventory_head', 'content_creation_head'].includes(role);
                         const isTrainee = role === 'trainee';
                         if (selectedRoleFilter === 'member') return isMember;
                         if (selectedRoleFilter === 'trainee') return isTrainee;
