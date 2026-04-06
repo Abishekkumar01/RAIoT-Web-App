@@ -128,21 +128,23 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 const userDoc = await adminDb.collection('users').doc(uid).get();
                 const userData = userDoc.data();
                 userMap.set(uid, {
-                    name: userData?.displayName || userData?.name || userData?.profileData?.name || 'Unknown User',
+                    name: userData?.displayName || userData?.name || userData?.profileData?.name || '',
                     email: userData?.email || '',
                     role: userData?.role || 'guest'
                 });
             } catch {
-                userMap.set(uid, { name: 'Unknown User', email: '', role: 'guest' });
+                userMap.set(uid, { name: '', email: '', role: 'guest' });
             }
         }));
 
         const submissions = submissionsSnapshot.docs.map(doc => {
             const data = doc.data();
             const manualGrades = (data?.manualGrades && typeof data.manualGrades === 'object') ? data.manualGrades : {};
-            const userInfo = userMap.get(data.userId) || { name: 'Unknown User', email: '', role: 'guest' };
+            const userInfo = userMap.get(data.userId) || { name: '', email: '', role: 'guest' };
             const totalQuestions = examQuestions.length;
             const totalMarks = examQuestions.reduce((sum: number, q: any) => sum + Number(q?.points || 0), 0);
+            const displayName = userInfo.name || data?.userName || data?.displayName || data?.name || 'Unknown User';
+            const displayEmail = userInfo.email || data?.userEmail || data?.email || '';
 
             let attemptedCount = 0;
             let correctCount = 0;
@@ -256,8 +258,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
             return {
                 id: doc.id,
                 ...data,
-                userName: userInfo.name,
-                userEmail: userInfo.email,
+                userName: displayName,
+                userEmail: displayEmail,
                 userRole: userInfo.role,
                 totalQuestions,
                 totalMarks,

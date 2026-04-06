@@ -192,27 +192,30 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 const userDoc = await adminDb.collection('users').doc(uid).get();
                 const userData = userDoc.data();
                 userMap.set(uid, {
-                    name: userData?.displayName || userData?.name || userData?.profileData?.name || 'Unknown User',
+                    name: userData?.displayName || userData?.name || userData?.profileData?.name || '',
                     email: userData?.email || '',
                     role: userData?.role || 'guest'
                 });
             } catch {
-                userMap.set(uid, { name: 'Unknown User', email: '', role: 'guest' });
+                userMap.set(uid, { name: '', email: '', role: 'guest' });
             }
         }));
 
         const submissions = subSnapshot.docs.map((doc) => {
             const data = doc.data();
-            const userInfo = userMap.get(data.userId) || { name: 'Unknown User', email: '', role: 'guest' };
-            const finalScore = computeFinalScore(examQuestions, data);
+            const userInfo = userMap.get(data.userId) || { name: '', email: '', role: 'guest' };
+            const storedScore = typeof data?.score === 'number' ? roundMarks(data.score) : null;
+            const finalScore = storedScore !== null ? storedScore : computeFinalScore(examQuestions, data);
             const hasManualGrades = !!data?.manualGrades && Object.keys(data.manualGrades).length > 0;
             const hasFinalManualReview = !!data?.manualReviewedAt || data?.requiresManualReview === false || hasManualGrades;
+            const displayName = userInfo.name || data?.userName || data?.displayName || data?.name || 'Unknown User';
+            const displayEmail = userInfo.email || data?.userEmail || data?.email || '';
 
             return {
                 id: doc.id,
                 ...data,
-                userName: userInfo.name,
-                userEmail: userInfo.email,
+                userName: displayName,
+                userEmail: displayEmail,
                 userRole: userInfo.role,
                 finalScore: finalScore !== null ? finalScore : null,
                 score: finalScore !== null ? finalScore : (typeof data?.score === 'number' ? roundMarks(data.score) : null),
