@@ -1577,7 +1577,7 @@ export default function AdminExamsPage() {
                 One-way sequential mode (no back / no jump)
               </label>
               <p className="text-xs text-zinc-400">
-                If enabled, each question can be viewed only once in order. Skipped questions remain unattempted, and users cannot return to previous questions.
+                If enabled, questions must be viewed in order. A question may be skipped and left unattempted, but users cannot go back or jump to another question later.
               </p>
             </div>
           </CardContent>
