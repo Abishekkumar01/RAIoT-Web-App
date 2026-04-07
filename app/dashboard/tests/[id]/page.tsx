@@ -12,6 +12,12 @@ import { ExamTest, Question } from "@/types/examination";
 
 type AnswerValue = string | string[];
 
+const hasAttemptedValue = (value: AnswerValue | undefined): boolean => {
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "string") return value.trim().length > 0;
+  return false;
+};
+
 const calculatorButtons = [
   ["sin", "cos", "tan", "(", ")"],
   ["log", "ln", "sqrt", "pi", "e"],
@@ -40,6 +46,7 @@ export default function TakeTestPage() {
   const [test, setTest] = useState<ExamTest | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
+  const [lockedQuestions, setLockedQuestions] = useState<Record<string, boolean>>({});
   const [viewedQuestions, setViewedQuestions] = useState<Record<string, boolean>>({});
   const [reviewMarkedQuestions, setReviewMarkedQuestions] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
@@ -70,11 +77,17 @@ export default function TakeTestPage() {
     try {
       const auth = (await import("@/lib/firebase")).auth;
       const token = await auth.currentUser?.getIdToken();
+      const lockedAnswers = Object.entries(answers).reduce((acc, [questionId, value]) => {
+        if (lockedQuestions[questionId] && hasAttemptedValue(value)) {
+          acc[questionId] = value;
+        }
+        return acc;
+      }, {} as Record<string, AnswerValue>);
 
       const res = await fetch('/api/tests/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ testId: id, answers })
+        body: JSON.stringify({ testId: id, answers: lockedAnswers })
       });
 
       const data = await res.json();
@@ -83,6 +96,7 @@ export default function TakeTestPage() {
       localStorage.removeItem(`test_start_${id}`);
       localStorage.removeItem(`test_violations_${id}`);
       localStorage.removeItem(`test_answers_${id}`);
+      localStorage.removeItem(`test_locked_${id}`);
       localStorage.removeItem(`test_viewed_${id}`);
       localStorage.removeItem(`test_review_${id}`);
       
@@ -92,7 +106,7 @@ export default function TakeTestPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [id, answers, router]);
+  }, [id, answers, lockedQuestions, router]);
 
   useEffect(() => {
     fetchTest();
@@ -109,6 +123,11 @@ export default function TakeTestPage() {
     const savedReview = localStorage.getItem(`test_review_${id}`);
     if (savedReview) {
       try { setReviewMarkedQuestions(JSON.parse(savedReview)); } catch (e) {}
+    }
+
+    const savedLocked = localStorage.getItem(`test_locked_${id}`);
+    if (savedLocked) {
+      try { setLockedQuestions(JSON.parse(savedLocked)); } catch (e) {}
     }
   }, [id]);
 
@@ -342,6 +361,7 @@ export default function TakeTestPage() {
   };
 
   const handleAnswerChange = (questionId: string, value: AnswerValue) => {
+    if (lockedQuestions[questionId]) return;
     setAnswers(prev => {
       const updated = { ...prev, [questionId]: value };
       localStorage.setItem(`test_answers_${id}`, JSON.stringify(updated));
@@ -350,6 +370,7 @@ export default function TakeTestPage() {
   };
 
   const handleCheckboxAnswerChange = (questionId: string, optionIndex: string, checked: boolean) => {
+    if (lockedQuestions[questionId]) return;
     setAnswers((prev) => {
       const existing = prev[questionId];
       const selected = Array.isArray(existing)
@@ -377,11 +398,10 @@ export default function TakeTestPage() {
   };
 
   const isQuestionAnswered = (questionId: string) => {
-    const value = answers[questionId];
-    if (Array.isArray(value)) return value.length > 0;
-    if (typeof value === "string") return value.trim().length > 0;
-    return false;
+    return hasAttemptedValue(answers[questionId]);
   };
+
+  const isQuestionLocked = (questionId: string) => !!lockedQuestions[questionId];
 
   const jumpToQuestion = (index: number) => {
     if (test?.sequentialNavigationOnly) return;
@@ -389,6 +409,7 @@ export default function TakeTestPage() {
   };
 
   const clearAnswer = (questionId: string) => {
+    if (lockedQuestions[questionId]) return;
     setAnswers((prev) => {
       const updated = { ...prev };
       delete updated[questionId];
@@ -398,6 +419,7 @@ export default function TakeTestPage() {
   };
 
   const toggleMarkForReview = (questionId: string) => {
+    if (lockedQuestions[questionId]) return;
     setReviewMarkedQuestions((prev) => {
       const updated = { ...prev, [questionId]: !prev[questionId] };
       localStorage.setItem(`test_review_${id}`, JSON.stringify(updated));
@@ -426,23 +448,50 @@ export default function TakeTestPage() {
     }
   }, [id, submitting, test?.id, testStarted]);
 
+  const getLockedAnswersSnapshot = useCallback(
+    (
+      answersSnapshot: Record<string, AnswerValue> = answers,
+      lockedSnapshot: Record<string, boolean> = lockedQuestions
+    ) => {
+      return Object.entries(answersSnapshot).reduce((acc, [questionId, value]) => {
+        if (lockedSnapshot[questionId] && hasAttemptedValue(value)) {
+          acc[questionId] = value;
+        }
+        return acc;
+      }, {} as Record<string, AnswerValue>);
+    },
+    [answers, lockedQuestions]
+  );
+
+  const submitAnswerForQuestion = async (questionId: string) => {
+    if (lockedQuestions[questionId]) return;
+
+    const nextLocked = { ...lockedQuestions, [questionId]: true };
+    setLockedQuestions(nextLocked);
+    localStorage.setItem(`test_locked_${id}`, JSON.stringify(nextLocked));
+
+    const lockedSnapshot = getLockedAnswersSnapshot(answers, nextLocked);
+    await syncLiveProgress(lockedSnapshot);
+  };
+
   useEffect(() => {
     if (!testStarted) return;
     if (progressSyncTimerRef.current) clearTimeout(progressSyncTimerRef.current);
 
     progressSyncTimerRef.current = setTimeout(() => {
-      syncLiveProgress(answers);
+      syncLiveProgress(getLockedAnswersSnapshot(answers, lockedQuestions));
     }, 1200);
 
     return () => {
       if (progressSyncTimerRef.current) clearTimeout(progressSyncTimerRef.current);
     };
-  }, [answers, syncLiveProgress, testStarted]);
+  }, [answers, lockedQuestions, getLockedAnswersSnapshot, syncLiveProgress, testStarted]);
 
   const getQuestionTileStyle = (questionId: string, index: number) => {
     const isCurrent = currentQuestionIndex === index;
     const isReviewed = !!reviewMarkedQuestions[questionId];
-    const isAnswered = isQuestionAnswered(questionId);
+    const isAnswered = isQuestionLocked(questionId) && isQuestionAnswered(questionId);
+    const isLockedUnattempted = isQuestionLocked(questionId) && !isQuestionAnswered(questionId);
     const isViewed = !!viewedQuestions[questionId];
 
     let base = "h-9 px-0 border transition-colors";
@@ -451,6 +500,8 @@ export default function TakeTestPage() {
       base += " bg-amber-500/20 border-amber-400 text-amber-200 hover:bg-amber-500/30";
     } else if (isAnswered) {
       base += " bg-emerald-500/20 border-emerald-400 text-emerald-200 hover:bg-emerald-500/30";
+    } else if (isLockedUnattempted) {
+      base += " bg-orange-500/20 border-orange-400 text-orange-200 hover:bg-orange-500/30";
     } else if (isViewed) {
       base += " bg-red-500/20 border-red-400 text-red-200 hover:bg-red-500/30";
     } else {
@@ -561,10 +612,12 @@ export default function TakeTestPage() {
   const isSequentialOneWay = !!test.sequentialNavigationOnly;
   const isWarning = timeLeft !== null && timeLeft <= 300; // last 5 mins
   const totalQuestions = test.questions.length;
-  const attemptedQuestions = test.questions.filter((q) => isQuestionAnswered(q.id)).length;
+  const attemptedQuestions = test.questions.filter((q) => isQuestionLocked(q.id) && isQuestionAnswered(q.id)).length;
   const unattendedQuestions = totalQuestions - attemptedQuestions;
   const reviewedQuestions = test.questions.filter((q) => !!reviewMarkedQuestions[q.id]).length;
   const currentQuestion = test.questions[currentQuestionIndex];
+  const isCurrentQuestionLocked = currentQuestion ? isQuestionLocked(currentQuestion.id) : false;
+  const isCurrentQuestionAnswered = currentQuestion ? isQuestionAnswered(currentQuestion.id) : false;
 
   return (
     <div id="exam-fullscreen-container" className={testStarted ? "exam-fullscreen-cursor fixed inset-0 z-[100] bg-zinc-950 overflow-y-auto" : "relative w-full"}>
@@ -764,7 +817,8 @@ export default function TakeTestPage() {
           <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-zinc-300">
             <span className="px-2 py-1 rounded border border-zinc-700 bg-transparent">Not Viewed</span>
             <span className="px-2 py-1 rounded border border-red-400 bg-red-500/20 text-red-200">Viewed Unattempted</span>
-            <span className="px-2 py-1 rounded border border-emerald-400 bg-emerald-500/20 text-emerald-200">Attempted</span>
+            <span className="px-2 py-1 rounded border border-emerald-400 bg-emerald-500/20 text-emerald-200">Locked Attempted</span>
+            <span className="px-2 py-1 rounded border border-orange-400 bg-orange-500/20 text-orange-200">Locked Unattempted</span>
             <span className="px-2 py-1 rounded border border-amber-400 bg-amber-500/20 text-amber-200">Marked for Review</span>
           </div>
           {!isSequentialOneWay ? (
@@ -803,8 +857,10 @@ export default function TakeTestPage() {
               </CardTitle>
               <CardDescription className="text-primary font-medium flex items-center justify-between">
                 <span>{currentQuestion.points} points</span>
-                <span className={isQuestionAnswered(currentQuestion.id) ? "text-emerald-400" : "text-zinc-400"}>
-                  {isQuestionAnswered(currentQuestion.id) ? "Answered" : "Unanswered"}
+                <span className={isCurrentQuestionLocked ? "text-emerald-400" : "text-zinc-400"}>
+                  {isCurrentQuestionLocked
+                    ? (isCurrentQuestionAnswered ? "Answer Locked" : "Locked as Unattempted")
+                    : (isCurrentQuestionAnswered ? "Draft Answer" : "Unanswered")}
                 </span>
               </CardDescription>
             </CardHeader>
@@ -828,6 +884,7 @@ export default function TakeTestPage() {
                         value={optIndex.toString()} 
                         checked={typeof answers[currentQuestion.id] === "string" && answers[currentQuestion.id] === optIndex.toString()}
                         onChange={() => handleAnswerChange(currentQuestion.id, optIndex.toString())}
+                        disabled={isCurrentQuestionLocked}
                         className="w-4 h-4 text-primary bg-zinc-900 border-zinc-700 focus:ring-primary focus:ring-offset-zinc-900"
                       />
                       <div className="space-y-2">
@@ -854,6 +911,7 @@ export default function TakeTestPage() {
                           type="checkbox"
                           checked={selected}
                           onChange={(e) => handleCheckboxAnswerChange(currentQuestion.id, optIndex.toString(), e.target.checked)}
+                          disabled={isCurrentQuestionLocked}
                           className="w-4 h-4 text-primary bg-zinc-900 border-zinc-700 focus:ring-primary focus:ring-offset-zinc-900"
                         />
                         <div className="space-y-2">
@@ -876,6 +934,7 @@ export default function TakeTestPage() {
                   placeholder="Your answer..." 
                   value={typeof answers[currentQuestion.id] === "string" ? answers[currentQuestion.id] : ""}
                   onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                  disabled={isCurrentQuestionLocked}
                   className="bg-zinc-900 text-zinc-100 caret-zinc-100 placeholder:text-zinc-500"
                 />
               )}
@@ -885,6 +944,7 @@ export default function TakeTestPage() {
                   className="min-h-[150px] bg-zinc-900 resize-y text-zinc-100 caret-zinc-100 placeholder:text-zinc-500"
                   value={typeof answers[currentQuestion.id] === "string" ? answers[currentQuestion.id] : ""}
                   onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                  disabled={isCurrentQuestionLocked}
                 />
               )}
               <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
@@ -911,13 +971,23 @@ export default function TakeTestPage() {
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
+                    variant={isCurrentQuestionLocked ? "secondary" : "default"}
+                    onClick={() => submitAnswerForQuestion(currentQuestion.id)}
+                    disabled={isCurrentQuestionLocked}
+                    className={isCurrentQuestionLocked ? "border border-emerald-500/50 text-emerald-200" : ""}
+                  >
+                    {isCurrentQuestionLocked ? "Answer Submitted" : "Submit Answer"}
+                  </Button>
+                  <Button
+                    type="button"
                     variant={reviewMarkedQuestions[currentQuestion.id] ? "secondary" : "ghost"}
                     onClick={() => toggleMarkForReview(currentQuestion.id)}
+                    disabled={isCurrentQuestionLocked}
                     className={reviewMarkedQuestions[currentQuestion.id] ? "border border-amber-400/70 text-amber-200" : ""}
                   >
                     {reviewMarkedQuestions[currentQuestion.id] ? "Unmark Review" : "Mark for Review"}
                   </Button>
-                  <Button type="button" variant="ghost" onClick={() => clearAnswer(currentQuestion.id)}>
+                  <Button type="button" variant="ghost" onClick={() => clearAnswer(currentQuestion.id)} disabled={isCurrentQuestionLocked}>
                     <Eraser className="w-4 h-4 mr-2" /> Clear Answer
                   </Button>
                 </div>
