@@ -167,6 +167,85 @@ const computeFinalScore = (examQuestions: any[], submission: any): number | null
     return roundMarks(total);
 };
 
+const getQuestionBreakdown = (examQuestions: any[], submission: any) => {
+    const answers = submission?.answers || {};
+    const manualGrades = submission?.manualGrades || {};
+
+    return (examQuestions || []).map((question: any) => {
+        const questionId = String(question?.id || '');
+        const userAnswer = answers?.[questionId];
+        const manualGrade = manualGrades?.[questionId];
+        const hasAnswer = Array.isArray(userAnswer)
+            ? userAnswer.length > 0
+            : typeof userAnswer === 'string'
+                ? userAnswer.trim().length > 0
+                : userAnswer !== undefined && userAnswer !== null;
+
+        let awardedMarks = 0;
+        let status: 'correct' | 'incorrect' | 'unattempted' | 'manual' = 'unattempted';
+
+        if (manualGrade && Number.isFinite(Number(manualGrade.marks))) {
+            awardedMarks = Number(manualGrade.marks);
+            status = Number(manualGrade.marks) > 0 ? 'correct' : Number(manualGrade.marks) < 0 ? 'incorrect' : 'unattempted';
+        } else if (manualGrade && ['correct', 'incorrect', 'unattempted'].includes(String(manualGrade.status || ''))) {
+            status = String(manualGrade.status) as 'correct' | 'incorrect' | 'unattempted';
+            awardedMarks = status === 'correct'
+                ? Number(question.points || 0)
+                : status === 'incorrect'
+                    ? -Math.abs(Number(question.negativePoints || 0))
+                    : 0;
+        } else if (!hasAnswer) {
+            status = 'unattempted';
+            awardedMarks = 0;
+        } else if (question.type === 'mcq') {
+            const isCorrect = String(userAnswer ?? '').trim() === String(question.correctAnswer ?? '').trim();
+            status = isCorrect ? 'correct' : 'incorrect';
+            awardedMarks = isCorrect ? Number(question.points || 0) : -Math.abs(Number(question.negativePoints || 0));
+        } else if (question.type === 'checkbox') {
+            awardedMarks = computeCheckboxMarks(userAnswer, question.correctAnswer, Number(question.points || 0), Number(question.negativePoints || 0));
+            status = awardedMarks > 0 ? 'correct' : awardedMarks < 0 ? 'incorrect' : 'unattempted';
+        } else if (question.type === 'short_answer' || question.type === 'long_answer') {
+            const keywords = Array.isArray(question.keywords)
+                ? question.keywords.map((v: any) => String(v).trim()).filter(Boolean)
+                : [];
+            const matchMode: 'any' | 'all' = question.keywordMatchMode === 'all' ? 'all' : 'any';
+            const allowManualReview = question.allowManualReview !== false;
+
+            if (keywords.length > 0) {
+                const isKeywordMatch = evaluateKeywordAnswer(userAnswer, keywords, matchMode);
+                if (isKeywordMatch) {
+                    status = 'correct';
+                    awardedMarks = Number(question.points || 0);
+                } else if (allowManualReview) {
+                    status = 'manual';
+                    awardedMarks = 0;
+                } else {
+                    status = 'incorrect';
+                    awardedMarks = -Math.abs(Number(question.negativePoints || 0));
+                }
+            } else if (allowManualReview) {
+                status = 'manual';
+                awardedMarks = 0;
+            } else {
+                status = 'incorrect';
+                awardedMarks = -Math.abs(Number(question.negativePoints || 0));
+            }
+        }
+
+        const selectedAnswer = Array.isArray(userAnswer) ? userAnswer.join(', ') : String(userAnswer ?? '');
+
+        return {
+            questionId,
+            questionText: String(question?.text || ''),
+            questionType: String(question?.type || ''),
+            selectedAnswer,
+            awardedMarks: roundMarks(awardedMarks),
+            maxMarks: Number(question?.points || 0),
+            status,
+        };
+    });
+};
+
 export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
         const authUser = await verifyUser(request);
@@ -283,6 +362,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
         const hasFinalManualReview = !!submission?.manualReviewedAt || submission?.requiresManualReview === false || (!!submission?.manualGrades && Object.keys(submission.manualGrades).length > 0);
         const currentUserRank = leaderboard.find((row) => row.userId === authUser.uid)?.rank ?? null;
         return NextResponse.json({
+            examTitle: examData?.title || '',
             submission: {
                 ...submission,
                 score: finalScore !== null ? finalScore : submission?.score ?? null,
@@ -304,6 +384,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 submittedAt,
                 userId
             })),
+            questionBreakdown: getQuestionBreakdown(examQuestions, submission),
             currentUserRank
         });
     } catch (error: any) {

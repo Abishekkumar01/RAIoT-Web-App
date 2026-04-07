@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft, CheckCircle, Trophy, Sparkles } from "lucide-react";
+import * as XLSX from "xlsx";
 
 export default function TestResultsPage() {
   const { id } = useParams();
@@ -15,6 +16,9 @@ export default function TestResultsPage() {
   const [submission, setSubmission] = useState<any>(null);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [currentUserRank, setCurrentUserRank] = useState<number | null>(null);
+  const [examTitle, setExamTitle] = useState<string>("");
+  const [questionBreakdown, setQuestionBreakdown] = useState<any[]>([]);
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   useEffect(() => {
     fetchResults();
@@ -35,6 +39,8 @@ export default function TestResultsPage() {
         setSubmission(data.submission);
         setLeaderboard(Array.isArray(data.leaderboard) ? data.leaderboard : []);
         setCurrentUserRank(typeof data.currentUserRank === "number" ? data.currentUserRank : data.submission.rank ?? null);
+        setExamTitle(typeof data.examTitle === "string" ? data.examTitle : "");
+        setQuestionBreakdown(Array.isArray(data.questionBreakdown) ? data.questionBreakdown : []);
       }
     } catch (err) {
       console.error(err);
@@ -81,6 +87,60 @@ export default function TestResultsPage() {
     const marks = Number(row.totalMarks || totalMarks || 0);
     return marks > 0 ? ((getScore(row) / marks) * 100).toFixed(2) : "0.00";
   };
+
+  const downloadExcel = async () => {
+    if (!submission || exportingExcel) return;
+
+    try {
+      setExportingExcel(true);
+
+      const summaryRows = [
+        { Field: 'Exam Title', Value: examTitle || 'Test Result' },
+        { Field: 'Student', Value: submission.userName || 'Unknown User' },
+        { Field: 'Email', Value: submission.userEmail || '' },
+        { Field: 'Role', Value: submission.userRole || '' },
+        { Field: 'Submitted At', Value: submission.submittedAt ? new Date(submission.submittedAt).toLocaleString() : '' },
+        { Field: 'Score', Value: displayedScore !== null ? displayedScore : 'Pending Grading' },
+        { Field: 'Total Marks', Value: totalMarks },
+        { Field: 'Percentage', Value: displayedPercentage ? `${displayedPercentage}%` : '' },
+        { Field: 'Rank', Value: currentUserRank ? `#${currentUserRank}` : '' },
+      ];
+
+      const questionRows = questionBreakdown.map((row, index) => ({
+        'S.No': index + 1,
+        'Question ID': row.questionId,
+        'Question': row.questionText,
+        'Type': row.questionType,
+        'Your Answer': row.selectedAnswer,
+        'Status': row.status,
+        'Awarded Marks': row.awardedMarks,
+        'Max Marks': row.maxMarks,
+      }));
+
+      const leaderboardRows = leaderboardRowsForExport();
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(summaryRows), 'Summary');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(questionRows), 'Question Breakdown');
+      if (leaderboardRows.length > 0) {
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(leaderboardRows), 'Leaderboard');
+      }
+
+      const safeTitle = (examTitle || 'test-result').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      XLSX.writeFile(workbook, `${safeTitle || 'test-result'}.xlsx`);
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
+  const leaderboardRowsForExport = () => leaderboardRows.map((row, index) => ({
+    Rank: index + 1,
+    Participant: row.userName || 'Unknown User',
+    Role: row.userRole || '-',
+    Score: getScore(row),
+    'Total Marks': Number(row.totalMarks || totalMarks || 0),
+    Percentage: getPercent(row),
+  }));
   const podiumMeta = [
     {
       border: "border-amber-400/70",
@@ -113,6 +173,7 @@ export default function TestResultsPage() {
             <CheckCircle className="text-green-500 w-8 h-8" />
             Test Completed
           </h1>
+          {examTitle && <p className="text-sm text-zinc-400 mt-1">{examTitle}</p>}
           <p className="text-muted-foreground mt-2">
             Submitted on {new Date(submission.submittedAt).toLocaleString()}
           </p>
@@ -128,6 +189,15 @@ export default function TestResultsPage() {
           {isProvisionalScore && (
             <p className="text-xs text-amber-400 mt-1">Provisional (auto-evaluated)</p>
           )}
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={downloadExcel}
+            disabled={exportingExcel}
+          >
+            {exportingExcel ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+            Download Excel
+          </Button>
         </div>
       </div>
 
