@@ -404,7 +404,7 @@ export default function TakeTestPage() {
   const isQuestionLocked = (questionId: string) => !!lockedQuestions[questionId];
 
   const jumpToQuestion = (index: number) => {
-    if (test?.sequentialNavigationOnly) return;
+    if (test?.sequentialNavigationOnly && !isQuestionLocked(test.questions[currentQuestionIndex]?.id || '')) return;
     setCurrentQuestionIndex(index);
   };
 
@@ -472,6 +472,14 @@ export default function TakeTestPage() {
 
     const lockedSnapshot = getLockedAnswersSnapshot(answers, nextLocked);
     await syncLiveProgress(lockedSnapshot);
+
+    if (test?.sequentialNavigationOnly) {
+      const currentIndex = test.questions.findIndex((question) => question.id === questionId);
+      if (currentIndex >= 0) {
+        const nextIndex = Math.min(test.questions.length - 1, currentIndex + 1);
+        setCurrentQuestionIndex(nextIndex);
+      }
+    }
   };
 
   useEffect(() => {
@@ -618,6 +626,7 @@ export default function TakeTestPage() {
   const currentQuestion = test.questions[currentQuestionIndex];
   const isCurrentQuestionLocked = currentQuestion ? isQuestionLocked(currentQuestion.id) : false;
   const isCurrentQuestionAnswered = currentQuestion ? isQuestionAnswered(currentQuestion.id) : false;
+  const canNavigateAway = !isSequentialOneWay || isCurrentQuestionLocked;
 
   return (
     <div id="exam-fullscreen-container" className={testStarted ? "exam-fullscreen-cursor fixed inset-0 z-[100] bg-zinc-950 overflow-y-auto" : "relative w-full"}>
@@ -644,7 +653,7 @@ export default function TakeTestPage() {
                   <li>Do NOT switch tabs or minimize the browser window. Doing so will be recorded as a violation.</li>
                   <li>After 3 violations (tab/app switch or fullscreen exit), your test is auto-submitted.</li>
                   <li>Right-click is disabled during the test.</li>
-                  {isSequentialOneWay && <li>This test is in one-way sequential mode. You cannot return to previous questions or jump ahead.</li>}
+                  {isSequentialOneWay && <li>Until you submit the current answer, you cannot leave that question or edit it after submission.</li>}
                   <li>Ensure you have a stable internet connection.</li>
                 </ul>
               </div>
@@ -807,9 +816,9 @@ export default function TakeTestPage() {
 
       <Card className="border-zinc-800 bg-zinc-900/60">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">{isSequentialOneWay ? 'Sequential Progress' : 'Question Navigator'}</CardTitle>
+          <CardTitle className="text-base">{isSequentialOneWay ? 'Question Lock Mode' : 'Question Navigator'}</CardTitle>
           <CardDescription>
-            {isSequentialOneWay ? 'Questions unlock strictly in order. Back and jump are disabled.' : 'Jump to any question.'}
+            {isSequentialOneWay ? 'You can move only after submitting the current answer. Submitted questions remain locked.' : 'Jump to any question.'}
             Attempted: {attemptedQuestions}/{totalQuestions} | Unattempted: {unattendedQuestions} | Review: {reviewedQuestions}
           </CardDescription>
         </CardHeader>
@@ -821,7 +830,7 @@ export default function TakeTestPage() {
             <span className="px-2 py-1 rounded border border-orange-400 bg-orange-500/20 text-orange-200">Locked Unattempted</span>
             <span className="px-2 py-1 rounded border border-amber-400 bg-amber-500/20 text-amber-200">Marked for Review</span>
           </div>
-          {!isSequentialOneWay ? (
+          {!isSequentialOneWay || canNavigateAway ? (
             <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2">
               {test.questions.map((q, index) => {
                 return (
@@ -831,6 +840,7 @@ export default function TakeTestPage() {
                     variant="outline"
                     className={getQuestionTileStyle(q.id, index)}
                     onClick={() => jumpToQuestion(index)}
+                    disabled={isSequentialOneWay && !canNavigateAway && index !== currentQuestionIndex}
                   >
                     {index + 1}
                   </Button>
@@ -949,21 +959,21 @@ export default function TakeTestPage() {
               )}
               <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  {!isSequentialOneWay && (
+                  {!isSequentialOneWay || canNavigateAway ? (
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
-                      disabled={currentQuestionIndex === 0}
+                      disabled={!canNavigateAway || currentQuestionIndex === 0}
                     >
                       <ChevronLeft className="w-4 h-4 mr-1" /> Previous
                     </Button>
-                  )}
+                  ) : null}
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setCurrentQuestionIndex((prev) => Math.min(totalQuestions - 1, prev + 1))}
-                    disabled={currentQuestionIndex === totalQuestions - 1}
+                    disabled={isSequentialOneWay && !canNavigateAway}
                   >
                     Next <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
