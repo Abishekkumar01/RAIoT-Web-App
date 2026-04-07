@@ -1297,7 +1297,7 @@ export default function AdminExamsPage() {
       try {
         const auth = (await import("@/lib/firebase")).auth;
         const token = await auth.currentUser?.getIdToken(true);
-        const res = await fetch(`/api/admin/exams/${examId}/results/${submissionId}`, {
+        const res = await fetch(`/api/admin/exams/${examId}/results/${submissionId}?hardDelete=true`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` },
         });

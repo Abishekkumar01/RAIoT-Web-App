@@ -266,6 +266,8 @@ export async function DELETE(
         }
 
         const { id: testId, submissionId } = params;
+        const url = new URL(request.url);
+        const hardDelete = ['1', 'true', 'yes'].includes((url.searchParams.get('hardDelete') || '').toLowerCase());
         const adminDb = getAdminDb();
         if (!adminDb) throw new Error('Database not initialized');
 
@@ -278,6 +280,21 @@ export async function DELETE(
         const submissionData = submissionDoc.data();
         if (submissionData?.testId !== testId) {
             return NextResponse.json({ error: 'Submission does not belong to this test' }, { status: 400 });
+        }
+
+        if (hardDelete) {
+            const archivedCopies = await adminDb
+                .collection('deletedExamSubmissions')
+                .where('testId', '==', testId)
+                .where('originalSubmissionId', '==', submissionId)
+                .get();
+
+            const batch = adminDb.batch();
+            archivedCopies.docs.forEach((doc) => batch.delete(doc.ref));
+            batch.delete(submissionRef);
+            await batch.commit();
+
+            return NextResponse.json({ success: true, message: 'Submission permanently deleted' });
         }
 
         await adminDb.collection('deletedExamSubmissions').add({
