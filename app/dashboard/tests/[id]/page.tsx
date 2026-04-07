@@ -13,10 +13,12 @@ import { ExamTest, Question } from "@/types/examination";
 type AnswerValue = string | string[];
 
 const calculatorButtons = [
-  ["7", "8", "9", "/"],
-  ["4", "5", "6", "*"],
-  ["1", "2", "3", "-"],
-  ["0", ".", "=", "+"],
+  ["sin", "cos", "tan", "(", ")"],
+  ["log", "ln", "sqrt", "pi", "e"],
+  ["7", "8", "9", "/", "^"],
+  ["4", "5", "6", "*", "%"],
+  ["1", "2", "3", "-", "abs"],
+  ["0", ".", "ANS", "+", "="],
 ];
 
 // Fisher-Yates shuffle algorithm to randomize question order
@@ -50,7 +52,10 @@ export default function TakeTestPage() {
   const [showCalculator, setShowCalculator] = useState(true);
   const [calculatorInput, setCalculatorInput] = useState("");
   const [calculatorResult, setCalculatorResult] = useState("0");
+  const [calculatorMode, setCalculatorMode] = useState<'DEG' | 'RAD'>('DEG');
+  const [calculatorLastAnswer, setCalculatorLastAnswer] = useState("0");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const progressSyncTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasAutoSubmitted = useRef(false);
   const lastViolationTsRef = useRef(0);
   const maxViolations = 3;
@@ -318,11 +323,13 @@ export default function TakeTestPage() {
       if (!res.ok) {
         setError(data.error);
       } else {
-        // Shuffle questions for randomized order
-        const shuffledQuestions = shuffleQuestions(data.test.questions || []);
+        const sequentialMode = !!data?.test?.sequentialNavigationOnly;
+        const questionsForSession = sequentialMode
+          ? [...(data.test.questions || [])]
+          : shuffleQuestions(data.test.questions || []);
         setTest({
           ...data.test,
-          questions: shuffledQuestions
+          questions: questionsForSession
         });
         setCurrentQuestionIndex(0);
       }
@@ -377,6 +384,7 @@ export default function TakeTestPage() {
   };
 
   const jumpToQuestion = (index: number) => {
+    if (test?.sequentialNavigationOnly) return;
     setCurrentQuestionIndex(index);
   };
 
@@ -396,6 +404,40 @@ export default function TakeTestPage() {
       return updated;
     });
   };
+
+  const syncLiveProgress = useCallback(async (answersSnapshot: Record<string, AnswerValue>) => {
+    if (!testStarted || !test?.id || submitting) return;
+
+    try {
+      const auth = (await import("@/lib/firebase")).auth;
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return;
+
+      await fetch('/api/tests/progress', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ testId: id, answers: answersSnapshot })
+      });
+    } catch {
+      // Silent by design: progress sync should not interrupt the test flow.
+    }
+  }, [id, submitting, test?.id, testStarted]);
+
+  useEffect(() => {
+    if (!testStarted) return;
+    if (progressSyncTimerRef.current) clearTimeout(progressSyncTimerRef.current);
+
+    progressSyncTimerRef.current = setTimeout(() => {
+      syncLiveProgress(answers);
+    }, 1200);
+
+    return () => {
+      if (progressSyncTimerRef.current) clearTimeout(progressSyncTimerRef.current);
+    };
+  }, [answers, syncLiveProgress, testStarted]);
 
   const getQuestionTileStyle = (questionId: string, index: number) => {
     const isCurrent = currentQuestionIndex === index;
@@ -425,23 +467,65 @@ export default function TakeTestPage() {
   const evaluateCalculatorExpression = (expression: string) => {
     const cleaned = expression.replace(/\s+/g, "");
     if (!cleaned) return "0";
-    if (!/^[0-9+\-*/.()]+$/.test(cleaned)) return "Error";
+    if (!/^[0-9+\-*/%^().,a-zA-Z]+$/.test(cleaned)) return "Error";
+
+    const transformed = cleaned
+      .replace(/\^/g, "**")
+      .replace(/\bpi\b/gi, "pi")
+      .replace(/\bANS\b/g, calculatorLastAnswer);
+
+    const toRadians = (value: number) => calculatorMode === 'DEG' ? (value * Math.PI) / 180 : value;
+    const scope: Record<string, (...args: number[]) => number> = {
+      sin: (x: number) => Math.sin(toRadians(x)),
+      cos: (x: number) => Math.cos(toRadians(x)),
+      tan: (x: number) => Math.tan(toRadians(x)),
+      log: (x: number) => Math.log10(x),
+      ln: (x: number) => Math.log(x),
+      sqrt: (x: number) => Math.sqrt(x),
+      abs: (x: number) => Math.abs(x),
+      pow: (x: number, y: number) => Math.pow(x, y),
+      floor: (x: number) => Math.floor(x),
+      ceil: (x: number) => Math.ceil(x),
+      round: (x: number) => Math.round(x),
+      exp: (x: number) => Math.exp(x),
+    };
 
     try {
-      // The regex whitelist above limits characters to numeric math tokens.
-      const computed = Function(`"use strict"; return (${cleaned});`)();
+      const fn = Function(
+        ...Object.keys(scope),
+        'pi',
+        'e',
+        `"use strict"; return (${transformed});`
+      );
+      const computed = fn(...Object.values(scope), Math.PI, Math.E);
       if (typeof computed !== "number" || !Number.isFinite(computed)) return "Error";
-      return Number.isInteger(computed) ? String(computed) : String(Number(computed.toFixed(6)));
+      return Number.isInteger(computed) ? String(computed) : String(Number(computed.toFixed(8)));
     } catch {
       return "Error";
     }
   };
 
   const handleCalculatorButton = (value: string) => {
+    if (["sin", "cos", "tan", "log", "ln", "sqrt", "abs"].includes(value)) {
+      setCalculatorInput((prev) => `${prev}${value}(`);
+      return;
+    }
+
+    if (value === 'pi') {
+      setCalculatorInput((prev) => `${prev}pi`);
+      return;
+    }
+
+    if (value === 'ANS') {
+      setCalculatorInput((prev) => `${prev}${calculatorLastAnswer}`);
+      return;
+    }
+
     if (value === "=") {
       const evaluated = evaluateCalculatorExpression(calculatorInput);
       setCalculatorResult(evaluated);
       if (evaluated !== "Error") {
+        setCalculatorLastAnswer(evaluated);
         setCalculatorInput(evaluated);
       }
       return;
@@ -474,6 +558,7 @@ export default function TakeTestPage() {
   if (!test) return null;
 
   const existingSession = typeof window !== 'undefined' && !!localStorage.getItem(`test_start_${id}`);
+  const isSequentialOneWay = !!test.sequentialNavigationOnly;
   const isWarning = timeLeft !== null && timeLeft <= 300; // last 5 mins
   const totalQuestions = test.questions.length;
   const attemptedQuestions = test.questions.filter((q) => isQuestionAnswered(q.id)).length;
@@ -506,6 +591,7 @@ export default function TakeTestPage() {
                   <li>Do NOT switch tabs or minimize the browser window. Doing so will be recorded as a violation.</li>
                   <li>After 3 violations (tab/app switch or fullscreen exit), your test is auto-submitted.</li>
                   <li>Right-click is disabled during the test.</li>
+                  {isSequentialOneWay && <li>This test is in one-way sequential mode. You cannot return to previous questions or jump ahead.</li>}
                   <li>Ensure you have a stable internet connection.</li>
                 </ul>
               </div>
@@ -533,28 +619,39 @@ export default function TakeTestPage() {
                 Calculator
               </Button>
             ) : (
-              <Card className="w-72 bg-zinc-900/95 border-zinc-700 shadow-2xl">
+              <Card className="w-80 bg-zinc-900/95 border-zinc-700 shadow-2xl">
                 <CardHeader className="py-3 px-4 border-b border-zinc-800">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm flex items-center gap-2 text-zinc-100">
                       <Calculator className="w-4 h-4" />
-                      Calculator
+                      Scientific Calculator
                     </CardTitle>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => setShowCalculator(false)}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-7 px-2 text-[10px] border-zinc-700"
+                        onClick={() => setCalculatorMode((prev) => prev === 'DEG' ? 'RAD' : 'DEG')}
+                      >
+                        {calculatorMode}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setShowCalculator(false)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-3 space-y-3">
                   <div className="rounded-md border border-zinc-700 bg-zinc-950 p-2">
                     <p className="text-[11px] text-zinc-400 min-h-4 break-all">{calculatorInput || "0"}</p>
                     <p className="text-lg font-semibold text-zinc-100 break-all">{calculatorResult}</p>
+                    <p className="text-[10px] text-zinc-500 mt-1">ANS: {calculatorLastAnswer}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
@@ -562,7 +659,7 @@ export default function TakeTestPage() {
                     <Button type="button" variant="outline" className="border-zinc-700" onClick={handleCalculatorBackspace}>DEL</Button>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-5 gap-2">
                     {calculatorButtons.flat().map((btn) => (
                       <Button
                         key={btn}
@@ -657,9 +754,9 @@ export default function TakeTestPage() {
 
       <Card className="border-zinc-800 bg-zinc-900/60">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Question Navigator</CardTitle>
+          <CardTitle className="text-base">{isSequentialOneWay ? 'Sequential Progress' : 'Question Navigator'}</CardTitle>
           <CardDescription>
-            Jump to any question.
+            {isSequentialOneWay ? 'Questions unlock strictly in order. Back and jump are disabled.' : 'Jump to any question.'}
             Attempted: {attemptedQuestions}/{totalQuestions} | Unattempted: {unattendedQuestions} | Review: {reviewedQuestions}
           </CardDescription>
         </CardHeader>
@@ -670,21 +767,27 @@ export default function TakeTestPage() {
             <span className="px-2 py-1 rounded border border-emerald-400 bg-emerald-500/20 text-emerald-200">Attempted</span>
             <span className="px-2 py-1 rounded border border-amber-400 bg-amber-500/20 text-amber-200">Marked for Review</span>
           </div>
-          <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2">
-            {test.questions.map((q, index) => {
-              return (
-                <Button
-                  key={`nav-${q.id}`}
-                  type="button"
-                  variant="outline"
-                  className={getQuestionTileStyle(q.id, index)}
-                  onClick={() => jumpToQuestion(index)}
-                >
-                  {index + 1}
-                </Button>
-              );
-            })}
-          </div>
+          {!isSequentialOneWay ? (
+            <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2">
+              {test.questions.map((q, index) => {
+                return (
+                  <Button
+                    key={`nav-${q.id}`}
+                    type="button"
+                    variant="outline"
+                    className={getQuestionTileStyle(q.id, index)}
+                    onClick={() => jumpToQuestion(index)}
+                  >
+                    {index + 1}
+                  </Button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-md border border-zinc-800 bg-zinc-950/40 p-3 text-sm text-zinc-300">
+              Current question: <span className="font-semibold text-zinc-100">{currentQuestionIndex + 1}</span> / {totalQuestions}
+            </div>
+          )}
           <div className="mt-3 text-xs text-zinc-400">
             Progress: {attemptedQuestions}/{totalQuestions} attempted, {unattendedQuestions} unattended.
           </div>
@@ -786,14 +889,16 @@ export default function TakeTestPage() {
               )}
               <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
-                    disabled={currentQuestionIndex === 0}
-                  >
-                    <ChevronLeft className="w-4 h-4 mr-1" /> Previous
-                  </Button>
+                  {!isSequentialOneWay && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
+                      disabled={currentQuestionIndex === 0}
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     variant="outline"

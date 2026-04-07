@@ -289,6 +289,9 @@ export async function POST(request: Request) {
             submittedAt: new Date().toISOString()
         });
 
+        // Clear any in-progress live leaderboard snapshot once final submission is stored.
+        await adminDb.collection('examLiveProgress').doc(`${testId}_${authUser.uid}`).delete().catch(() => null);
+
         return NextResponse.json({ 
             success: true, 
              message: 'Submitted successfully',

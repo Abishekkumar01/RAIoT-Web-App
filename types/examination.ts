@@ -32,6 +32,7 @@ export interface ExamTest {
   examEndTime: string;   // Test closes for submissions at this time (ISO String)
   publishTarget?: ExamPublishTarget;
   publishToUserIds?: string[];
+  sequentialNavigationOnly?: boolean;
   durationMinutes: number;
   createdBy: string;
   createdAt: string;

@@ -48,6 +48,7 @@ export async function POST(request: Request) {
             examEndTime: body.examEndTime,
             publishTarget: body.publishTarget || 'all',
             publishToUserIds: Array.isArray(body.publishToUserIds) ? body.publishToUserIds : [],
+            sequentialNavigationOnly: body.sequentialNavigationOnly === true,
             durationMinutes: body.durationMinutes,
             createdBy: authUser.uid,
             createdAt: new Date().toISOString(),

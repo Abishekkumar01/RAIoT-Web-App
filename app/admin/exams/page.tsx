@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CloudinaryUpload } from "@/components/ui/CloudinaryUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp, FileSpreadsheet, Trophy, Sparkles } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp, FileSpreadsheet, Trophy, Sparkles, Activity } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ExamTest, KeywordMatchMode, Question, QuestionType } from "@/types/examination";
 
@@ -25,6 +25,8 @@ export default function AdminExamsPage() {
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [resultsLoadingByExam, setResultsLoadingByExam] = useState<Record<string, boolean>>({});
   const [resultsByExam, setResultsByExam] = useState<Record<string, any[]>>({});
+  const [liveLeaderboardLoadingByExam, setLiveLeaderboardLoadingByExam] = useState<Record<string, boolean>>({});
+  const [liveLeaderboardByExam, setLiveLeaderboardByExam] = useState<Record<string, any[]>>({});
   const [deletedResultsLoadingByExam, setDeletedResultsLoadingByExam] = useState<Record<string, boolean>>({});
   const [deletedResultsByExam, setDeletedResultsByExam] = useState<Record<string, any[]>>({});
   const [excelRestoreLoadingByExam, setExcelRestoreLoadingByExam] = useState<Record<string, boolean>>({});
@@ -92,6 +94,7 @@ export default function AdminExamsPage() {
   const [duration, setDuration] = useState("60");
   const [publishTarget, setPublishTarget] = useState<'all' | 'member' | 'trainee' | 'selected'>('all');
   const [publishToUserIds, setPublishToUserIds] = useState<string[]>([]);
+  const [sequentialNavigationOnly, setSequentialNavigationOnly] = useState(false);
   const [eligibleUsers, setEligibleUsers] = useState<Array<{ uid: string; name: string; email: string; role: string }>>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [keywordDraftByQuestion, setKeywordDraftByQuestion] = useState<Record<string, string>>({});
@@ -121,6 +124,19 @@ export default function AdminExamsPage() {
     setIsSuperAdmin(role === 'superadmin');
     setIsAdminUser(role === 'superadmin' || role === 'admin');
   }, [user]);
+
+  useEffect(() => {
+    const openExamIds = Object.keys(liveLeaderboardByExam);
+    if (openExamIds.length === 0) return;
+
+    const timer = setInterval(() => {
+      openExamIds.forEach((examId) => {
+        fetchLiveLeaderboard(examId);
+      });
+    }, 8000);
+
+    return () => clearInterval(timer);
+  }, [liveLeaderboardByExam]);
 
   const showNotice = (message: string, title = "Notice") => {
     setNoticeDialog({ open: true, title, message });
@@ -168,6 +184,7 @@ export default function AdminExamsPage() {
     setDuration("60");
     setPublishTarget('all');
     setPublishToUserIds([]);
+    setSequentialNavigationOnly(false);
     setQuestions([]);
     setKeywordDraftByQuestion({});
     setIsEditing(false);
@@ -191,6 +208,7 @@ export default function AdminExamsPage() {
     setDuration(String(exam.durationMinutes || 60));
     setPublishTarget(exam.publishTarget || 'all');
     setPublishToUserIds(Array.isArray(exam.publishToUserIds) ? exam.publishToUserIds : []);
+    setSequentialNavigationOnly(!!exam.sequentialNavigationOnly);
     setQuestions(
       (exam.questions || []).map((q) => ({
         ...q,
@@ -719,7 +737,7 @@ export default function AdminExamsPage() {
       }
 
       if (publishTarget === 'selected' && publishToUserIds.length === 0) {
-        showNotice("Please select at least one member/trainee for selected publish mode.", 'Audience Required');
+        showNotice("Please select at least one user for selected publish mode.", 'Audience Required');
         return;
       }
 
@@ -741,6 +759,7 @@ export default function AdminExamsPage() {
         examEndTime: exEnDate,
         publishTarget,
         publishToUserIds: publishTarget === 'selected' ? publishToUserIds : [],
+        sequentialNavigationOnly,
         durationMinutes: parseInt(duration),
         status: "upcoming",
         questions: preparedQuestions
@@ -861,6 +880,43 @@ export default function AdminExamsPage() {
       }
     } finally {
       setResultsLoadingByExam(prev => ({ ...prev, [examId]: false }));
+    }
+  };
+
+  const fetchLiveLeaderboard = async (examId: string) => {
+    try {
+      const auth = (await import("@/lib/firebase")).auth;
+      const token = await auth.currentUser?.getIdToken(true);
+      const res = await fetch(`/api/admin/exams/${examId}/live-leaderboard`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showNotice(data.error || 'Failed to fetch live leaderboard', 'Fetch Failed');
+        return;
+      }
+      setLiveLeaderboardByExam((prev) => ({ ...prev, [examId]: data.rows || [] }));
+    } catch (err) {
+      console.error(err);
+      showNotice('Failed to fetch live leaderboard', 'Fetch Failed');
+    }
+  };
+
+  const toggleLiveLeaderboard = async (examId: string) => {
+    if (liveLeaderboardByExam[examId]) {
+      setLiveLeaderboardByExam((prev) => {
+        const next = { ...prev };
+        delete next[examId];
+        return next;
+      });
+      return;
+    }
+
+    setLiveLeaderboardLoadingByExam((prev) => ({ ...prev, [examId]: true }));
+    try {
+      await fetchLiveLeaderboard(examId);
+    } finally {
+      setLiveLeaderboardLoadingByExam((prev) => ({ ...prev, [examId]: false }));
     }
   };
 
@@ -1478,7 +1534,7 @@ export default function AdminExamsPage() {
                   <SelectItem value="all">ALL (Default)</SelectItem>
                   <SelectItem value="member">Members Only</SelectItem>
                   <SelectItem value="trainee">Trainees Only</SelectItem>
-                  <SelectItem value="selected">Selected Members/Trainees</SelectItem>
+                  <SelectItem value="selected">Selected Users</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
@@ -1510,6 +1566,20 @@ export default function AdminExamsPage() {
                 </div>
               </div>
             )}
+
+            <div className="rounded-md border border-zinc-800 p-3 space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={sequentialNavigationOnly}
+                  onChange={(e) => setSequentialNavigationOnly(e.target.checked)}
+                />
+                One-way sequential mode (no back / no jump)
+              </label>
+              <p className="text-xs text-zinc-400">
+                If enabled, each question can be viewed only once in order. Skipped questions remain unattempted, and users cannot return to previous questions.
+              </p>
+            </div>
           </CardContent>
         </Card>
 
@@ -1763,6 +1833,7 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                     <span>Qns: {exam.questions?.length || 0}</span>
                     <span>Reg. Start: {new Date(exam.startTime).toLocaleString()}</span>
                     {exam.examStartTime && <span className="text-green-500">Exam: {new Date(exam.examStartTime).toLocaleString()}</span>}
+                    {exam.sequentialNavigationOnly && <span className="text-amber-400">Sequential One-Way Mode</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -1789,6 +1860,16 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                       onClick={() => updateResultPublished(exam.id!, !exam.resultPublished)}
                     >
                       {exam.resultPublished ? 'Unpublish Result' : 'Publish Result'}
+                    </Button>
+                  )}
+                  {isSuperAdmin && (
+                    <Button variant="outline" onClick={() => toggleLiveLeaderboard(exam.id!)}>
+                      {liveLeaderboardLoadingByExam[exam.id!] ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Activity className="w-4 h-4 mr-2" />
+                      )}
+                      {liveLeaderboardByExam[exam.id!] ? 'Hide Live Leaderboard' : 'View Live Leaderboard'}
                     </Button>
                   )}
                   {isSuperAdmin && (
@@ -1839,6 +1920,54 @@ Define IoT in one line.,short_answer,,,https://example.com/iot.png,internet|thin
                   </Button>
                 </div>
               </CardContent>
+              {isSuperAdmin && (liveLeaderboardLoadingByExam[exam.id!] || liveLeaderboardByExam[exam.id!]) && (
+                <CardContent className="pt-0 pb-4">
+                  <div className="mb-3 flex items-center gap-2 text-zinc-200">
+                    <Activity className="w-4 h-4 text-cyan-300" />
+                    <span className="font-semibold">Live Leaderboard</span>
+                    <span className="text-xs text-zinc-500">Auto-refreshes every 8 seconds</span>
+                  </div>
+                  <div className="rounded-md border border-zinc-800 overflow-hidden">
+                    <div className="grid grid-cols-12 gap-2 p-3 bg-zinc-900 text-xs uppercase tracking-wide text-zinc-400">
+                      <div className="col-span-1">Rank</div>
+                      <div className="col-span-3">Member</div>
+                      <div className="col-span-2">Role</div>
+                      <div className="col-span-2">Score</div>
+                      <div className="col-span-1">%</div>
+                      <div className="col-span-2">Status</div>
+                      <div className="col-span-1 text-right">Updated</div>
+                    </div>
+                    {liveLeaderboardLoadingByExam[exam.id!] && (
+                      <div className="p-4 text-sm text-muted-foreground flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Loading live leaderboard...
+                      </div>
+                    )}
+                    {!liveLeaderboardLoadingByExam[exam.id!] && (liveLeaderboardByExam[exam.id!] || []).length === 0 && (
+                      <div className="p-4 text-sm text-zinc-400">No live participants yet.</div>
+                    )}
+                    {!liveLeaderboardLoadingByExam[exam.id!] && (liveLeaderboardByExam[exam.id!] || []).map((row: any) => (
+                      <div key={`live-${row.userId}`} className="grid grid-cols-12 gap-2 p-3 border-t border-zinc-800 text-sm items-center">
+                        <div className="col-span-1">
+                          <span className="inline-flex h-7 w-7 min-w-7 aspect-square items-center justify-center rounded-full bg-zinc-800 text-zinc-100 text-xs font-black">
+                            {row.rank}
+                          </span>
+                        </div>
+                        <div className="col-span-3 truncate text-zinc-100">{row.userName || 'Unknown User'}</div>
+                        <div className="col-span-2 truncate text-zinc-400">{row.userRole || '-'}</div>
+                        <div className="col-span-2 text-zinc-100 font-semibold">{formatMarks(row.score)}/{formatMarks(row.totalMarks)}</div>
+                        <div className="col-span-1 text-cyan-300 font-semibold">{formatPercent(row.score, row.totalMarks)}%</div>
+                        <div className="col-span-2">
+                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${row.source === 'submitted' ? 'border-emerald-500/60 text-emerald-300' : 'border-amber-500/60 text-amber-300'}`}>
+                            {row.source === 'submitted' ? 'Submitted' : 'In Progress'}
+                          </span>
+                        </div>
+                        <div className="col-span-1 text-right text-xs text-zinc-500">{row.updatedAt ? new Date(row.updatedAt).toLocaleTimeString() : '-'}</div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              )}
+
               {isSuperAdmin && (resultsLoadingByExam[exam.id!] || resultsByExam[exam.id!]) && (
                 <CardContent className="pt-0 pb-4">
                   <div className="flex justify-end mb-2">
