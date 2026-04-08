@@ -229,6 +229,101 @@ export const extendIssuanceDays = async (id: string, daysToAdd: number): Promise
     }
 }
 
+export const requestIssuanceExtension = async (
+    id: string,
+    userId: string,
+    requestedDays: number
+): Promise<void> => {
+    try {
+        const days = Math.floor(requestedDays);
+        if (!days || days <= 0) throw new Error("Please request at least 1 additional day.");
+
+        const requestRef = doc(db, REQUESTS_COLLECTION, id);
+
+        await runTransaction(db, async (transaction) => {
+            const requestSnap = await transaction.get(requestRef);
+            if (!requestSnap.exists()) throw new Error("Issuance request not found.");
+
+            const requestData = requestSnap.data() as IInventoryRequest;
+
+            if (requestData.userId !== userId) throw new Error("You can only request an extension for your own issuance.");
+            if (requestData.status !== 'approved') throw new Error("Extensions can only be requested for approved issuances.");
+            if (requestData.extensionRequestStatus) throw new Error("An extension request already exists for this issuance.");
+
+            const projectedTotalDays = Math.floor(requestData.daysRequested) + days;
+            if (projectedTotalDays > 7) {
+                throw new Error(`Extension exceeds maximum duration. Current: ${requestData.daysRequested} days, requested: ${days}, max: 7.`);
+            }
+
+            transaction.update(requestRef, {
+                extensionRequestedDays: days,
+                extensionRequestStatus: 'pending',
+                extensionRequestedAt: new Date().toISOString(),
+                extensionRejectionReason: null,
+                extensionRejectedAt: null,
+                extensionApprovedAt: null,
+                updatedAt: new Date().toISOString()
+            });
+        });
+    } catch (error) {
+        console.error("Error requesting issuance extension:", error);
+        throw error;
+    }
+};
+
+export const reviewIssuanceExtension = async (
+    id: string,
+    approve: boolean,
+    rejectionReason?: string
+): Promise<void> => {
+    try {
+        const requestRef = doc(db, REQUESTS_COLLECTION, id);
+
+        await runTransaction(db, async (transaction) => {
+            const requestSnap = await transaction.get(requestRef);
+            if (!requestSnap.exists()) throw new Error("Issuance request not found.");
+
+            const requestData = requestSnap.data() as IInventoryRequest;
+            if (requestData.status !== 'approved') throw new Error("Only active approved issuances can be extended.");
+            if (requestData.extensionRequestStatus !== 'pending' || !requestData.extensionRequestedDays) {
+                throw new Error("No pending extension request found for this issuance.");
+            }
+
+            const extensionDays = Math.floor(requestData.extensionRequestedDays);
+            const currentDays = Math.floor(requestData.daysRequested);
+            const updatedTotalDays = currentDays + extensionDays;
+
+            if (updatedTotalDays > 7) {
+                throw new Error(`Cannot approve. Total duration would be ${updatedTotalDays} days (max 7).`);
+            }
+
+            if (approve) {
+                const currentDueDate = new Date(requestData.dueDate);
+                currentDueDate.setDate(currentDueDate.getDate() + extensionDays);
+
+                transaction.update(requestRef, {
+                    dueDate: currentDueDate.toISOString(),
+                    daysRequested: updatedTotalDays,
+                    extensionRequestStatus: 'approved',
+                    extensionApprovedAt: new Date().toISOString(),
+                    warningEmailSent: false,
+                    updatedAt: new Date().toISOString()
+                });
+            } else {
+                transaction.update(requestRef, {
+                    extensionRequestStatus: 'rejected',
+                    extensionRejectedAt: new Date().toISOString(),
+                    extensionRejectionReason: rejectionReason || 'Extension request rejected by admin.',
+                    updatedAt: new Date().toISOString()
+                });
+            }
+        });
+    } catch (error) {
+        console.error("Error reviewing issuance extension:", error);
+        throw error;
+    }
+};
+
 export const getUserRequests = async (userId: string): Promise<IInventoryRequest[]> => {
     try {
         const q = query(collection(db, REQUESTS_COLLECTION), where("userId", "==", userId));

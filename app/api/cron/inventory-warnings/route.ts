@@ -33,24 +33,13 @@ export async function GET(request: Request) {
             let shouldSend = false;
             let timeString = "";
 
-            // If 1-day request, warn at 6 hours
-            if (data.daysRequested <= 1) {
-                if (hoursRemaining > 0 && hoursRemaining <= 6) {
-                    shouldSend = true;
-                    timeString = `${Math.ceil(hoursRemaining)} hours`;
-                } else if (hoursRemaining <= 0) {
-                    shouldSend = true;
-                    timeString = `OVERDUE by ${Math.abs(Math.ceil(hoursRemaining))} hours`;
-                }
-            } else {
-                // If > 1 day request, warn at 24 hours
-                if (hoursRemaining > 0 && hoursRemaining <= 24) {
-                    shouldSend = true;
-                    timeString = `${Math.ceil(hoursRemaining)} hours`;
-                } else if (hoursRemaining <= 0) {
-                    shouldSend = true;
-                    timeString = `OVERDUE by ${Math.abs(Math.ceil(hoursRemaining / 24))} days`;
-                }
+            // Unified warning policy: warn at 24 hours before due date for every issuance
+            if (hoursRemaining > 0 && hoursRemaining <= 24) {
+                shouldSend = true;
+                timeString = `${Math.ceil(hoursRemaining)} hours`;
+            } else if (hoursRemaining <= 0) {
+                shouldSend = true;
+                timeString = `OVERDUE by ${Math.abs(Math.ceil(hoursRemaining / 24))} days`;
             }
 
             if (shouldSend && !data.warningEmailSent) {

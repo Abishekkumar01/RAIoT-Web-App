@@ -38,6 +38,12 @@ export interface IInventoryRequest {
     returnDate?: string; // ISO
     rejectionReason?: string;
     warningEmailSent?: boolean;
+    extensionRequestedDays?: number;
+    extensionRequestStatus?: 'pending' | 'approved' | 'rejected';
+    extensionRequestedAt?: string;
+    extensionApprovedAt?: string;
+    extensionRejectedAt?: string;
+    extensionRejectionReason?: string;
     createdAt: string; // ISO
 }
 

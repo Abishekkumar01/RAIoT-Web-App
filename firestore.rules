@@ -197,7 +197,20 @@ service cloud.firestore {
       // Users can create their own requests
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       // Admins/Managers update the status
-      allow update: if isAdmin() || isInventoryManager();
+      allow update: if isAdmin() || isInventoryManager() || (
+        request.auth != null &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'extensionRequestedDays',
+          'extensionRequestStatus',
+          'extensionRequestedAt',
+          'extensionRejectionReason',
+          'extensionRejectedAt',
+          'extensionApprovedAt',
+          'updatedAt'
+        ]) &&
+        request.resource.data.extensionRequestStatus == 'pending'
+      );
     }
 
     match /inventory_damaged/{logId} {

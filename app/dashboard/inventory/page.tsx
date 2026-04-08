@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { useAuth } from '@/lib/contexts/AuthContext'
+import { auth } from '@/lib/firebase'
 import { useRouter } from "next/navigation"
 import { IComponent, IInventoryRequest, IRequestItem } from "@/types/inventory"
 import { getInventory, getUserRequests, submitInventoryRequest, checkDailyRequestLimit } from "@/lib/inventory"
@@ -143,6 +144,43 @@ export default function UserInventoryPage() {
         }
     }
 
+    const handleRequestExtension = async (request: IInventoryRequest) => {
+        if (!user) return;
+        const maxPossible = 7 - Math.floor(request.daysRequested || 0);
+        if (maxPossible <= 0) {
+            toast({ title: "Limit Reached", description: "This issuance is already at the 7-day maximum.", variant: "destructive" });
+            return;
+        }
+
+        const input = prompt(`Request extra days for this issuance (1-${maxPossible}):`);
+        const days = parseInt(input || '0');
+        if (!days || days <= 0) return;
+
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            if (!token) throw new Error("Authentication token not available.");
+
+            const response = await fetch('/api/inventory/request-extension', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ requestId: request.id, requestedDays: days })
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to request extension.');
+            }
+
+            toast({ title: "Extension Requested", description: `Requested +${days} day(s). Awaiting admin approval.` });
+            fetchData();
+        } catch (error: any) {
+            toast({ title: "Request Failed", description: error.message || "Failed to request extension.", variant: "destructive" });
+        }
+    }
+
     if (loading || authLoading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin w-8 h-8" /></div>
 
 
@@ -256,9 +294,32 @@ export default function UserInventoryPage() {
                                             Due: {new Date(req.dueDate).toLocaleDateString()}
                                         </div>
                                     )}
+                                    {req.status === 'approved' && req.extensionRequestStatus === 'pending' && (
+                                        <div className="mt-2 text-xs text-yellow-300">
+                                            Extension Pending: +{req.extensionRequestedDays || 0} day(s)
+                                        </div>
+                                    )}
+                                    {req.status === 'approved' && req.extensionRequestStatus === 'rejected' && (
+                                        <div className="mt-2 text-xs text-red-300">
+                                            Extension Rejected: {req.extensionRejectionReason || 'No reason provided.'}
+                                        </div>
+                                    )}
                                     {req.status === 'rejected' && req.rejectionReason && (
                                         <div className="mt-3 pt-3 border-t border-zinc-700 text-xs text-red-300">
                                             Reason: {req.rejectionReason}
+                                        </div>
+                                    )}
+                                    {req.status === 'approved' && (
+                                        <div className="mt-3 pt-3 border-t border-zinc-700">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="w-full"
+                                                onClick={() => handleRequestExtension(req)}
+                                                disabled={req.extensionRequestStatus === 'pending' || req.daysRequested >= 7}
+                                            >
+                                                Request Extension
+                                            </Button>
                                         </div>
                                     )}
                                 </CardContent>

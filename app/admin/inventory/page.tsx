@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react"
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { useRouter } from "next/navigation"
 import { IComponent, IInventoryRequest, IDamagedLog, RequestStatus } from "@/types/inventory"
-import { getInventory, addComponent, deleteComponent, getDamagedLogs, getAllRequests, updateRequestStatus, reportDamage, extendIssuanceDays } from "@/lib/inventory"
+import { getInventory, addComponent, deleteComponent, getDamagedLogs, getAllRequests, updateRequestStatus, reportDamage, reviewIssuanceExtension } from "@/lib/inventory"
 import { sendApprovalEmail, sendRejectionEmail } from "@/app/actions/emailActions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, Plus, Trash2, ShieldAlert, Check, X, Box, RefreshCw, CalendarPlus } from "lucide-react"
+import { Loader2, Plus, Trash2, ShieldAlert, Check, X, Box, RefreshCw } from "lucide-react"
 import { CloudinaryUpload } from "@/components/ui/CloudinaryUpload"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
@@ -158,18 +158,26 @@ export default function AdminInventoryPage() {
         }
     }
 
-    const handleExtendDays = async (id: string) => {
-        const days = prompt("How many additional days?")
-        const daysNum = parseInt(days || '0')
-        if (!daysNum || isNaN(daysNum) || daysNum <= 0) return
-
+    const handleExtensionDecision = async (request: IInventoryRequest, approve: boolean) => {
         setIsSubmitting(true)
         try {
-            await extendIssuanceDays(id, daysNum)
-            toast({ title: "Extended", description: `Added ${daysNum} days to issuance.` })
+            let reason = ""
+            if (!approve) {
+                const input = prompt("Reason for rejecting extension request:")
+                if (input === null) return
+                reason = input
+            }
+
+            await reviewIssuanceExtension(request.id, approve, reason)
+            toast({
+                title: approve ? "Extension Approved" : "Extension Rejected",
+                description: approve
+                    ? `Due date updated by +${request.extensionRequestedDays || 0} day(s).`
+                    : "Extension request rejected."
+            })
             fetchData()
-        } catch (error) {
-            toast({ title: "Error", description: "Failed to extend days.", variant: "destructive" })
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to process extension.", variant: "destructive" })
         } finally {
             setIsSubmitting(false)
         }
@@ -321,6 +329,12 @@ export default function AdminInventoryPage() {
                                                 {req.status === 'approved' && (
                                                     <div className="text-xs text-orange-400 mt-1">Due: {new Date(req.dueDate).toLocaleDateString()}</div>
                                                 )}
+                                                {req.extensionRequestStatus === 'pending' && (
+                                                    <div className="text-xs text-yellow-300 mt-1">Extension Requested: +{req.extensionRequestedDays || 0} day(s)</div>
+                                                )}
+                                                {req.extensionRequestStatus === 'rejected' && (
+                                                    <div className="text-xs text-red-300 mt-1">Extension Rejected</div>
+                                                )}
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant="outline" className={
@@ -342,7 +356,12 @@ export default function AdminInventoryPage() {
                                                     )}
                                                     {req.status === 'approved' && (
                                                         <>
-                                                            <Button size="sm" variant="outline" onClick={() => handleExtendDays(req.id)} disabled={isSubmitting} title="Extend Due Date"><CalendarPlus className="w-4 h-4" /></Button>
+                                                            {req.extensionRequestStatus === 'pending' && (
+                                                                <>
+                                                                    <Button size="sm" variant="outline" className="text-green-500 border-green-900 bg-green-950/30 hover:bg-green-900/50" onClick={() => handleExtensionDecision(req, true)} disabled={isSubmitting}><Check className="w-4 h-4" /></Button>
+                                                                    <Button size="sm" variant="outline" className="text-red-500 border-red-900 bg-red-950/30 hover:bg-red-900/50" onClick={() => handleExtensionDecision(req, false)} disabled={isSubmitting}><X className="w-4 h-4" /></Button>
+                                                                </>
+                                                            )}
                                                             <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => handleRequestAction(req, 'returned')} disabled={isSubmitting}>Mark Returned</Button>
                                                         </>
                                                     )}
