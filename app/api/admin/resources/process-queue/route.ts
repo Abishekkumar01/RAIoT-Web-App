@@ -36,12 +36,14 @@ export async function POST(request: Request) {
         const adminDb = getAdminDb();
         if (!adminDb) throw new Error('Database not initialized');
 
-        // Find the first pending email
+        const BATCH_SIZE = 20;
+
+        // Fetch pending emails (up to batch size)
         const queueSnapshot = await adminDb
             .collection('resourceEmailQueue')
             .where('status', '==', 'pending')
             .orderBy('createdAt', 'asc')
-            .limit(1)
+            .limit(BATCH_SIZE)
             .get();
 
         if (queueSnapshot.empty) {
@@ -52,80 +54,72 @@ export async function POST(request: Request) {
             });
         }
 
-        const queueDoc = queueSnapshot.docs[0];
-        const queueData = queueDoc.data();
+        let processed = 0;
+        let sentCount = 0;
+        let failedCount = 0;
 
-        // Validate email
-        if (!isValidEmail(queueData.recipientEmail)) {
-            await queueDoc.ref.update({
-                status: 'failed',
-                error: `Invalid email format: ${queueData.recipientEmail}`,
-                sentAt: new Date(),
-            });
+        for (const doc of queueSnapshot.docs) {
+            const data = doc.data();
 
-            console.warn(`⚠️ Skipped invalid email: ${queueData.recipientEmail}`);
+            // Validate email
+            if (!isValidEmail(data.recipientEmail)) {
+                await doc.ref.update({
+                    status: 'failed',
+                    error: `Invalid email format: ${data.recipientEmail}`,
+                    sentAt: new Date(),
+                });
+                console.warn(`⚠️ Skipped invalid email: ${data.recipientEmail}`);
+                processed++;
+                failedCount++;
+                continue;
+            }
 
-            return NextResponse.json({
-                success: true,
-                message: 'Invalid email skipped, moving to next',
-                processed: 0,
-                skipped: 1,
-            });
+            try {
+                await sendEmail({
+                    to: data.recipientEmail,
+                    subject: `New Learning Resource: ${data.title}`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                            <h2 style="color: #7c3aed;">New Resource Available</h2>
+                            <p>Hello ${data.recipientName || 'there'},</p>
+                            <p>A new learning resource has been uploaded for you${data.storageType === 'link' ? ' as an external learning link' : ''}.</p>
+                            <p><strong>Title:</strong> ${data.title}</p>
+                            ${data.fileName ? `<p><strong>Label:</strong> ${data.fileName}</p>` : ''}
+                            ${data.description ? `<p><strong>Description:</strong> ${data.description}</p>` : ''}
+                            <p><strong>Uploaded By:</strong> ${data.uploadedByName || 'RAIoT Admin'}</p>
+                            <p><a href="${data.fileUrl}" target="_blank" rel="noopener noreferrer">Open Resource</a></p>
+                            <br/>
+                            <p>Regards,<br/>RAIoT Learning Team</p>
+                        </div>
+                    `,
+                });
+
+                await doc.ref.update({
+                    status: 'sent',
+                    sentAt: new Date(),
+                });
+                console.log(`✅ Email sent to ${data.recipientEmail}`);
+                processed++;
+                sentCount++;
+            } catch (emailError: any) {
+                await doc.ref.update({
+                    status: 'failed',
+                    error: emailError instanceof Error ? emailError.message : String(emailError),
+                    sentAt: new Date(),
+                });
+                console.error(`❌ Failed to send email to ${data.recipientEmail}:`, emailError);
+                processed++;
+                failedCount++;
+            }
         }
 
-        // Send the email
-        try {
-            await sendEmail({
-                to: queueData.recipientEmail,
-                subject: `New Learning Resource: ${queueData.title}`,
-                html: `
-                    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-                        <h2 style="color: #7c3aed;">New Resource Available</h2>
-                        <p>Hello ${queueData.recipientName || 'there'},</p>
-                        <p>A new learning resource has been uploaded for you${queueData.storageType === 'link' ? ' as an external learning link' : ''}.</p>
-                        <p><strong>Title:</strong> ${queueData.title}</p>
-                        ${queueData.fileName ? `<p><strong>Label:</strong> ${queueData.fileName}</p>` : ''}
-                        ${queueData.description ? `<p><strong>Description:</strong> ${queueData.description}</p>` : ''}
-                        <p><strong>Uploaded By:</strong> ${queueData.uploadedByName || 'RAIoT Admin'}</p>
-                        <p><a href="${queueData.fileUrl}" target="_blank" rel="noopener noreferrer">Open Resource</a></p>
-                        <br/>
-                        <p>Regards,<br/>RAIoT Learning Team</p>
-                    </div>
-                `,
-            });
-
-            // Mark as sent
-            await queueDoc.ref.update({
-                status: 'sent',
-                sentAt: new Date(),
-            });
-
-            console.log(`✅ Email sent to ${queueData.recipientEmail}`);
-
-            return NextResponse.json({
-                success: true,
-                message: `Email sent to ${queueData.recipientEmail}. Next email will be processed in 5 minutes.`,
-                processed: 1,
-                recipientEmail: queueData.recipientEmail,
-            });
-        } catch (emailError: any) {
-            // Mark as failed with error message
-            await queueDoc.ref.update({
-                status: 'failed',
-                error: emailError instanceof Error ? emailError.message : String(emailError),
-                sentAt: new Date(),
-            });
-
-            console.error(`❌ Failed to send email to ${queueData.recipientEmail}:`, emailError);
-
-            return NextResponse.json({
-                success: true,
-                message: `Failed to send email to ${queueData.recipientEmail}. Marked as failed. Continuing with next email.`,
-                processed: 0,
-                failed: 1,
-                error: emailError instanceof Error ? emailError.message : String(emailError),
-            });
-        }
+        return NextResponse.json({
+            success: true,
+            message: `Processed ${processed} emails: ${sentCount} sent, ${failedCount} failed.`,
+            processed,
+            sent: sentCount,
+            failed: failedCount,
+        });
     } catch (error: any) {
         console.error('Error processing email queue:', error);
         return NextResponse.json({ error: 'Failed to process email queue' }, { status: 500 });
