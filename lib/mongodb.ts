@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://raiotweb_user:utBgv6576jJbVzgZDlX8@140.238.225.254:27017/raiotweb?authSource=admin';
-
+// const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://raiotweb_user:utBgv6576jJbVzgZDlX8@140.238.225.254:27017/raiotweb?authSource=admin';   //OLD
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://theraiottech:whatissecurity@cluster0.wgusa.mongodb.net/raiotweb?retryWrites=true&w=majority&appName=Cluster0';
 
 
 /**
