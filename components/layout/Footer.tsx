@@ -164,6 +164,13 @@ export default function Footer() {
                         </div>
                     </div>
                 </div>
+
+                {/* Developer Credit Line */}
+                <div className="mt-12 w-full flex justify-center">
+                    <p className="font-mono text-[9px] sm:text-[10px] text-white/20 uppercase tracking-[0.2em] font-light hover:text-white/40 transition-colors duration-500 cursor-default">
+                        © {currentYear} RAIoT <span className="mx-2 text-purple-500/40">|</span> Crafted by <span className="text-white/40 hover:text-purple-400 transition-colors duration-300">Abishek Kumar Thurvas & Team</span>
+                    </p>
+                </div>
             </div>
         </footer>
     );
