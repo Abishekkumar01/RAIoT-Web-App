@@ -69,9 +69,9 @@ export const fetchGithubGallery = async (config: GithubRepoConfig): Promise<Gall
     // Disabling it correctly fetches public data.
     // Note: GITHUB_TOKEN caused issues with public repo access in this environment. 
     // Disabling it correctly fetches public data.
-    if (process.env.GITHUB_TOKEN) {
-        headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
-    }
+    // if (process.env.GITHUB_TOKEN) {
+    //     headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
+    // }
 
     try {
         const rootRes = await fetch(treeUrl, { headers, next: { revalidate: 30 } });
