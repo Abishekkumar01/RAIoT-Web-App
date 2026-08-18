@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { useRef } from "react";
 
 export default function WhatsAppButton() {
-  const phoneNumber = "918690595763"; // Replace with your WhatsApp number (no +)
+  const phoneNumber = "917737235263"; // Replace with your WhatsApp number (no +)
   const message = "Hello! I Need Help"; // Default message
   const constraintsRef = useRef(null);
   const isDragging = useRef(false);
