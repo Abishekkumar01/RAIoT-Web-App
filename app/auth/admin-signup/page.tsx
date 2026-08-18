@@ -255,7 +255,7 @@ export default function AdminSignupPage() {
                 <p className="text-xs text-red-500/50 font-mono mb-2">ACCESS_LEVEL: RESTRICTED</p>
                 <div className="flex justify-center gap-6">
                   <Link href="/auth/login" className="text-red-400 hover:text-red-300 font-orbitron text-sm tracking-wide hover:underline decoration-red-500/50">LOG IN</Link>
-                  <Link href="/auth/signup" className="text-cyan-400 hover:text-cyan-300 font-orbitron text-sm tracking-wide hover:underline decoration-cyan-500/50">MEMBER SIGNUP</Link>
+                  <Link href="/auth/guest-signup" className="text-cyan-400 hover:text-cyan-300 font-orbitron text-sm tracking-wide hover:underline decoration-cyan-500/50">GUEST SIGNUP</Link>
                 </div>
               </div>
             </form>

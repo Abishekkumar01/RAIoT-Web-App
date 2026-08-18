@@ -60,7 +60,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
             merged = { ...base, ...data, role: normalizedRole }
           } else {
-            // ... (deletion logic) ...
+            // Grace period: if user was created in the last 15 seconds, don't log them out yet.
+            // This prevents race conditions where onAuthStateChanged triggers before the signup function 
+            // can create the user's Firestore profile document.
+            const creationTime = firebaseUser.metadata.creationTime ? new Date(firebaseUser.metadata.creationTime).getTime() : 0;
+            if (Date.now() - creationTime < 15000) {
+              console.log('User profile not found, but user was recently created. Waiting for profile setup...');
+              return;
+            }
+            
             console.warn('User authenticated but no Firestore profile found. Logging out.')
             await signOut(auth)
             setUser(null)

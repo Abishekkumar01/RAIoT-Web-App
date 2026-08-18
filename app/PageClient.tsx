@@ -170,7 +170,7 @@ export default function PageClient({ galleryImages }: PageClientProps) {
 
                                 {/* CTA Buttons - Inside Animation Group */}
                                 <div className="flex justify-center md:justify-start gap-6 animate-fade-in-up animation-delay-400 w-full md:w-auto md:pl-1">
-                                    <Link href="/auth/signup">
+                                    <Link href="/auth/guest-signup">
                                         <Button
                                             size="lg"
                                             className="bg-cyan-600 hover:bg-cyan-500 text-white rounded-full px-10 py-7 text-lg shadow-[0_0_25px_rgba(8,145,178,0.4)] transition-all duration-300 hover:scale-105 cursor-target border border-cyan-400/30 min-w-[160px] h-[52px]"

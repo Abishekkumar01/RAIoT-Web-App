@@ -440,7 +440,7 @@ function LoginContent() {
                 New to the system?
               </p>
               <Link
-                href="/auth/signup"
+                href="/auth/guest-signup"
                 className="text-cyan-400 hover:text-cyan-300 font-orbitron text-sm tracking-wide hover:underline decoration-cyan-500/50 underline-offset-4 flex items-center justify-center gap-2 group transition-all"
               >
                 <span className="group-hover:-translate-x-1 transition-transform">{'>>'}</span> CREATE ACOUNT

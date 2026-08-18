@@ -116,7 +116,7 @@ export default function ParallaxHero() {
             Pioneering the Future of Automation & Robotics
           </p>
           <div className="flex gap-6 justify-center">
-            <Link href="/auth/signup">
+            <Link href="/auth/guest-signup">
               <Button
                 size="lg"
                 className="rounded-full px-8 py-6 text-lg bg-cyan-600 hover:bg-cyan-500 hover:scale-105 transition-all shadow-[0_0_20px_rgba(8,145,178,0.5)]"

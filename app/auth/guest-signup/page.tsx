@@ -74,8 +74,8 @@ export default function GuestSignupPage() {
 
       setSuccess(true)
       setTimeout(() => {
-        router.push("/guest/profile")
-      }, 2000)
+        router.push("/")
+      }, 4000)
 
     } catch (error: any) {
       let errorMessage = "Failed to create account"
@@ -91,13 +91,16 @@ export default function GuestSignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black font-orbitron text-cyan-500">
-        <div className="text-center space-y-4">
+      <div className="min-h-screen flex items-center justify-center bg-black font-orbitron text-cyan-500 px-4">
+        <div className="text-center space-y-4 max-w-lg">
           <div className="inline-block p-4 rounded-full bg-cyan-500/10 border border-cyan-500 animate-pulse">
             <Users className="w-12 h-12" />
           </div>
-          <h2 className="text-3xl font-bold tracking-widest">REGISTRATION COMPLETE</h2>
-          <p className="text-cyan-400/60 font-mono">Redirecting to guest profile...</p>
+          <h2 className="text-3xl font-bold tracking-widest">PROFILE SETUP COMPLETE</h2>
+          <p className="text-cyan-400 font-mono">
+            Registration successful! Please return to the homepage to submit your Trainee Application using the <strong className="text-white bg-cyan-900/50 px-2 py-1 rounded">Register</strong> option.
+          </p>
+          <p className="text-cyan-400/40 font-mono text-sm pt-4">Redirecting to homepage...</p>
           <Loader2 className="w-6 h-6 animate-spin mx-auto text-cyan-400" />
         </div>
       </div>

@@ -191,10 +191,7 @@ export default function TraineeRegistrationModal({
                             <a href="/auth/login">Login</a>
                         </Button>
                         <Button asChild className="w-full">
-                            <a href="/auth/signup">Sign Up</a>
-                        </Button>
-                        <Button asChild variant="ghost" className="w-full">
-                            <a href="/auth/guest-signup">Guest Signup</a>
+                            <a href="/auth/guest-signup">Guest Registration</a>
                         </Button>
                     </div>
                 </DialogContent>

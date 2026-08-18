@@ -129,7 +129,7 @@ export default function Footer() {
 
                         <div className="pt-4">
                             <Link
-                                href="/auth/signup"
+                                href="/auth/guest-signup"
                                 className="group relative w-full flex items-center justify-between px-6 py-5 bg-black border border-white/20 hover:border-purple-500/50 transition-all duration-300 overflow-hidden"
                             >
                                 <div className="absolute inset-0 bg-purple-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
