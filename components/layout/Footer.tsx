@@ -168,7 +168,7 @@ export default function Footer() {
                 {/* Developer Credit Line */}
                 <div className="mt-12 w-full flex justify-center">
                     <p className="font-mono text-[9px] sm:text-[10px] text-white/20 uppercase tracking-[0.2em] font-light hover:text-white/40 transition-colors duration-500 cursor-default">
-                        © {currentYear} RAIoT <span className="mx-2 text-purple-500/40">|</span> Crafted by <span className="text-white/40 hover:text-purple-400 transition-colors duration-300">Abishek Kumar Thurvas & Team</span>
+                        © {currentYear} RAIoT <span className="mx-2 text-purple-500/40">|</span> Crafted by <a href="https://www.linkedin.com/in/abishek-kumar-thurvas-1a81b5260" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-purple-400 transition-colors duration-300 cursor-pointer inline-block">Abishek Kumar Thurvas & Team</a>
                     </p>
                 </div>
             </div>
