@@ -198,7 +198,7 @@ export default function PageClient({ galleryImages }: PageClientProps) {
 
             {/* Features Section - Slides Up Over Hero */}
             {/* Features Section - Slides Up Over Hero */}
-            <section className="relative z-10 bg-black min-h-screen flex flex-col mt-0 md:mt-0 pt-16 md:pt-32 pb-20 px-4">
+            <section className="relative z-10 bg-black min-h-screen flex flex-col -mt-20 md:mt-0 pt-16 md:pt-32 pb-20 px-4">
                 {/* Custom Divider - Absolute Top Border */}
                 <div className="absolute top-0 left-0 w-full -translate-y-[70px]">
                     <SectionHeader title="WHAT WE DO" className="w-full" />
