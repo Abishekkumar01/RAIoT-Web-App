@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Event from '@/lib/models/Event';
 
+export const dynamic = 'force-dynamic';
+
 const serialize = (doc: any) => {
     const raw = doc?.toObject ? doc.toObject() : doc;
     if (!raw) return raw;
