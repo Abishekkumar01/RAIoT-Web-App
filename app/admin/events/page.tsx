@@ -51,6 +51,8 @@ export default function AdminEventsPage() {
     imageUrl: "",
     detailedContent: "",
     isOnline: true,
+    registrationType: "in-site",
+    externalRegistrationLink: "",
   })
   const { toast } = useToast()
 
@@ -613,6 +615,8 @@ export default function AdminEventsPage() {
         imageUrl: "",
         detailedContent: "",
         isOnline: true,
+        registrationType: "in-site",
+        externalRegistrationLink: "",
       })
       setIsCreateDialogOpen(false)
       setSelectedImage(null)
@@ -645,6 +649,8 @@ export default function AdminEventsPage() {
       imageUrl: event.imageUrl || "",
       detailedContent: event.detailedContent || "",
       isOnline: event.isOnline !== false, // Default to true if not set, but respect false
+      registrationType: event.registrationType || "in-site",
+      externalRegistrationLink: event.externalRegistrationLink || "",
     })
   }
 
@@ -1052,6 +1058,33 @@ export default function AdminEventsPage() {
                   </div>
                 </div>
 
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold">Registration Method</Label>
+                  <div className="flex items-center gap-3 mb-2">
+                    <Switch
+                      id="registrationType"
+                      checked={formData.registrationType === 'external'}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, registrationType: checked ? 'external' : 'in-site', externalRegistrationLink: checked ? prev.externalRegistrationLink : '' }))}
+                    />
+                    <Label htmlFor="registrationType" className="text-sm text-muted-foreground cursor-pointer">
+                      {formData.registrationType === 'external' ? 'External Link (e.g., Google Forms)' : 'In-Site (RAIoT Platform)'}
+                    </Label>
+                  </div>
+                  {formData.registrationType === 'external' && (
+                    <div className="space-y-2 mt-2">
+                      <Label htmlFor="externalRegistrationLink">External Registration Link</Label>
+                      <Input
+                        id="externalRegistrationLink"
+                        name="externalRegistrationLink"
+                        placeholder="https://forms.google.com/..."
+                        value={formData.externalRegistrationLink}
+                        onChange={handleInputChange}
+                        className="h-11"
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -1455,6 +1488,33 @@ export default function AdminEventsPage() {
                     {formData.isOnline ? 'Event is ONLINE' : 'Event is OFFLINE'}
                   </Label>
                 </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Registration Method</Label>
+                <div className="flex items-center gap-3 mb-2">
+                  <Switch
+                    id="edit-registrationType"
+                    checked={formData.registrationType === 'external'}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, registrationType: checked ? 'external' : 'in-site', externalRegistrationLink: checked ? prev.externalRegistrationLink : '' }))}
+                  />
+                  <Label htmlFor="edit-registrationType" className="text-sm text-muted-foreground cursor-pointer">
+                    {formData.registrationType === 'external' ? 'External Link (e.g., Google Forms)' : 'In-Site (RAIoT Platform)'}
+                  </Label>
+                </div>
+                {formData.registrationType === 'external' && (
+                  <div className="space-y-2 mt-2">
+                    <Label htmlFor="edit-externalRegistrationLink">External Registration Link</Label>
+                    <Input
+                      id="edit-externalRegistrationLink"
+                      name="externalRegistrationLink"
+                      placeholder="https://forms.google.com/..."
+                      value={formData.externalRegistrationLink}
+                      onChange={handleInputChange}
+                      className="h-11"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

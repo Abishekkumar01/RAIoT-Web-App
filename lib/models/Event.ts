@@ -18,6 +18,8 @@ export interface IEvent extends Document {
     imageUrl?: string | null;
     status?: 'active' | 'inactive';
     isOnline?: boolean;
+    registrationType?: 'in-site' | 'external';
+    externalRegistrationLink?: string;
     createdBy?: string;
     createdAt: Date;
     updatedAt: Date;
@@ -46,6 +48,8 @@ const eventSchema = new Schema<IEvent>(
         imageUrl: { type: String, default: null },
         status: { type: String, enum: ['active', 'inactive'], default: 'active' },
         isOnline: { type: Boolean, default: true },
+        registrationType: { type: String, enum: ['in-site', 'external'], default: 'in-site' },
+        externalRegistrationLink: { type: String, default: '' },
         createdBy: { type: String, default: '' },
     },
     { timestamps: true }

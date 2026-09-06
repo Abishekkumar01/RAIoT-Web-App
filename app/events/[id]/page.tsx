@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { PublicNavbar } from '@/components/layout/PublicNavbar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Calendar, Clock, MapPin, Users, ArrowLeft, CheckCircle } from 'lucide-react'
 import { doc, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -30,6 +31,8 @@ interface EventDetail {
   imageUrl?: string
   registrationDeadline?: string
   isOnline?: boolean
+  registrationType?: 'in-site' | 'external'
+  externalRegistrationLink?: string
 }
 
 export default function EventDetailPage() {
@@ -180,6 +183,12 @@ export default function EventDetailPage() {
       return
     }
 
+    // Handle external registration
+    if (event.registrationType === 'external' && event.externalRegistrationLink) {
+      window.open(event.externalRegistrationLink, '_blank')
+      return
+    }
+
     // Check profile completion (skip for admins)
     if (!validation.isComplete && user.role !== 'admin' && user.role !== 'superadmin') {
       toast({
@@ -306,15 +315,33 @@ export default function EventDetailPage() {
                 {/* Event Image */}
                 {event.imageUrl && (
                   <div className="w-full md:w-auto md:max-w-sm shrink-0">
-                    <img
-                      src={event.imageUrl}
-                      alt={event.title}
-                      className="w-full h-auto rounded-lg shadow-md object-contain max-h-[500px]"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement
-                        target.style.display = 'none'
-                      }}
-                    />
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <div className="cursor-pointer overflow-hidden rounded-lg shadow-md group relative border border-transparent hover:border-cyan-500/50 transition-colors duration-300">
+                          <img
+                            src={event.imageUrl}
+                            alt={event.title}
+                            className="w-full h-auto object-contain max-h-[500px] transition-transform duration-500 group-hover:scale-105"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                            <span className="text-white font-mono text-sm border border-white/50 px-3 py-1 rounded-full backdrop-blur-sm">Click to view poster</span>
+                          </div>
+                        </div>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-[95vw] md:max-w-[90vw] lg:max-w-[1200px] h-[90vh] md:h-[95vh] p-2 md:p-6 bg-black/95 border-cyan-500/50 flex flex-col items-center justify-center">
+                        <div className="relative w-full h-full flex items-center justify-center">
+                          <img
+                            src={event.imageUrl}
+                            alt={event.title}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 )}
 
@@ -498,7 +525,7 @@ export default function EventDetailPage() {
                         className="w-full"
                         size="lg"
                       >
-                        Register for Event
+                        {event.registrationType === 'external' ? 'Register via External Link' : 'Register for Event'}
                       </Button>
                     )}
                   </CardContent>

@@ -86,6 +86,8 @@ export async function POST(request: Request) {
             imageUrl: body.imageUrl ? String(body.imageUrl) : null,
             status: String(body.status || 'active'),
             isOnline: body.isOnline !== false,
+            registrationType: body.registrationType === 'external' ? 'external' : 'in-site',
+            externalRegistrationLink: body.externalRegistrationLink ? String(body.externalRegistrationLink) : '',
             registered: Number(body.registered || 0),
             createdBy: manager.uid,
         };
