@@ -36,6 +36,30 @@ interface EventDetail {
   requiresLogin?: boolean
 }
 
+const renderTextWithLinks = (text: string) => {
+  if (!text) return null;
+  // Regular expression to match URLs (http, https)
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-purple-400 hover:text-purple-300 underline underline-offset-2 break-all transition-colors"
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export default function EventDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -401,7 +425,7 @@ export default function EventDetailPage() {
                     <div
                       className="text-foreground text-sm leading-relaxed whitespace-pre-wrap font-sans"
                     >
-                      {event.detailedContent}
+                      {renderTextWithLinks(event.detailedContent)}
                     </div>
                   </CardContent>
                 </Card>
@@ -537,7 +561,7 @@ export default function EventDetailPage() {
                         className="w-full"
                         size="lg"
                       >
-                        {event.registrationType === 'external' ? 'Register via External Link' : 'Register for Event'}
+                        Register
                       </Button>
                     )}
                   </CardContent>
