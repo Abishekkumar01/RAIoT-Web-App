@@ -88,6 +88,7 @@ export async function POST(request: Request) {
             isOnline: body.isOnline !== false,
             registrationType: body.registrationType === 'external' ? 'external' : 'in-site',
             externalRegistrationLink: body.externalRegistrationLink ? String(body.externalRegistrationLink) : '',
+            requiresLogin: body.requiresLogin !== false,
             registered: Number(body.registered || 0),
             createdBy: manager.uid,
         };

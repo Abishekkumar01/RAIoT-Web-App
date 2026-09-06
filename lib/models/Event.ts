@@ -20,6 +20,7 @@ export interface IEvent extends Document {
     isOnline?: boolean;
     registrationType?: 'in-site' | 'external';
     externalRegistrationLink?: string;
+    requiresLogin?: boolean;
     createdBy?: string;
     createdAt: Date;
     updatedAt: Date;
@@ -50,6 +51,7 @@ const eventSchema = new Schema<IEvent>(
         isOnline: { type: Boolean, default: true },
         registrationType: { type: String, enum: ['in-site', 'external'], default: 'in-site' },
         externalRegistrationLink: { type: String, default: '' },
+        requiresLogin: { type: Boolean, default: true },
         createdBy: { type: String, default: '' },
     },
     { timestamps: true }

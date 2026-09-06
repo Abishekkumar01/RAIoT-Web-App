@@ -53,6 +53,7 @@ export default function AdminEventsPage() {
     isOnline: true,
     registrationType: "in-site",
     externalRegistrationLink: "",
+    requiresLogin: true,
   })
   const { toast } = useToast()
 
@@ -550,6 +551,9 @@ export default function AdminEventsPage() {
         registered: 0,
         status: 'active',
         isOnline: formData.isOnline === true, // Explicitly save as boolean
+        registrationType: formData.registrationType,
+        externalRegistrationLink: formData.externalRegistrationLink,
+        requiresLogin: formData.requiresLogin,
       }
 
       // ALWAYS set imageUrl field (even if null) for clarity
@@ -651,6 +655,7 @@ export default function AdminEventsPage() {
       isOnline: event.isOnline !== false, // Default to true if not set, but respect false
       registrationType: event.registrationType || "in-site",
       externalRegistrationLink: event.externalRegistrationLink || "",
+      requiresLogin: event.requiresLogin !== false,
     })
   }
 
@@ -679,6 +684,9 @@ export default function AdminEventsPage() {
         maxTeamSize: Number.parseInt(formData.maxTeamSize) || 10,
         registrationDeadline: formData.registrationDeadline || "",
         isOnline: formData.isOnline === true, // Explicitly save as boolean
+        registrationType: formData.registrationType,
+        externalRegistrationLink: formData.externalRegistrationLink,
+        requiresLogin: formData.requiresLogin,
       }
 
       // Only update imageUrl if it's provided
@@ -1071,16 +1079,28 @@ export default function AdminEventsPage() {
                     </Label>
                   </div>
                   {formData.registrationType === 'external' && (
-                    <div className="space-y-2 mt-2">
-                      <Label htmlFor="externalRegistrationLink">External Registration Link</Label>
-                      <Input
-                        id="externalRegistrationLink"
-                        name="externalRegistrationLink"
-                        placeholder="https://forms.google.com/..."
-                        value={formData.externalRegistrationLink}
-                        onChange={handleInputChange}
-                        className="h-11"
-                      />
+                    <div className="space-y-4 mt-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="externalRegistrationLink">External Registration Link</Label>
+                        <Input
+                          id="externalRegistrationLink"
+                          name="externalRegistrationLink"
+                          placeholder="https://forms.google.com/..."
+                          value={formData.externalRegistrationLink}
+                          onChange={handleInputChange}
+                          className="h-11"
+                        />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Switch
+                          id="requiresLogin"
+                          checked={formData.requiresLogin}
+                          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, requiresLogin: checked }))}
+                        />
+                        <Label htmlFor="requiresLogin" className="text-sm text-muted-foreground cursor-pointer">
+                          {formData.requiresLogin ? 'Require Login to see Button' : 'Button visible to everyone'}
+                        </Label>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1503,16 +1523,28 @@ export default function AdminEventsPage() {
                   </Label>
                 </div>
                 {formData.registrationType === 'external' && (
-                  <div className="space-y-2 mt-2">
-                    <Label htmlFor="edit-externalRegistrationLink">External Registration Link</Label>
-                    <Input
-                      id="edit-externalRegistrationLink"
-                      name="externalRegistrationLink"
-                      placeholder="https://forms.google.com/..."
-                      value={formData.externalRegistrationLink}
-                      onChange={handleInputChange}
-                      className="h-11"
-                    />
+                  <div className="space-y-4 mt-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-externalRegistrationLink">External Registration Link</Label>
+                      <Input
+                        id="edit-externalRegistrationLink"
+                        name="externalRegistrationLink"
+                        placeholder="https://forms.google.com/..."
+                        value={formData.externalRegistrationLink}
+                        onChange={handleInputChange}
+                        className="h-11"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        id="edit-requiresLogin"
+                        checked={formData.requiresLogin}
+                        onCheckedChange={(checked) => setFormData(prev => ({ ...prev, requiresLogin: checked }))}
+                      />
+                      <Label htmlFor="edit-requiresLogin" className="text-sm text-muted-foreground cursor-pointer">
+                        {formData.requiresLogin ? 'Require Login to see Button' : 'Button visible to everyone'}
+                      </Label>
+                    </div>
                   </div>
                 )}
               </div>

@@ -33,6 +33,7 @@ interface EventDetail {
   isOnline?: boolean
   registrationType?: 'in-site' | 'external'
   externalRegistrationLink?: string
+  requiresLogin?: boolean
 }
 
 export default function EventDetailPage() {
@@ -161,7 +162,18 @@ export default function EventDetailPage() {
 
 
   const handleRegister = async () => {
-    if (!user || !event) return
+    if (!event) return
+
+    // If login is required and user is not logged in, they shouldn't even see the button, but just in case:
+    if (!user && (event.requiresLogin !== false || event.registrationType !== 'external')) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to register for this event.",
+        variant: "destructive",
+      })
+      router.push('/auth/login')
+      return
+    }
 
     // Check if event is offline
     if (event.isOnline === false) {
@@ -469,7 +481,7 @@ export default function EventDetailPage() {
               </Card>
 
               {/* Registration Section */}
-              {user && (
+              {(user || (!user && event.registrationType === 'external' && event.requiresLogin === false)) && (
                 <Card className="p-4">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg">Registration</CardTitle>
