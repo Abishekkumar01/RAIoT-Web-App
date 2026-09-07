@@ -47,6 +47,13 @@ interface EventDetail {
     rulebookUrl?: string
     imageUrl?: string
   }[]
+  teamMembers?: {
+    id: string
+    name: string
+    role: string
+    contact: string
+    imageUrl?: string
+  }[]
 }
 
 const renderTextWithLinks = (text: string) => {
@@ -428,53 +435,115 @@ export default function EventDetailPage() {
                       </CardContent>
                     </Card>
                   )}
+                  {/* Event Details & Contact Team */}
+                  {(event.detailedContent || (event.teamMembers && event.teamMembers.length > 0)) && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+                      {/* Event Details */}
+                      {event.detailedContent && event.detailedContent.trim() !== '' && (
+                        <div className="relative group rounded-xl border border-cyan-500/20 bg-black/40 p-6 overflow-hidden hover:border-cyan-400/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(34,211,238,0.15)] flex flex-col h-full">
+                          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                          <h3 className="text-xl font-bold text-cyan-400 mb-4 flex items-center gap-2 relative z-10">
+                            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                            Event Details
+                          </h3>
+                          <div 
+                            className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap font-sans relative z-10 overflow-y-auto max-h-[300px] scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent pr-2"
+                            dangerouslySetInnerHTML={{ __html: event.detailedContent }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Contact Team */}
+                      {event.teamMembers && event.teamMembers.length > 0 && (
+                        <div className="relative group rounded-xl border border-cyan-500/20 bg-black/40 p-6 overflow-hidden hover:border-cyan-400/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(34,211,238,0.15)] flex flex-col h-full">
+                          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                          <h3 className="text-xl font-bold text-cyan-400 mb-4 flex items-center gap-2 relative z-10">
+                            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                            Organizing Team
+                          </h3>
+                          <div className="space-y-4 relative z-10 overflow-y-auto max-h-[300px] scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent pr-2">
+                            {event.teamMembers.map((member) => (
+                              <div key={member.id} className="flex items-center gap-4 p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                                {member.imageUrl ? (
+                                  <img src={member.imageUrl} alt={member.name} className="w-12 h-12 rounded-full object-cover border border-cyan-500/30" />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-full bg-cyan-950 flex items-center justify-center border border-cyan-500/30">
+                                    <Users className="w-6 h-6 text-cyan-500" />
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="font-semibold text-sm">{member.name}</p>
+                                  {member.role && <p className="text-xs text-cyan-400">{member.role}</p>}
+                                  {member.contact && <p className="text-xs text-muted-foreground mt-1">{member.contact}</p>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Detailed Content */}
-              {event.detailedContent && event.detailedContent.trim() !== '' && (
-                <Card className="p-4">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xl">Event Details</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div
-                      className="text-foreground text-sm leading-relaxed whitespace-pre-wrap font-sans"
-                      dangerouslySetInnerHTML={{ __html: event.detailedContent }}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-
               {/* Sub Events */}
               {event.subEvents && event.subEvents.length > 0 && (
-                <Card className="p-4">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xl">Event Schedule & Sub-Events</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {event.subEvents.map((subEvent, index) => (
-                        <Dialog key={subEvent.id}>
-                          <DialogTrigger asChild>
-                            <div className="group cursor-pointer rounded-lg border border-border/50 bg-muted/20 p-4 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all duration-300 flex flex-col gap-2 relative overflow-hidden">
-                              <h3 className="font-semibold text-base md:text-lg line-clamp-2 group-hover:text-cyan-400 transition-colors z-10">{subEvent.title}</h3>
+                <div className="mt-12 space-y-8">
+                  <div className="flex items-center gap-4">
+                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-cyan-500/50" />
+                    <h2 className="text-2xl md:text-3xl font-bold text-center text-white font-mono uppercase tracking-wider flex items-center gap-3">
+                      <span className="w-3 h-3 rounded-full bg-cyan-400 animate-ping" />
+                      Sub-Events
+                    </h2>
+                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-cyan-500/50" />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {event.subEvents.map((subEvent, index) => (
+                      <Dialog key={subEvent.id}>
+                        <DialogTrigger asChild>
+                          <div className="group relative w-full aspect-[3/4] cursor-pointer rounded-2xl overflow-hidden border border-cyan-500/30 bg-black/50 flex flex-col justify-end p-6 hover:border-cyan-400 transition-all duration-700 hover:shadow-[0_0_40px_rgba(34,211,238,0.3)] hover:-translate-y-2">
+                            {/* Animated Background layers */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent z-10" />
+                            
+                            {/* Orbiting element animation */}
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] border border-cyan-500/20 rounded-full animate-[spin_10s_linear_infinite] opacity-0 group-hover:opacity-100 transition-opacity duration-1000 z-0 pointer-events-none">
+                               <div className="absolute top-0 left-1/2 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee]" />
+                            </div>
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] border border-purple-500/20 rounded-full animate-[spin_7s_linear_infinite_reverse] opacity-0 group-hover:opacity-100 transition-opacity duration-1000 z-0 pointer-events-none">
+                               <div className="absolute bottom-0 right-1/2 w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_10px_#c084fc]" />
+                            </div>
+
+                            {/* Sub-event Image */}
+                            {subEvent.imageUrl ? (
+                              <img 
+                                src={subEvent.imageUrl} 
+                                alt="" 
+                                className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 z-0"
+                              />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center bg-cyan-950/20 group-hover:bg-cyan-900/40 transition-colors duration-700 z-0">
+                                <Calendar className="w-16 h-16 text-cyan-500/20 group-hover:text-cyan-400/40 transition-colors duration-700" />
+                              </div>
+                            )}
+
+                            {/* Content overlay */}
+                            <div className="relative z-20 flex flex-col gap-3 transform translate-y-8 group-hover:translate-y-0 transition-transform duration-500">
+                              <h3 className="font-bold text-xl md:text-2xl text-white group-hover:text-cyan-400 transition-colors">{subEvent.title}</h3>
                               {subEvent.time && (
-                                <Badge variant="secondary" className="w-fit opacity-80 group-hover:opacity-100 z-10">
+                                <Badge variant="outline" className="w-fit border-cyan-500/50 text-cyan-300 bg-black/50 backdrop-blur-sm">
                                   <Clock className="w-3 h-3 mr-1" />
                                   {subEvent.time}
                                 </Badge>
                               )}
-                              {subEvent.imageUrl && (
-                                <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none">
-                                  <img 
-                                    src={subEvent.imageUrl} 
-                                    alt="" 
-                                    className="w-full h-full object-cover" 
-                                  />
-                                </div>
-                              )}
+                              <p className="text-sm text-gray-300 line-clamp-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100 h-0 group-hover:h-auto overflow-hidden">
+                                {subEvent.description?.replace(/<[^>]*>?/gm, '') || 'Click to view details'}
+                              </p>
+                              <div className="mt-2 text-cyan-500 text-sm font-semibold opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity duration-500 delay-200">
+                                View Details <span className="text-lg leading-none">&rarr;</span>
+                              </div>
                             </div>
+                          </div>
                           </DialogTrigger>
                           <DialogContent className="max-w-[95vw] md:max-w-[600px] bg-black/95 border-cyan-500/50 max-h-[90vh] overflow-y-auto">
                             <div className="space-y-6 pt-4">
@@ -532,8 +601,7 @@ export default function EventDetailPage() {
                         </Dialog>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
+                </div>
               )}
             </div>
 

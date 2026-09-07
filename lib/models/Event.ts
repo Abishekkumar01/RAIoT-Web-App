@@ -31,6 +31,13 @@ export interface IEvent extends Document {
         rulebookUrl?: string;
         imageUrl?: string;
     }[];
+    teamMembers?: {
+        id: string;
+        name: string;
+        role: string;
+        contact: string;
+        imageUrl?: string;
+    }[];
     createdBy?: string;
     createdAt: Date;
     updatedAt: Date;
@@ -70,6 +77,13 @@ const eventSchema = new Schema<IEvent>(
             time: { type: String, default: '' },
             location: { type: String, default: '' },
             rulebookUrl: { type: String, default: '' },
+            imageUrl: { type: String, default: '' }
+        }],
+        teamMembers: [{
+            id: { type: String, required: true },
+            name: { type: String, required: true },
+            role: { type: String, default: '' },
+            contact: { type: String, default: '' },
             imageUrl: { type: String, default: '' }
         }],
         createdBy: { type: String, default: '' },

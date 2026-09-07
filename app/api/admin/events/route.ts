@@ -91,6 +91,7 @@ export async function POST(request: Request) {
             requiresLogin: body.requiresLogin !== false,
             showCapacity: body.showCapacity !== false,
             subEvents: Array.isArray(body.subEvents) ? body.subEvents : [],
+            teamMembers: Array.isArray(body.teamMembers) ? body.teamMembers : [],
             registered: Number(body.registered || 0),
             createdBy: manager.uid,
         };

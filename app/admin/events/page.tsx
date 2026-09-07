@@ -56,6 +56,7 @@ export default function AdminEventsPage() {
     requiresLogin: true,
     showCapacity: true,
     subEvents: [] as any[],
+    teamMembers: [] as any[],
   })
   const { toast } = useToast()
 
@@ -84,6 +85,30 @@ export default function AdminEventsPage() {
     });
   }
 
+  const handleAddTeamMember = () => {
+    setFormData(prev => ({
+      ...prev,
+      teamMembers: [
+        ...(prev.teamMembers || []),
+        { id: Math.random().toString(36).substring(7), name: "", role: "", contact: "", imageUrl: "" }
+      ]
+    }))
+  }
+
+  const handleRemoveTeamMember = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      teamMembers: (prev.teamMembers || []).filter((_, i) => i !== index)
+    }))
+  }
+
+  const handleTeamMemberChange = (index: number, field: string, value: string) => {
+    setFormData(prev => {
+      const newTeamMembers = [...(prev.teamMembers || [])];
+      newTeamMembers[index] = { ...newTeamMembers[index], [field]: value };
+      return { ...prev, teamMembers: newTeamMembers };
+    });
+  }
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = e.target.value
     const name = e.target.name
@@ -583,6 +608,7 @@ export default function AdminEventsPage() {
         requiresLogin: formData.requiresLogin,
         showCapacity: formData.showCapacity,
         subEvents: formData.subEvents,
+        teamMembers: formData.teamMembers,
       }
 
       // ALWAYS set imageUrl field (even if null) for clarity
@@ -653,6 +679,7 @@ export default function AdminEventsPage() {
         requiresLogin: true,
         showCapacity: true,
         subEvents: [] as any[],
+        teamMembers: [] as any[],
       })
       setIsCreateDialogOpen(false)
       setSelectedImage(null)
@@ -690,6 +717,7 @@ export default function AdminEventsPage() {
       requiresLogin: event.requiresLogin !== false,
       showCapacity: event.showCapacity !== false,
       subEvents: event.subEvents || [],
+      teamMembers: event.teamMembers || [],
     })
   }
 
@@ -723,6 +751,7 @@ export default function AdminEventsPage() {
         requiresLogin: formData.requiresLogin,
         showCapacity: formData.showCapacity,
         subEvents: formData.subEvents,
+        teamMembers: formData.teamMembers,
       }
 
       // Only update imageUrl if it's provided
@@ -791,6 +820,7 @@ export default function AdminEventsPage() {
         requiresLogin: true,
         showCapacity: true,
         subEvents: [] as any[],
+        teamMembers: [] as any[],
       })
       await fetchEvents()
     } catch (e) {
@@ -1025,6 +1055,48 @@ export default function AdminEventsPage() {
                           <div className="space-y-2">
                             <Label>Description</Label>
                             <Textarea value={subEvent.description} onChange={(e) => handleSubEventChange(idx, 'description', e.target.value)} placeholder="Details for this specific sub-event..." rows={3} className="font-mono text-sm" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base font-semibold">Team Members (Optional)</Label>
+                      <p className="text-sm text-muted-foreground">Add organizers or leads for this event</p>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={handleAddTeamMember}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Member
+                    </Button>
+                  </div>
+                  {formData.teamMembers && formData.teamMembers.length > 0 && (
+                    <div className="space-y-4">
+                      {formData.teamMembers.map((member, idx) => (
+                        <div key={member.id} className="p-4 border rounded-lg relative space-y-4 bg-muted/30">
+                          <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8 text-destructive" onClick={() => handleRemoveTeamMember(idx)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                          <div className="grid grid-cols-2 gap-4 pt-2">
+                            <div className="space-y-2">
+                              <Label>Name</Label>
+                              <Input value={member.name} onChange={(e) => handleTeamMemberChange(idx, 'name', e.target.value)} placeholder="John Doe" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Role</Label>
+                              <Input value={member.role} onChange={(e) => handleTeamMemberChange(idx, 'role', e.target.value)} placeholder="e.g. Sub-Event Lead" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Contact</Label>
+                              <Input value={member.contact} onChange={(e) => handleTeamMemberChange(idx, 'contact', e.target.value)} placeholder="Phone or Email" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Face Image URL (Optional)</Label>
+                              <Input value={member.imageUrl} onChange={(e) => handleTeamMemberChange(idx, 'imageUrl', e.target.value)} placeholder="https://..." />
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -1544,6 +1616,48 @@ export default function AdminEventsPage() {
                         <div className="space-y-2">
                           <Label>Description</Label>
                           <Textarea value={subEvent.description} onChange={(e) => handleSubEventChange(idx, 'description', e.target.value)} placeholder="Details for this specific sub-event..." rows={3} className="font-mono text-sm" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4 pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base font-semibold">Team Members (Optional)</Label>
+                    <p className="text-sm text-muted-foreground">Add organizers or leads for this event</p>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddTeamMember}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Member
+                  </Button>
+                </div>
+                {formData.teamMembers && formData.teamMembers.length > 0 && (
+                  <div className="space-y-4">
+                    {formData.teamMembers.map((member, idx) => (
+                      <div key={member.id} className="p-4 border rounded-lg relative space-y-4 bg-muted/30">
+                        <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8 text-destructive" onClick={() => handleRemoveTeamMember(idx)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                        <div className="grid grid-cols-2 gap-4 pt-2">
+                          <div className="space-y-2">
+                            <Label>Name</Label>
+                            <Input value={member.name} onChange={(e) => handleTeamMemberChange(idx, 'name', e.target.value)} placeholder="John Doe" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Role</Label>
+                            <Input value={member.role} onChange={(e) => handleTeamMemberChange(idx, 'role', e.target.value)} placeholder="e.g. Sub-Event Lead" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Contact</Label>
+                            <Input value={member.contact} onChange={(e) => handleTeamMemberChange(idx, 'contact', e.target.value)} placeholder="Phone or Email" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Face Image URL (Optional)</Label>
+                            <Input value={member.imageUrl} onChange={(e) => handleTeamMemberChange(idx, 'imageUrl', e.target.value)} placeholder="https://..." />
+                          </div>
                         </div>
                       </div>
                     ))}
