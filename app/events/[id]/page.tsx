@@ -453,28 +453,55 @@ export default function EventDetailPage() {
                     <CardTitle className="text-xl">Event Schedule & Sub-Events</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <Accordion type="single" collapsible className="w-full">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {event.subEvents.map((subEvent, index) => (
-                        <AccordionItem key={subEvent.id} value={`item-${index}`}>
-                          <AccordionTrigger className="hover:no-underline text-left">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full pr-4">
-                              <span className="font-semibold text-base">{subEvent.title}</span>
+                        <Dialog key={subEvent.id}>
+                          <DialogTrigger asChild>
+                            <div className="group cursor-pointer rounded-lg border border-border/50 bg-muted/20 p-4 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all duration-300 flex flex-col gap-2 relative overflow-hidden">
+                              <h3 className="font-semibold text-base md:text-lg line-clamp-2 group-hover:text-cyan-400 transition-colors z-10">{subEvent.title}</h3>
                               {subEvent.time && (
-                                <Badge variant="secondary" className="w-fit">
+                                <Badge variant="secondary" className="w-fit opacity-80 group-hover:opacity-100 z-10">
                                   <Clock className="w-3 h-3 mr-1" />
                                   {subEvent.time}
                                 </Badge>
                               )}
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="space-y-4 pt-2 text-muted-foreground text-sm">
                               {subEvent.imageUrl && (
-                                <div className="mb-4">
+                                <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none">
+                                  <img 
+                                    src={subEvent.imageUrl} 
+                                    alt="" 
+                                    className="w-full h-full object-cover" 
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-[95vw] md:max-w-[600px] bg-black/95 border-cyan-500/50 max-h-[90vh] overflow-y-auto">
+                            <div className="space-y-6 pt-4">
+                              <div className="space-y-3">
+                                <h2 className="text-2xl font-bold text-cyan-400 pr-8">{subEvent.title}</h2>
+                                <div className="flex flex-wrap gap-4 text-muted-foreground text-sm">
+                                  {subEvent.time && (
+                                    <div className="flex items-center bg-muted/30 px-3 py-1 rounded-full">
+                                      <Clock className="w-4 h-4 mr-2 text-cyan-400" />
+                                      <span>{subEvent.time}</span>
+                                    </div>
+                                  )}
+                                  {subEvent.location && (
+                                    <div className="flex items-center bg-muted/30 px-3 py-1 rounded-full">
+                                      <MapPin className="w-4 h-4 mr-2 text-cyan-400" />
+                                      <span>{subEvent.location}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {subEvent.imageUrl && (
+                                <div className="rounded-lg overflow-hidden border border-cyan-500/20 bg-black/50 flex justify-center">
                                   <img 
                                     src={subEvent.imageUrl} 
                                     alt={subEvent.title} 
-                                    className="max-w-full sm:max-w-[300px] h-auto rounded-lg shadow-sm border border-cyan-500/20"
+                                    className="max-w-full max-h-[300px] object-contain"
                                     onError={(e) => {
                                       const target = e.target as HTMLImageElement
                                       target.style.display = 'none'
@@ -482,31 +509,29 @@ export default function EventDetailPage() {
                                   />
                                 </div>
                               )}
-                              {subEvent.location && (
-                                <div className="flex items-center gap-2">
-                                  <MapPin className="w-4 h-4" />
-                                  <span>{subEvent.location}</span>
-                                </div>
-                              )}
+
                               {subEvent.description && (
                                 <div 
-                                  className="leading-relaxed whitespace-pre-wrap"
+                                  className="text-foreground text-sm leading-relaxed whitespace-pre-wrap"
                                   dangerouslySetInnerHTML={{ __html: subEvent.description }}
                                 />
                               )}
+                              
                               {subEvent.rulebookUrl && (
-                                <Button asChild variant="outline" size="sm" className="mt-2">
-                                  <a href={subEvent.rulebookUrl} target="_blank" rel="noopener noreferrer">
-                                    <ExternalLink className="w-4 h-4 mr-2" />
-                                    Rulebook / Guidelines
-                                  </a>
-                                </Button>
+                                <div className="pt-2 border-t border-border/50">
+                                  <Button asChild variant="default" className="w-full bg-cyan-600 hover:bg-cyan-700 text-white">
+                                    <a href={subEvent.rulebookUrl} target="_blank" rel="noopener noreferrer">
+                                      <ExternalLink className="w-4 h-4 mr-2" />
+                                      View Rulebook / Guidelines
+                                    </a>
+                                  </Button>
+                                </div>
                               )}
                             </div>
-                          </AccordionContent>
-                        </AccordionItem>
+                          </DialogContent>
+                        </Dialog>
                       ))}
-                    </Accordion>
+                    </div>
                   </CardContent>
                 </Card>
               )}
