@@ -21,6 +21,16 @@ export interface IEvent extends Document {
     registrationType?: 'in-site' | 'external';
     externalRegistrationLink?: string;
     requiresLogin?: boolean;
+    showCapacity?: boolean;
+    subEvents?: {
+        id: string;
+        title: string;
+        description: string;
+        time?: string;
+        location?: string;
+        rulebookUrl?: string;
+        imageUrl?: string;
+    }[];
     createdBy?: string;
     createdAt: Date;
     updatedAt: Date;
@@ -52,6 +62,16 @@ const eventSchema = new Schema<IEvent>(
         registrationType: { type: String, enum: ['in-site', 'external'], default: 'in-site' },
         externalRegistrationLink: { type: String, default: '' },
         requiresLogin: { type: Boolean, default: true },
+        showCapacity: { type: Boolean, default: true },
+        subEvents: [{
+            id: { type: String, required: true },
+            title: { type: String, required: true },
+            description: { type: String, default: '' },
+            time: { type: String, default: '' },
+            location: { type: String, default: '' },
+            rulebookUrl: { type: String, default: '' },
+            imageUrl: { type: String, default: '' }
+        }],
         createdBy: { type: String, default: '' },
     },
     { timestamps: true }

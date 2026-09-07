@@ -54,8 +54,35 @@ export default function AdminEventsPage() {
     registrationType: "in-site",
     externalRegistrationLink: "",
     requiresLogin: true,
+    showCapacity: true,
+    subEvents: [] as any[],
   })
   const { toast } = useToast()
+
+  const handleAddSubEvent = () => {
+    setFormData(prev => ({
+      ...prev,
+      subEvents: [
+        ...(prev.subEvents || []),
+        { id: Math.random().toString(36).substring(7), title: "", description: "", time: "", location: "", rulebookUrl: "", imageUrl: "" }
+      ]
+    }))
+  }
+
+  const handleRemoveSubEvent = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      subEvents: (prev.subEvents || []).filter((_, i) => i !== index)
+    }))
+  }
+
+  const handleSubEventChange = (index: number, field: string, value: string) => {
+    setFormData(prev => {
+      const newSubEvents = [...(prev.subEvents || [])];
+      newSubEvents[index] = { ...newSubEvents[index], [field]: value };
+      return { ...prev, subEvents: newSubEvents };
+    });
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = e.target.value
@@ -554,6 +581,8 @@ export default function AdminEventsPage() {
         registrationType: formData.registrationType,
         externalRegistrationLink: formData.externalRegistrationLink,
         requiresLogin: formData.requiresLogin,
+        showCapacity: formData.showCapacity,
+        subEvents: formData.subEvents,
       }
 
       // ALWAYS set imageUrl field (even if null) for clarity
@@ -621,6 +650,9 @@ export default function AdminEventsPage() {
         isOnline: true,
         registrationType: "in-site",
         externalRegistrationLink: "",
+        requiresLogin: true,
+        showCapacity: true,
+        subEvents: [] as any[],
       })
       setIsCreateDialogOpen(false)
       setSelectedImage(null)
@@ -656,6 +688,8 @@ export default function AdminEventsPage() {
       registrationType: event.registrationType || "in-site",
       externalRegistrationLink: event.externalRegistrationLink || "",
       requiresLogin: event.requiresLogin !== false,
+      showCapacity: event.showCapacity !== false,
+      subEvents: event.subEvents || [],
     })
   }
 
@@ -687,6 +721,8 @@ export default function AdminEventsPage() {
         registrationType: formData.registrationType,
         externalRegistrationLink: formData.externalRegistrationLink,
         requiresLogin: formData.requiresLogin,
+        showCapacity: formData.showCapacity,
+        subEvents: formData.subEvents,
       }
 
       // Only update imageUrl if it's provided
@@ -750,6 +786,11 @@ export default function AdminEventsPage() {
         imageUrl: "",
         detailedContent: "",
         isOnline: true,
+        registrationType: "in-site",
+        externalRegistrationLink: "",
+        requiresLogin: true,
+        showCapacity: true,
+        subEvents: [] as any[],
       })
       await fetchEvents()
     } catch (e) {
@@ -939,6 +980,58 @@ export default function AdminEventsPage() {
                   />
                 </div>
 
+                <div className="space-y-3 border-t pt-6 mt-6">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-lg font-semibold">Sub-Events (Optional)</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={handleAddSubEvent}>
+                      <Plus className="w-4 h-4 mr-2" /> Add Sub-Event
+                    </Button>
+                  </div>
+                  {formData.subEvents && formData.subEvents.length > 0 && (
+                    <div className="space-y-4 mt-4">
+                      {formData.subEvents.map((subEvent, idx) => (
+                        <div key={subEvent.id} className="p-4 border rounded-md relative space-y-4 bg-muted/20">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute top-2 right-2 text-red-500 hover:text-red-700 hover:bg-red-100/50"
+                            onClick={() => handleRemoveSubEvent(idx)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                          <div className="grid grid-cols-2 gap-4 pt-4">
+                            <div className="space-y-2">
+                              <Label>Title</Label>
+                              <Input value={subEvent.title} onChange={(e) => handleSubEventChange(idx, 'title', e.target.value)} placeholder="e.g. Round 1, Qualifying" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Time</Label>
+                              <Input value={subEvent.time} onChange={(e) => handleSubEventChange(idx, 'time', e.target.value)} placeholder="e.g. 10:00 AM - 12:00 PM" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Location</Label>
+                              <Input value={subEvent.location} onChange={(e) => handleSubEventChange(idx, 'location', e.target.value)} placeholder="e.g. Room 204" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Rulebook/Guideline Link</Label>
+                              <Input value={subEvent.rulebookUrl} onChange={(e) => handleSubEventChange(idx, 'rulebookUrl', e.target.value)} placeholder="https://..." />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Poster Image URL</Label>
+                            <Input value={subEvent.imageUrl} onChange={(e) => handleSubEventChange(idx, 'imageUrl', e.target.value)} placeholder="https://... (Direct image link)" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Description</Label>
+                            <Textarea value={subEvent.description} onChange={(e) => handleSubEventChange(idx, 'description', e.target.value)} placeholder="Details for this specific sub-event..." rows={3} className="font-mono text-sm" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-3 gap-6">
                   <div className="space-y-3">
                     <Label htmlFor="date" className="text-base font-semibold">Event Date</Label>
@@ -1006,6 +1099,16 @@ export default function AdminEventsPage() {
                       placeholder="30"
                       className="h-11"
                     />
+                    <div className="flex items-center gap-2 mt-2">
+                      <Switch
+                        id="showCapacity"
+                        checked={formData.showCapacity}
+                        onCheckedChange={(checked) => setFormData(prev => ({ ...prev, showCapacity: checked }))}
+                      />
+                      <Label htmlFor="showCapacity" className="text-sm cursor-pointer">
+                        Show Capacity on Public Page
+                      </Label>
+                    </div>
                   </div>
                 </div>
 
@@ -1396,6 +1499,58 @@ export default function AdminEventsPage() {
                 />
               </div>
 
+              <div className="space-y-3 border-t pt-6 mt-6">
+                <div className="flex items-center justify-between">
+                  <Label className="text-lg font-semibold">Sub-Events (Optional)</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddSubEvent}>
+                    <Plus className="w-4 h-4 mr-2" /> Add Sub-Event
+                  </Button>
+                </div>
+                {formData.subEvents && formData.subEvents.length > 0 && (
+                  <div className="space-y-4 mt-4">
+                    {formData.subEvents.map((subEvent, idx) => (
+                      <div key={subEvent.id} className="p-4 border rounded-md relative space-y-4 bg-muted/20">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute top-2 right-2 text-red-500 hover:text-red-700 hover:bg-red-100/50"
+                          onClick={() => handleRemoveSubEvent(idx)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                        <div className="grid grid-cols-2 gap-4 pt-4">
+                          <div className="space-y-2">
+                            <Label>Title</Label>
+                            <Input value={subEvent.title} onChange={(e) => handleSubEventChange(idx, 'title', e.target.value)} placeholder="e.g. Round 1, Qualifying" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Time</Label>
+                            <Input value={subEvent.time} onChange={(e) => handleSubEventChange(idx, 'time', e.target.value)} placeholder="e.g. 10:00 AM - 12:00 PM" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Location</Label>
+                            <Input value={subEvent.location} onChange={(e) => handleSubEventChange(idx, 'location', e.target.value)} placeholder="e.g. Room 204" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Rulebook/Guideline Link</Label>
+                            <Input value={subEvent.rulebookUrl} onChange={(e) => handleSubEventChange(idx, 'rulebookUrl', e.target.value)} placeholder="https://..." />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Poster Image URL</Label>
+                          <Input value={subEvent.imageUrl} onChange={(e) => handleSubEventChange(idx, 'imageUrl', e.target.value)} placeholder="https://... (Direct image link)" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Description</Label>
+                          <Textarea value={subEvent.description} onChange={(e) => handleSubEventChange(idx, 'description', e.target.value)} placeholder="Details for this specific sub-event..." rows={3} className="font-mono text-sm" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-3 gap-6">
                 <div className="space-y-3">
                   <Label htmlFor="edit-date" className="text-base font-semibold">Event Date</Label>
@@ -1452,6 +1607,16 @@ export default function AdminEventsPage() {
                     onChange={handleInputChange}
                     className="h-11"
                   />
+                  <div className="flex items-center gap-2 mt-2">
+                    <Switch
+                      id="edit-showCapacity"
+                      checked={formData.showCapacity}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, showCapacity: checked }))}
+                    />
+                    <Label htmlFor="edit-showCapacity" className="text-sm cursor-pointer">
+                      Show Capacity on Public Page
+                    </Label>
+                  </div>
                 </div>
               </div>
 

@@ -5,8 +5,10 @@ import { useParams, useRouter } from 'next/navigation'
 import { PublicNavbar } from '@/components/layout/PublicNavbar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
-import { Calendar, Clock, MapPin, Users, ArrowLeft, CheckCircle } from 'lucide-react'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Calendar, Clock, MapPin, Users, ArrowLeft, CheckCircle, ExternalLink } from 'lucide-react'
 import { doc, collection, query, where, onSnapshot, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/lib/contexts/AuthContext'
@@ -24,16 +26,27 @@ interface EventDetail {
   duration: number
   location: string
   type: string
-  maxParticipants?: number
-  registered?: number
+  maxParticipants: number
+  registered: number
   minTeamSize?: number
   maxTeamSize?: number
-  imageUrl?: string
   registrationDeadline?: string
+  imageUrl?: string
+  status: 'active' | 'completed' | 'cancelled'
   isOnline?: boolean
   registrationType?: 'in-site' | 'external'
   externalRegistrationLink?: string
   requiresLogin?: boolean
+  showCapacity?: boolean
+  subEvents?: {
+    id: string
+    title: string
+    description: string
+    time?: string
+    location?: string
+    rulebookUrl?: string
+    imageUrl?: string
+  }[]
 }
 
 const renderTextWithLinks = (text: string) => {
@@ -408,7 +421,10 @@ export default function EventDetailPage() {
                         <CardTitle className="text-xl">About This Event</CardTitle>
                       </CardHeader>
                       <CardContent className="p-0">
-                        <p className="text-muted-foreground whitespace-pre-wrap text-sm leading-relaxed">{event.description}</p>
+                        <div 
+                          className="text-muted-foreground whitespace-pre-wrap text-sm leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: event.description }}
+                        />
                       </CardContent>
                     </Card>
                   )}
@@ -424,9 +440,73 @@ export default function EventDetailPage() {
                   <CardContent>
                     <div
                       className="text-foreground text-sm leading-relaxed whitespace-pre-wrap font-sans"
-                    >
-                      {renderTextWithLinks(event.detailedContent)}
-                    </div>
+                      dangerouslySetInnerHTML={{ __html: event.detailedContent }}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Sub Events */}
+              {event.subEvents && event.subEvents.length > 0 && (
+                <Card className="p-4">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xl">Event Schedule & Sub-Events</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Accordion type="single" collapsible className="w-full">
+                      {event.subEvents.map((subEvent, index) => (
+                        <AccordionItem key={subEvent.id} value={`item-${index}`}>
+                          <AccordionTrigger className="hover:no-underline text-left">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full pr-4">
+                              <span className="font-semibold text-base">{subEvent.title}</span>
+                              {subEvent.time && (
+                                <Badge variant="secondary" className="w-fit">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  {subEvent.time}
+                                </Badge>
+                              )}
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="space-y-4 pt-2 text-muted-foreground text-sm">
+                              {subEvent.imageUrl && (
+                                <div className="mb-4">
+                                  <img 
+                                    src={subEvent.imageUrl} 
+                                    alt={subEvent.title} 
+                                    className="max-w-full sm:max-w-[300px] h-auto rounded-lg shadow-sm border border-cyan-500/20"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement
+                                      target.style.display = 'none'
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              {subEvent.location && (
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="w-4 h-4" />
+                                  <span>{subEvent.location}</span>
+                                </div>
+                              )}
+                              {subEvent.description && (
+                                <div 
+                                  className="leading-relaxed whitespace-pre-wrap"
+                                  dangerouslySetInnerHTML={{ __html: subEvent.description }}
+                                />
+                              )}
+                              {subEvent.rulebookUrl && (
+                                <Button asChild variant="outline" size="sm" className="mt-2">
+                                  <a href={subEvent.rulebookUrl} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="w-4 h-4 mr-2" />
+                                    Rulebook / Guidelines
+                                  </a>
+                                </Button>
+                              )}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
                   </CardContent>
                 </Card>
               )}
@@ -465,18 +545,20 @@ export default function EventDetailPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3">
-                    <Users className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Capacity</p>
-                      <p className="text-sm text-muted-foreground">
-                        {event.maxParticipants
-                          ? `${event.registered ?? 0} / ${event.maxParticipants} registered`
-                          : 'Unlimited'
-                        }
-                      </p>
+                  {event.showCapacity !== false && (
+                    <div className="flex items-start gap-3">
+                      <Users className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">Capacity</p>
+                        <p className="text-sm text-muted-foreground">
+                          {event.maxParticipants
+                            ? `${event.registered ?? 0} / ${event.maxParticipants} registered`
+                            : 'Unlimited'
+                          }
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {event.registrationDeadline && (
                     <div className="flex items-start gap-3">
