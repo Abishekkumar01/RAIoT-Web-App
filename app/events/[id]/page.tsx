@@ -436,50 +436,80 @@ export default function EventDetailPage() {
                     </Card>
                   )}
                   {/* Event Details & Contact Team */}
+                  {/* Event Details & Contact Team */}
                   {(event.detailedContent || (event.teamMembers && event.teamMembers.length > 0)) && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
-                      {/* Event Details */}
+                    <div className="flex flex-wrap gap-4 mt-6">
+                      {/* Event Details Button & Modal */}
                       {event.detailedContent && event.detailedContent.trim() !== '' && (
-                        <div className="relative group rounded-xl border border-cyan-500/20 bg-black/40 p-6 overflow-hidden hover:border-cyan-400/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(34,211,238,0.15)] flex flex-col h-full">
-                          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                          <h3 className="text-xl font-bold text-cyan-400 mb-4 flex items-center gap-2 relative z-10">
-                            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                            Event Details
-                          </h3>
-                          <div 
-                            className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap font-sans relative z-10 overflow-y-auto max-h-[300px] scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent pr-2"
-                            dangerouslySetInnerHTML={{ __html: event.detailedContent }}
-                          />
-                        </div>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <button className="relative group overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-black">
+                              <span className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full opacity-70 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
+                              <div className="relative flex items-center gap-2 px-6 py-2.5 bg-black rounded-full transition-all duration-300 group-hover:bg-opacity-0">
+                                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                                <span className="text-white font-semibold text-sm tracking-wide">View Event Details</span>
+                              </div>
+                            </button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-[95vw] md:max-w-[700px] bg-black/95 border border-cyan-500/50 backdrop-blur-xl shadow-[0_0_50px_rgba(34,211,238,0.2)]">
+                            <div className="relative group rounded-xl p-2 sm:p-6 overflow-hidden flex flex-col h-full">
+                              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-purple-500/5 pointer-events-none" />
+                              <h3 className="text-2xl font-bold text-cyan-400 mb-6 flex items-center gap-3 relative z-10 border-b border-cyan-500/20 pb-4">
+                                <span className="w-3 h-3 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#22d3ee]" />
+                                Event Details
+                              </h3>
+                              <div 
+                                className="text-gray-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap font-sans relative z-10 overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent pr-4"
+                                dangerouslySetInnerHTML={{ __html: event.detailedContent }}
+                              />
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       )}
 
-                      {/* Contact Team */}
+                      {/* Contact Team Button & Modal */}
                       {event.teamMembers && event.teamMembers.length > 0 && (
-                        <div className="relative group rounded-xl border border-cyan-500/20 bg-black/40 p-6 overflow-hidden hover:border-cyan-400/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(34,211,238,0.15)] flex flex-col h-full">
-                          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                          <h3 className="text-xl font-bold text-cyan-400 mb-4 flex items-center gap-2 relative z-10">
-                            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                            Organizing Team
-                          </h3>
-                          <div className="space-y-4 relative z-10 overflow-y-auto max-h-[300px] scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent pr-2">
-                            {event.teamMembers.map((member) => (
-                              <div key={member.id} className="flex items-center gap-4 p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
-                                {member.imageUrl ? (
-                                  <img src={member.imageUrl} alt={member.name} className="w-12 h-12 rounded-full object-cover border border-cyan-500/30" />
-                                ) : (
-                                  <div className="w-12 h-12 rounded-full bg-cyan-950 flex items-center justify-center border border-cyan-500/30">
-                                    <Users className="w-6 h-6 text-cyan-500" />
-                                  </div>
-                                )}
-                                <div>
-                                  <p className="font-semibold text-sm">{member.name}</p>
-                                  {member.role && <p className="text-xs text-cyan-400">{member.role}</p>}
-                                  {member.contact && <p className="text-xs text-muted-foreground mt-1">{member.contact}</p>}
-                                </div>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <button className="relative group overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-black">
+                              <span className="absolute inset-0 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full opacity-70 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
+                              <div className="relative flex items-center gap-2 px-6 py-2.5 bg-black rounded-full transition-all duration-300 group-hover:bg-opacity-0">
+                                <Users className="w-4 h-4 text-purple-400 group-hover:text-white transition-colors" />
+                                <span className="text-white font-semibold text-sm tracking-wide">Organizing Team</span>
                               </div>
-                            ))}
-                          </div>
-                        </div>
+                            </button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-[95vw] md:max-w-[700px] bg-black/95 border border-purple-500/50 backdrop-blur-xl shadow-[0_0_50px_rgba(168,85,247,0.2)]">
+                            <div className="relative group rounded-xl p-2 sm:p-6 overflow-hidden flex flex-col h-full">
+                              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-cyan-500/5 pointer-events-none" />
+                              <h3 className="text-2xl font-bold text-purple-400 mb-6 flex items-center gap-3 relative z-10 border-b border-purple-500/20 pb-4">
+                                <Users className="w-6 h-6 text-purple-400" />
+                                Organizing Team
+                              </h3>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10 overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent pr-4 pb-4">
+                                {event.teamMembers.map((member) => (
+                                  <div key={member.id} className="group/card flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 transition-all duration-300 hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] hover:-translate-y-1 cursor-default">
+                                    <div className="relative">
+                                      <div className="absolute inset-0 rounded-full bg-purple-500/20 blur-md opacity-0 group-hover/card:opacity-100 transition-opacity duration-300" />
+                                      {member.imageUrl ? (
+                                        <img src={member.imageUrl} alt={member.name} className="relative w-14 h-14 rounded-full object-cover border-2 border-purple-500/30 group-hover/card:border-purple-400 transition-colors z-10" />
+                                      ) : (
+                                        <div className="relative w-14 h-14 rounded-full bg-purple-950/50 flex items-center justify-center border-2 border-purple-500/30 group-hover/card:border-purple-400 transition-colors z-10">
+                                          <Users className="w-7 h-7 text-purple-400" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-bold text-base text-gray-100 truncate group-hover/card:text-purple-300 transition-colors">{member.name}</p>
+                                      {member.role && <p className="text-xs text-purple-400/80 font-medium tracking-wide uppercase mt-0.5 truncate">{member.role}</p>}
+                                      {member.contact && <p className="text-xs text-gray-400 mt-1 truncate">{member.contact}</p>}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       )}
                     </div>
                   )}
