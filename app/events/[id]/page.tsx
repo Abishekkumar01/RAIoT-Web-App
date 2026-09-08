@@ -438,18 +438,25 @@ export default function EventDetailPage() {
                   {/* Event Details & Contact Team */}
                   {/* Event Details & Contact Team */}
                   {(event.detailedContent || (event.teamMembers && event.teamMembers.length > 0)) && (
-                    <div className="flex flex-wrap gap-4 mt-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8">
                       {/* Event Details Button & Modal */}
                       {event.detailedContent && event.detailedContent.trim() !== '' && (
                         <Dialog>
                           <DialogTrigger asChild>
-                            <button className="relative group overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-black">
-                              <span className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full opacity-70 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
-                              <div className="relative flex items-center gap-2 px-6 py-2.5 bg-black rounded-full transition-all duration-300 group-hover:bg-opacity-0">
-                                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-                                <span className="text-white font-semibold text-sm tracking-wide">View Event Details</span>
+                            <div className="group relative cursor-pointer w-full h-32 rounded-2xl overflow-hidden border border-cyan-500/30 bg-black/40 flex items-center justify-center p-6 hover:border-cyan-400 transition-all duration-500 hover:shadow-[0_0_30px_rgba(34,211,238,0.2)] hover:-translate-y-1">
+                              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-purple-500/5 opacity-50 group-hover:opacity-100 transition-opacity duration-500" />
+                              {/* Background glowing rings */}
+                              <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-cyan-500/20 rounded-full blur-2xl group-hover:bg-cyan-400/30 transition-colors duration-500" />
+                              <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl group-hover:bg-purple-400/30 transition-colors duration-500" />
+                              
+                              <div className="relative z-10 flex flex-col items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-cyan-950/50 border border-cyan-500/30 flex items-center justify-center group-hover:scale-110 group-hover:border-cyan-400 transition-all duration-300">
+                                  <span className="w-3 h-3 rounded-full bg-cyan-400 animate-ping absolute opacity-70" />
+                                  <span className="w-3 h-3 rounded-full bg-cyan-400 relative z-10" />
+                                </div>
+                                <span className="text-white font-bold text-lg tracking-wide group-hover:text-cyan-400 transition-colors">Event Details</span>
                               </div>
-                            </button>
+                            </div>
                           </DialogTrigger>
                           <DialogContent className="max-w-[95vw] md:max-w-[700px] bg-black/95 border border-cyan-500/50 backdrop-blur-xl shadow-[0_0_50px_rgba(34,211,238,0.2)]">
                             <div className="relative group rounded-xl p-2 sm:p-6 overflow-hidden flex flex-col h-full">
@@ -471,13 +478,19 @@ export default function EventDetailPage() {
                       {event.teamMembers && event.teamMembers.length > 0 && (
                         <Dialog>
                           <DialogTrigger asChild>
-                            <button className="relative group overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-black">
-                              <span className="absolute inset-0 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full opacity-70 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
-                              <div className="relative flex items-center gap-2 px-6 py-2.5 bg-black rounded-full transition-all duration-300 group-hover:bg-opacity-0">
-                                <Users className="w-4 h-4 text-purple-400 group-hover:text-white transition-colors" />
-                                <span className="text-white font-semibold text-sm tracking-wide">Organizing Team</span>
+                            <div className="group relative cursor-pointer w-full h-32 rounded-2xl overflow-hidden border border-purple-500/30 bg-black/40 flex items-center justify-center p-6 hover:border-purple-400 transition-all duration-500 hover:shadow-[0_0_30px_rgba(168,85,247,0.2)] hover:-translate-y-1">
+                              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-cyan-500/5 opacity-50 group-hover:opacity-100 transition-opacity duration-500" />
+                              {/* Background glowing rings */}
+                              <div className="absolute top-0 left-0 -mt-8 -ml-8 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl group-hover:bg-purple-400/30 transition-colors duration-500" />
+                              <div className="absolute bottom-0 right-0 -mb-8 -mr-8 w-32 h-32 bg-cyan-500/20 rounded-full blur-2xl group-hover:bg-cyan-400/30 transition-colors duration-500" />
+                              
+                              <div className="relative z-10 flex flex-col items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-purple-950/50 border border-purple-500/30 flex items-center justify-center group-hover:scale-110 group-hover:border-purple-400 transition-all duration-300">
+                                  <Users className="w-5 h-5 text-purple-400 group-hover:text-purple-300 transition-colors" />
+                                </div>
+                                <span className="text-white font-bold text-lg tracking-wide group-hover:text-purple-400 transition-colors">Organizing Team</span>
                               </div>
-                            </button>
+                            </div>
                           </DialogTrigger>
                           <DialogContent className="max-w-[95vw] md:max-w-[700px] bg-black/95 border border-purple-500/50 backdrop-blur-xl shadow-[0_0_50px_rgba(168,85,247,0.2)]">
                             <div className="relative group rounded-xl p-2 sm:p-6 overflow-hidden flex flex-col h-full">
