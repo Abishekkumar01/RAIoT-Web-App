@@ -15,6 +15,9 @@ import { useAuth } from '@/lib/contexts/AuthContext'
 import { useProfileValidation } from '@/hooks/use-profile-validation'
 import { useToast } from '@/hooks/use-toast'
 import TeamManagement from '@/components/TeamManagement'
+import dynamic from 'next/dynamic'
+
+const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
 
 interface EventDetail {
   id: string
@@ -46,6 +49,7 @@ interface EventDetail {
     location?: string
     rulebookUrl?: string
     imageUrl?: string
+    lottieUrl?: string
   }[]
   teamMembers?: {
     id: string
@@ -567,6 +571,18 @@ export default function EventDetailPage() {
                             ) : (
                               <div className="absolute inset-0 flex items-center justify-center bg-cyan-950/20 group-hover:bg-cyan-900/40 transition-colors duration-700 z-0">
                                 <Calendar className="w-16 h-16 text-cyan-500/20 group-hover:text-cyan-400/40 transition-colors duration-700" />
+                              </div>
+                            )}
+
+                            {/* Lottie Overlay Animation */}
+                            {subEvent.lottieUrl && (
+                              <div className="absolute inset-0 z-10 opacity-0 group-hover:opacity-70 transition-opacity duration-700 pointer-events-none flex items-center justify-center">
+                                <Lottie 
+                                  animationData={null} // We will fetch it via the path
+                                  path={subEvent.lottieUrl}
+                                  loop={true}
+                                  className="w-full h-full object-contain"
+                                />
                               </div>
                             )}
 

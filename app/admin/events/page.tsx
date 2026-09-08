@@ -1053,6 +1053,10 @@ export default function AdminEventsPage() {
                             <Input value={subEvent.imageUrl} onChange={(e) => handleSubEventChange(idx, 'imageUrl', e.target.value)} placeholder="https://... (Direct image link)" />
                           </div>
                           <div className="space-y-2">
+                            <Label>Lottie Animation URL (Optional)</Label>
+                            <Input value={subEvent.lottieUrl} onChange={(e) => handleSubEventChange(idx, 'lottieUrl', e.target.value)} placeholder="https://lottie.host/.../xyz.json (Plays on hover)" />
+                          </div>
+                          <div className="space-y-2">
                             <Label>Description</Label>
                             <Textarea value={subEvent.description} onChange={(e) => handleSubEventChange(idx, 'description', e.target.value)} placeholder="Details for this specific sub-event..." rows={3} className="font-mono text-sm" />
                           </div>
@@ -1612,6 +1616,10 @@ export default function AdminEventsPage() {
                         <div className="space-y-2">
                           <Label>Poster Image URL</Label>
                           <Input value={subEvent.imageUrl} onChange={(e) => handleSubEventChange(idx, 'imageUrl', e.target.value)} placeholder="https://... (Direct image link)" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Lottie Animation URL (Optional)</Label>
+                          <Input value={subEvent.lottieUrl} onChange={(e) => handleSubEventChange(idx, 'lottieUrl', e.target.value)} placeholder="https://lottie.host/.../xyz.json (Plays on hover)" />
                         </div>
                         <div className="space-y-2">
                           <Label>Description</Label>

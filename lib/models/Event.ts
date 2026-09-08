@@ -30,6 +30,7 @@ export interface IEvent extends Document {
         location?: string;
         rulebookUrl?: string;
         imageUrl?: string;
+        lottieUrl?: string;
     }[];
     teamMembers?: {
         id: string;
@@ -77,7 +78,8 @@ const eventSchema = new Schema<IEvent>(
             time: { type: String, default: '' },
             location: { type: String, default: '' },
             rulebookUrl: { type: String, default: '' },
-            imageUrl: { type: String, default: '' }
+            imageUrl: { type: String, default: '' },
+            lottieUrl: { type: String, default: '' }
         }],
         teamMembers: [{
             id: { type: String, required: true },
