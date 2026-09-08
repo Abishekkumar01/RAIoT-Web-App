@@ -503,27 +503,44 @@ export default function EventDetailPage() {
                                 <Users className="w-6 h-6 text-purple-400" />
                                 Organizing Team
                               </h3>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10 overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent pr-4 pb-4">
-                                {event.teamMembers.map((member) => (
-                                  <div key={member.id} className="group/card flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 transition-all duration-300 hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] hover:-translate-y-1 cursor-default">
-                                    <div className="relative">
-                                      <div className="absolute inset-0 rounded-full bg-purple-500/20 blur-md opacity-0 group-hover/card:opacity-100 transition-opacity duration-300" />
-                                      {member.imageUrl ? (
-                                        <img src={member.imageUrl} alt={member.name} className="relative w-14 h-14 rounded-full object-cover border-2 border-purple-500/30 group-hover/card:border-purple-400 transition-colors z-10" />
-                                      ) : (
-                                        <div className="relative w-14 h-14 rounded-full bg-purple-950/50 flex items-center justify-center border-2 border-purple-500/30 group-hover/card:border-purple-400 transition-colors z-10">
-                                          <Users className="w-7 h-7 text-purple-400" />
+                              {(() => {
+                                const grouped = event.teamMembers.reduce((acc, member) => {
+                                  const role = member.role || 'Team Member';
+                                  if (!acc[role]) acc[role] = [];
+                                  acc[role].push(member);
+                                  return acc;
+                                }, {} as Record<string, typeof event.teamMembers[0][]>);
+
+                                return (
+                                  <div className="flex flex-col gap-6 relative z-10 overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent pr-4 pb-4">
+                                    {Object.entries(grouped).map(([role, members]) => (
+                                      <div key={role} className="flex flex-col gap-3">
+                                        <h4 className="text-sm font-bold text-purple-400 tracking-wider uppercase border-b border-purple-500/20 pb-2">{role}</h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                          {members.map((member) => (
+                                            <div key={member.id} className="group/card flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 transition-all duration-300 hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] hover:-translate-y-1 cursor-default">
+                                              <div className="relative">
+                                                <div className="absolute inset-0 rounded-full bg-purple-500/20 blur-md opacity-0 group-hover/card:opacity-100 transition-opacity duration-300" />
+                                                {member.imageUrl ? (
+                                                  <img src={member.imageUrl} alt={member.name} className="relative w-14 h-14 rounded-full object-cover border-2 border-purple-500/30 group-hover/card:border-purple-400 transition-colors z-10" />
+                                                ) : (
+                                                  <div className="relative w-14 h-14 rounded-full bg-purple-950/50 flex items-center justify-center border-2 border-purple-500/30 group-hover/card:border-purple-400 transition-colors z-10">
+                                                    <Users className="w-7 h-7 text-purple-400" />
+                                                  </div>
+                                                )}
+                                              </div>
+                                              <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-base text-gray-100 truncate group-hover/card:text-purple-300 transition-colors">{member.name}</p>
+                                                {member.contact && <p className="text-xs text-gray-400 mt-1 truncate">{member.contact}</p>}
+                                              </div>
+                                            </div>
+                                          ))}
                                         </div>
-                                      )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="font-bold text-base text-gray-100 truncate group-hover/card:text-purple-300 transition-colors">{member.name}</p>
-                                      {member.role && <p className="text-xs text-purple-400/80 font-medium tracking-wide uppercase mt-0.5 truncate">{member.role}</p>}
-                                      {member.contact && <p className="text-xs text-gray-400 mt-1 truncate">{member.contact}</p>}
-                                    </div>
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
-                              </div>
+                                );
+                              })()}
                             </div>
                           </DialogContent>
                         </Dialog>
