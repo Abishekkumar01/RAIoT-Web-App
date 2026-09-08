@@ -433,7 +433,7 @@ export default function EventDetailPage() {
                       </CardHeader>
                       <CardContent className="p-0">
                         <div 
-                          className="text-muted-foreground whitespace-pre-wrap text-sm leading-relaxed"
+                          className="text-muted-foreground whitespace-pre-wrap text-sm leading-relaxed [&_a]:text-cyan-400 [&_a]:underline [&_a]:hover:text-cyan-300 [&_a]:transition-colors"
                           dangerouslySetInnerHTML={{ __html: event.description }}
                         />
                       </CardContent>
@@ -470,7 +470,7 @@ export default function EventDetailPage() {
                                 Event Details
                               </h3>
                               <div 
-                                className="text-gray-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap font-sans relative z-10 overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent pr-4"
+                                className="text-gray-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap font-sans relative z-10 overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent pr-4 [&_a]:text-cyan-400 [&_a]:underline [&_a]:hover:text-cyan-300 [&_a]:transition-colors"
                                 dangerouslySetInnerHTML={{ __html: event.detailedContent }}
                               />
                             </div>
