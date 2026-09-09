@@ -642,17 +642,33 @@ export default function EventDetailPage() {
                               </div>
                               
                               {subEvent.imageUrl && (
-                                <div className="rounded-lg overflow-hidden border border-cyan-500/20 bg-black/50 flex justify-center">
-                                  <img 
-                                    src={subEvent.imageUrl} 
-                                    alt={subEvent.title} 
-                                    className="max-w-full max-h-[300px] object-contain"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement
-                                      target.style.display = 'none'
-                                    }}
-                                  />
-                                </div>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <div className="rounded-lg overflow-hidden border border-cyan-500/20 bg-black/50 flex justify-center cursor-pointer group relative hover:border-cyan-500/50 transition-colors duration-300">
+                                      <img 
+                                        src={subEvent.imageUrl} 
+                                        alt={subEvent.title} 
+                                        className="max-w-full max-h-[300px] object-contain transition-transform duration-500 group-hover:scale-105"
+                                        onError={(e) => {
+                                          const target = e.target as HTMLImageElement
+                                          target.style.display = 'none'
+                                        }}
+                                      />
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none">
+                                        <span className="text-white font-mono text-sm border border-white/50 px-3 py-1 rounded-full backdrop-blur-sm">Click to view poster</span>
+                                      </div>
+                                    </div>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-[95vw] md:max-w-[90vw] lg:max-w-[1200px] h-[90vh] md:h-[95vh] p-2 md:p-6 bg-black/95 border-cyan-500/50 flex flex-col items-center justify-center z-[60]">
+                                    <div className="relative w-full h-full flex items-center justify-center">
+                                      <img
+                                        src={subEvent.imageUrl}
+                                        alt={subEvent.title}
+                                        className="w-full h-full object-contain"
+                                      />
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
                               )}
 
                               {subEvent.description && (
