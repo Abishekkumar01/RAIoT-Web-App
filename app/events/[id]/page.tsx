@@ -496,11 +496,11 @@ export default function EventDetailPage() {
                               </div>
                             </div>
                           </DialogTrigger>
-                          <DialogContent className="max-w-[95vw] md:max-w-[700px] bg-black/95 border border-purple-500/50 backdrop-blur-xl shadow-[0_0_50px_rgba(168,85,247,0.2)]">
-                            <div className="relative group rounded-xl p-2 sm:p-6 overflow-hidden flex flex-col h-full">
+                          <DialogContent className="max-w-[95vw] md:max-w-[850px] lg:max-w-[1000px] bg-black/95 border border-purple-500/50 backdrop-blur-xl shadow-[0_0_50px_rgba(168,85,247,0.2)]">
+                            <div className="relative group rounded-xl p-2 sm:p-6 lg:p-8 overflow-hidden flex flex-col h-full">
                               <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-cyan-500/5 pointer-events-none" />
-                              <h3 className="text-2xl font-bold text-purple-400 mb-6 flex items-center gap-3 relative z-10 border-b border-purple-500/20 pb-4">
-                                <Users className="w-6 h-6 text-purple-400" />
+                              <h3 className="text-2xl md:text-3xl font-bold text-purple-400 mb-6 md:mb-8 flex items-center gap-3 relative z-10 border-b border-purple-500/20 pb-4">
+                                <Users className="w-6 h-6 md:w-8 md:h-8 text-purple-400" />
                                 Organizing Team
                               </h3>
                               {(() => {
@@ -512,26 +512,26 @@ export default function EventDetailPage() {
                                 }, {} as Record<string, typeof event.teamMembers[0][]>);
 
                                 return (
-                                  <div className="flex flex-col gap-6 relative z-10 overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent pr-4 pb-4">
+                                  <div className="flex flex-col gap-8 md:gap-10 relative z-10 overflow-y-auto max-h-[70vh] scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent pr-4 pb-4">
                                     {Object.entries(grouped).map(([role, members]) => (
-                                      <div key={role} className="flex flex-col gap-3">
-                                        <h4 className="text-sm font-bold text-purple-400 tracking-wider uppercase border-b border-purple-500/20 pb-2">{role}</h4>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                      <div key={role} className="flex flex-col gap-4">
+                                        <h4 className="text-base md:text-lg font-bold text-purple-400 tracking-wider uppercase border-b border-purple-500/20 pb-2">{role}</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                           {members.map((member) => (
-                                            <div key={member.id} className="group/card flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 transition-all duration-300 hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] hover:-translate-y-1 cursor-default">
-                                              <div className="relative">
+                                            <div key={member.id} className="group/card flex items-center gap-5 md:gap-6 p-5 md:p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 transition-all duration-300 hover:shadow-[0_0_30px_rgba(168,85,247,0.15)] hover:-translate-y-1 cursor-default">
+                                              <div className="relative shrink-0">
                                                 <div className="absolute inset-0 rounded-full bg-purple-500/20 blur-md opacity-0 group-hover/card:opacity-100 transition-opacity duration-300" />
                                                 {member.imageUrl ? (
-                                                  <img src={member.imageUrl} alt={member.name} className="relative w-14 h-14 rounded-full object-cover border-2 border-purple-500/30 group-hover/card:border-purple-400 transition-colors z-10" />
+                                                  <img src={member.imageUrl} alt={member.name} className="relative w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-2 border-purple-500/30 group-hover/card:border-purple-400 transition-colors z-10" />
                                                 ) : (
-                                                  <div className="relative w-14 h-14 rounded-full bg-purple-950/50 flex items-center justify-center border-2 border-purple-500/30 group-hover/card:border-purple-400 transition-colors z-10">
-                                                    <Users className="w-7 h-7 text-purple-400" />
+                                                  <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-purple-950/50 flex items-center justify-center border-2 border-purple-500/30 group-hover/card:border-purple-400 transition-colors z-10">
+                                                    <Users className="w-10 h-10 md:w-12 md:h-12 text-purple-400" />
                                                   </div>
                                                 )}
                                               </div>
                                               <div className="flex-1 min-w-0">
-                                                <p className="font-bold text-base text-gray-100 truncate group-hover/card:text-purple-300 transition-colors">{member.name}</p>
-                                                {member.contact && <p className="text-xs text-gray-400 mt-1 truncate">{member.contact}</p>}
+                                                <p className="font-bold text-lg md:text-xl text-gray-100 truncate group-hover/card:text-purple-300 transition-colors">{member.name}</p>
+                                                {member.contact && <p className="text-sm md:text-base text-gray-400 mt-1 md:mt-2 truncate">{member.contact}</p>}
                                               </div>
                                             </div>
                                           ))}
