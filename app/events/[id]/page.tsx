@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast'
 import TeamManagement from '@/components/TeamManagement'
 import dynamic from 'next/dynamic'
 
-const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
+const Lottie = dynamic(() => import('lottie-react').then((mod) => mod.default || mod.Lottie || mod as any), { ssr: false })
 
 interface EventDetail {
   id: string
