@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast'
 import TeamManagement from '@/components/TeamManagement'
 import dynamic from 'next/dynamic'
 
-const Lottie = dynamic(() => import('lottie-react').then((mod) => mod.default || mod.Lottie || mod as any), { ssr: false })
+const Lottie = dynamic(() => import('@lottiefiles/dotlottie-react').then((mod) => mod.DotLottieReact), { ssr: false })
 
 interface EventDetail {
   id: string
@@ -595,9 +595,9 @@ export default function EventDetailPage() {
                             {subEvent.lottieUrl && (
                               <div className="absolute inset-0 z-10 opacity-0 group-hover:opacity-70 transition-opacity duration-700 pointer-events-none flex items-center justify-center">
                                 <Lottie 
-                                  animationData={null} // We will fetch it via the path
-                                  path={subEvent.lottieUrl}
+                                  src={subEvent.lottieUrl}
                                   loop={true}
+                                  autoplay={true}
                                   className="w-full h-full object-contain"
                                 />
                               </div>
