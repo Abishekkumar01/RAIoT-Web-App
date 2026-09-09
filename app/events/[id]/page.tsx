@@ -568,7 +568,7 @@ export default function EventDetailPage() {
                         <DialogTrigger asChild>
                           <div className="group relative w-full aspect-[3/4] cursor-pointer rounded-2xl overflow-hidden border border-cyan-500/30 bg-black/50 flex flex-col justify-end p-6 hover:border-cyan-400 transition-all duration-700 hover:shadow-[0_0_40px_rgba(34,211,238,0.3)] hover:-translate-y-2">
                             {/* Animated Background layers */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent z-10" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10 pointer-events-none transition-all duration-700 group-hover:via-black/10" />
                             
                             {/* Orbiting element animation */}
                             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] border border-cyan-500/20 rounded-full animate-[spin_10s_linear_infinite] opacity-0 group-hover:opacity-100 transition-opacity duration-1000 z-0 pointer-events-none">
@@ -583,7 +583,7 @@ export default function EventDetailPage() {
                               <img 
                                 src={subEvent.imageUrl} 
                                 alt="" 
-                                className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 z-0"
+                                className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 z-0"
                               />
                             ) : (
                               <div className="absolute inset-0 flex items-center justify-center bg-cyan-950/20 group-hover:bg-cyan-900/40 transition-colors duration-700 z-0">
