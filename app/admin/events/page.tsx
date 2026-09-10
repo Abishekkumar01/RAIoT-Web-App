@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, Upload, X } from "lucide-react"
+import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, Upload, X, ArrowUp, ArrowDown } from "lucide-react"
 import { auth } from '@/lib/firebase'
 import { getCloudinarySignature } from '@/app/actions/uploadAction'
 import { useToast } from '@/hooks/use-toast'
@@ -106,6 +106,18 @@ export default function AdminEventsPage() {
     setFormData(prev => {
       const newTeamMembers = [...(prev.teamMembers || [])];
       newTeamMembers[index] = { ...newTeamMembers[index], [field]: value };
+      return { ...prev, teamMembers: newTeamMembers };
+    });
+  }
+
+  const handleMoveTeamMember = (index: number, direction: 'up' | 'down') => {
+    setFormData(prev => {
+      const newTeamMembers = [...(prev.teamMembers || [])];
+      if (direction === 'up' && index > 0) {
+        [newTeamMembers[index - 1], newTeamMembers[index]] = [newTeamMembers[index], newTeamMembers[index - 1]];
+      } else if (direction === 'down' && index < newTeamMembers.length - 1) {
+        [newTeamMembers[index + 1], newTeamMembers[index]] = [newTeamMembers[index], newTeamMembers[index + 1]];
+      }
       return { ...prev, teamMembers: newTeamMembers };
     });
   }
@@ -1081,9 +1093,21 @@ export default function AdminEventsPage() {
                     <div className="space-y-4">
                       {formData.teamMembers.map((member, idx) => (
                         <div key={member.id} className="p-4 border rounded-lg relative space-y-4 bg-muted/30">
-                          <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8 text-destructive" onClick={() => handleRemoveTeamMember(idx)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <div className="absolute top-2 right-2 flex gap-1">
+                            {idx > 0 && (
+                              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => handleMoveTeamMember(idx, 'up')}>
+                                <ArrowUp className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {idx < formData.teamMembers!.length - 1 && (
+                              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => handleMoveTeamMember(idx, 'down')}>
+                                <ArrowDown className="w-4 h-4" />
+                              </Button>
+                            )}
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleRemoveTeamMember(idx)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                           <div className="grid grid-cols-2 gap-4 pt-2">
                             <div className="space-y-2">
                               <Label>Name</Label>
@@ -1646,9 +1670,21 @@ export default function AdminEventsPage() {
                   <div className="space-y-4">
                     {formData.teamMembers.map((member, idx) => (
                       <div key={member.id} className="p-4 border rounded-lg relative space-y-4 bg-muted/30">
-                        <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8 text-destructive" onClick={() => handleRemoveTeamMember(idx)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="absolute top-2 right-2 flex gap-1">
+                          {idx > 0 && (
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => handleMoveTeamMember(idx, 'up')}>
+                              <ArrowUp className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {idx < formData.teamMembers!.length - 1 && (
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => handleMoveTeamMember(idx, 'down')}>
+                              <ArrowDown className="w-4 h-4" />
+                            </Button>
+                          )}
+                          <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleRemoveTeamMember(idx)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                         <div className="grid grid-cols-2 gap-4 pt-2">
                           <div className="space-y-2">
                             <Label>Name</Label>
