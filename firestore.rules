@@ -76,6 +76,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Achievements Collection
+    match /achievements/{achievementId} {
+      allow read: if true;
+      allow write: if isAdmin() || isPublicRelation();
+    }
+
     // Events collection: public readable; admin-only writes, but users can update registered count
     match /events/{eventId} {
       allow read: if true;
