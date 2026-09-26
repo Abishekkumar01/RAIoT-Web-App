@@ -20,7 +20,7 @@ interface Leader {
     role: string
     batch: string
     status: 'active' | 'alumni'
-    type?: 'leader' | 'faculty' // New field
+    type?: 'leader' | 'faculty' | 'team' // New field
     linkedin: string
     imageUrl: string
     order: number
@@ -40,7 +40,7 @@ const neonColors = [
 export default function LeadersPage() {
     const [leaders, setLeaders] = useState<Leader[]>([])
     const [loading, setLoading] = useState(true)
-    const [viewMode, setViewMode] = useState<'leader' | 'faculty'>('leader')
+    const [viewMode, setViewMode] = useState<'leader' | 'faculty' | 'team'>('leader')
     const containerRef = useRef<HTMLDivElement>(null)
     const { scrollYProgress } = useScroll({
         target: containerRef,
@@ -136,12 +136,12 @@ export default function LeadersPage() {
                     </div>
 
                     {/* View Switcher - Cyber Style */}
-                    <div className="flex justify-center mb-6 md:mb-8">
-                        <div className="bg-slate-900/80 p-1 rounded-full border border-slate-700 backdrop-blur-md relative flex items-center shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+                    <div className="flex justify-center mb-6 md:mb-8 px-2">
+                        <div className="bg-slate-900/80 p-1 rounded-full border border-slate-700 backdrop-blur-md relative flex items-center shadow-[0_0_20px_rgba(0,0,0,0.5)] max-w-full overflow-x-auto">
                             <button
                                 onClick={() => setViewMode('leader')}
                                 className={cn(
-                                    "relative px-4 md:px-6 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-bold tracking-wider transition-all duration-300 z-10 flex items-center gap-1.5 md:gap-2",
+                                    "relative px-3 sm:px-6 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-bold tracking-wider transition-all duration-300 z-10 flex items-center gap-1.5 md:gap-2 whitespace-nowrap",
                                     viewMode === 'leader' ? "text-slate-950" : "text-slate-400 hover:text-slate-200"
                                 )}
                             >
@@ -151,12 +151,22 @@ export default function LeadersPage() {
                             <button
                                 onClick={() => setViewMode('faculty')}
                                 className={cn(
-                                    "relative px-4 md:px-6 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-bold tracking-wider transition-all duration-300 z-10 flex items-center gap-1.5 md:gap-2",
+                                    "relative px-3 sm:px-6 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-bold tracking-wider transition-all duration-300 z-10 flex items-center gap-1.5 md:gap-2 whitespace-nowrap",
                                     viewMode === 'faculty' ? "text-slate-950" : "text-slate-400 hover:text-slate-200"
                                 )}
                             >
                                 <GraduationCap className="w-3 h-3 md:w-4 md:h-4" />
                                 FACULTY
+                            </button>
+                            <button
+                                onClick={() => setViewMode('team')}
+                                className={cn(
+                                    "relative px-3 sm:px-6 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-bold tracking-wider transition-all duration-300 z-10 flex items-center gap-1.5 md:gap-2 whitespace-nowrap",
+                                    viewMode === 'team' ? "text-slate-950" : "text-slate-400 hover:text-slate-200"
+                                )}
+                            >
+                                <Code className="w-3 h-3 md:w-4 md:h-4" />
+                                OUR TEAM
                             </button>
 
                             {/* Sliding Background */}
@@ -164,9 +174,9 @@ export default function LeadersPage() {
                                 className="absolute top-1 bottom-1 rounded-full bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.6)]"
                                 initial={false}
                                 animate={{
-                                    left: viewMode === 'leader' ? '4px' : '50%',
-                                    width: viewMode === 'leader' ? 'calc(50% - 4px)' : 'calc(50% - 4px)',
-                                    x: viewMode === 'leader' ? 0 : 0
+                                    left: viewMode === 'leader' ? '4px' : viewMode === 'faculty' ? 'calc(33.333% + 1px)' : 'calc(66.666% - 2px)',
+                                    width: 'calc(33.333% - 3px)',
+                                    x: 0
                                 }}
                                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                             />
@@ -177,12 +187,14 @@ export default function LeadersPage() {
                         className="text-4xl md:text-7xl font-black font-orbitron mb-4 md:mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-cyan-400 drop-shadow-[0_0_15px_rgba(6,182,212,0.6)] tracking-wide uppercase"
                         style={{ fontFamily: 'var(--font-orbitron)' }}
                     >
-                        {viewMode === 'leader' ? "Our Leaders" : "Our Faculty"}
+                        {viewMode === 'leader' ? "Our Leaders" : viewMode === 'faculty' ? "Our Faculty" : "Our Team"}
                     </h1>
                     <p className="text-muted-foreground text-sm md:text-lg max-w-2xl mx-auto px-4">
                         {viewMode === 'leader'
                             ? "The visionaries who built the circuits, coded the future, and led our revolution."
-                            : "The mentors who guided our path, shared their wisdom, and shaped our potential."}
+                            : viewMode === 'faculty'
+                            ? "The mentors who guided our path, shared their wisdom, and shaped our potential."
+                            : "The passionate innovators, developers, and creators powering every domain of RAIoT."}
                     </p>
                 </motion.div>
             </div>
@@ -190,7 +202,6 @@ export default function LeadersPage() {
             {/* Timeline Section - Full Width */}
             <div className="max-w-[1920px] mx-auto relative px-6 md:px-48 pb-16 md:pb-32">
                 {/* Scroll Progress Line (Animated) */}
-
 
                 {!loading && (
                     <AnimatePresence mode="wait">
@@ -201,8 +212,8 @@ export default function LeadersPage() {
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.5 }}
                         >
-                            {/* Scroll Progress Line (Refreshed per view) */}
-                            {filteredLeaders.length > 0 && (
+                            {/* Scroll Progress Line (Refreshed per view) - Only for Leader & Faculty */}
+                            {filteredLeaders.length > 0 && viewMode !== 'team' && (
                                 <>
                                     <motion.div
                                         style={{ scaleY: scaleY, originY: 0 }}
@@ -214,9 +225,98 @@ export default function LeadersPage() {
 
                             {filteredLeaders.length === 0 ? (
                                 <div className="text-center py-20 text-slate-500">
-                                    <p className="text-2xl font-orbitron text-cyan-500/50 uppercase">No {viewMode} Records Found</p>
+                                    <p className="text-2xl font-orbitron text-cyan-500/50 uppercase">
+                                        No {viewMode === 'team' ? 'Team' : viewMode} Records Found
+                                    </p>
                                     <p className="text-sm mt-2">Initializing database sequence...</p>
                                 </div>
+                            ) : viewMode === 'team' ? (
+                                sortedBatches.map((batch) => (
+                                    <div key={batch} className="mb-20 relative z-10">
+                                        {/* Batch Header */}
+                                        <div className="flex items-center gap-4 mb-8">
+                                            <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-cyan-500/30 to-cyan-500/60" />
+                                            <div className="bg-slate-900/90 border border-cyan-500/40 px-6 py-2 rounded-full shadow-[0_0_25px_rgba(6,182,212,0.25)] backdrop-blur-md flex items-center gap-3">
+                                                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#22d3ee]" />
+                                                <span className="text-lg md:text-xl font-bold font-mono tracking-wider text-cyan-400 uppercase">
+                                                    Batch {batch}
+                                                </span>
+                                                <Badge variant="outline" className="border-cyan-500/30 text-cyan-300 font-mono text-xs">
+                                                    {groupedLeaders[batch].length} {groupedLeaders[batch].length === 1 ? 'Member' : 'Members'}
+                                                </Badge>
+                                            </div>
+                                            <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-cyan-500/30 to-cyan-500/60" />
+                                        </div>
+
+                                        {/* Team Grid */}
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                                            {groupedLeaders[batch].map((member, idx) => (
+                                                <motion.div
+                                                    key={member.id}
+                                                    initial={{ opacity: 0, y: 20 }}
+                                                    whileInView={{ opacity: 1, y: 0 }}
+                                                    viewport={{ once: true }}
+                                                    transition={{ duration: 0.4, delay: (idx % 5) * 0.06 }}
+                                                    className="group relative bg-slate-950/80 border border-slate-800/80 hover:border-cyan-500/60 rounded-2xl p-3 sm:p-4 flex flex-col items-center text-center transition-all duration-500 hover:shadow-[0_0_30px_rgba(6,182,212,0.2)] hover:-translate-y-1.5 overflow-hidden"
+                                                >
+                                                    {/* Hover glow background */}
+                                                    <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/10 via-transparent to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+                                                    {/* Member Image - Large & Clearly Visible */}
+                                                    <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden mb-3 border border-slate-700/60 group-hover:border-cyan-400/60 transition-colors bg-slate-900">
+                                                        {member.imageUrl ? (
+                                                            <img
+                                                                src={member.imageUrl}
+                                                                alt={member.name}
+                                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 bg-slate-900/90">
+                                                                <Users className="w-12 h-12 mb-2 text-slate-600 group-hover:text-cyan-400 transition-colors" />
+                                                                <span className="text-[10px] font-mono text-slate-500">NO IMAGE</span>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Active Status Dot / Badge (Minute Detail) */}
+                                                        <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md border border-white/10 z-10 shadow-sm">
+                                                            <span
+                                                                className={cn(
+                                                                    "w-2 h-2 rounded-full",
+                                                                    member.status === 'active'
+                                                                        ? "bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse"
+                                                                        : "bg-slate-400 shadow-[0_0_6px_#94a3b8]"
+                                                                )}
+                                                            />
+                                                            <span className="text-[9px] font-mono uppercase tracking-wider text-slate-300 font-semibold">
+                                                                {member.status === 'active' ? 'Active' : 'Alumni'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Name */}
+                                                    <h4 className="font-bold text-sm sm:text-base md:text-lg text-slate-100 group-hover:text-cyan-300 transition-colors line-clamp-1 w-full font-orbitron">
+                                                        {member.name}
+                                                    </h4>
+
+                                                    {/* Role */}
+                                                    {member.role && (
+                                                        <p className="text-xs text-purple-400/90 font-mono mt-0.5 line-clamp-1 w-full">
+                                                            {member.role}
+                                                        </p>
+                                                    )}
+
+                                                    {/* ID Number */}
+                                                    <div className="mt-2 pt-2 border-t border-slate-800/80 w-full flex items-center justify-center gap-1 text-[11px] sm:text-xs text-slate-400 font-mono">
+                                                        <span className="text-slate-600">ID:</span>
+                                                        <span className="text-cyan-300 font-semibold tracking-wider">
+                                                            {member.displayId || member.id.slice(0, 7)}
+                                                        </span>
+                                                    </div>
+                                                </motion.div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))
                             ) : (
                                 sortedBatches.map((batch, batchIdx) => (
                                     <div key={batch} className="mb-24 relative z-10">

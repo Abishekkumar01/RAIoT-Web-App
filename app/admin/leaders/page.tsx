@@ -23,7 +23,7 @@ interface Leader {
     role: string
     batch: string
     status: 'active' | 'alumni'
-    type?: 'leader' | 'faculty' // New field
+    type?: 'leader' | 'faculty' | 'team' // Type field
     linkedin: string
     imageUrl: string
     order: number
@@ -36,6 +36,7 @@ export default function AdminLeadersPage() {
     const [leaders, setLeaders] = useState<Leader[]>([])
     const [loading, setLoading] = useState(true)
     const [editingId, setEditingId] = useState<string | null>(null)
+    const [filterType, setFilterType] = useState<'all' | 'leader' | 'faculty' | 'team'>('all')
 
     // Form State
     const [formData, setFormData] = useState({
@@ -44,7 +45,7 @@ export default function AdminLeadersPage() {
         role: "",
         batch: new Date().getFullYear().toString(),
         status: "active" as 'active' | 'alumni',
-        type: "leader" as 'leader' | 'faculty',
+        type: "leader" as 'leader' | 'faculty' | 'team',
         linkedin: "",
         imageUrl: "",
         order: 0,
@@ -176,8 +177,8 @@ export default function AdminLeadersPage() {
         <div className="max-w-[1920px] mx-auto p-6 space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold">Manage Leaders & Faculty</h1>
-                    <p className="text-muted-foreground">Add members to the Our Leaders or Faculty timeline.</p>
+                    <h1 className="text-3xl font-bold">Manage Leaders, Faculty & Team</h1>
+                    <p className="text-muted-foreground">Add members to the Our Leaders, Faculty, or Our Team directory.</p>
                 </div>
                 <div className="flex gap-2">
                     <Link href="/leaders" target="_blank">
@@ -205,16 +206,20 @@ export default function AdminLeadersPage() {
                                     <RadioGroup
                                         defaultValue="leader"
                                         value={formData.type}
-                                        onValueChange={(v: 'leader' | 'faculty') => setFormData({ ...formData, type: v })}
-                                        className="flex gap-4"
+                                        onValueChange={(v: 'leader' | 'faculty' | 'team') => setFormData({ ...formData, type: v })}
+                                        className="flex flex-wrap gap-4"
                                     >
                                         <div className="flex items-center space-x-2">
                                             <RadioGroupItem value="leader" id="r-leader" />
-                                            <Label htmlFor="r-leader">Leader</Label>
+                                            <Label htmlFor="r-leader" className="cursor-pointer">Leader</Label>
                                         </div>
                                         <div className="flex items-center space-x-2">
                                             <RadioGroupItem value="faculty" id="r-faculty" />
-                                            <Label htmlFor="r-faculty">Faculty</Label>
+                                            <Label htmlFor="r-faculty" className="cursor-pointer">Faculty</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="team" id="r-team" />
+                                            <Label htmlFor="r-team" className="cursor-pointer">Team Member</Label>
                                         </div>
                                     </RadioGroup>
                                 </div>
@@ -381,7 +386,48 @@ export default function AdminLeadersPage() {
 
                 {/* List Section */}
                 <div className="lg:col-span-2 space-y-4">
-                    <h2 className="text-xl font-semibold">Current Members ({leaders.length})</h2>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <h2 className="text-xl font-semibold">Current Members ({leaders.length})</h2>
+                        <div className="flex flex-wrap gap-1 bg-muted/60 p-1 rounded-lg">
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant={filterType === 'all' ? 'default' : 'ghost'}
+                                className="h-7 text-xs px-2.5"
+                                onClick={() => setFilterType('all')}
+                            >
+                                All ({leaders.length})
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant={filterType === 'leader' ? 'default' : 'ghost'}
+                                className="h-7 text-xs px-2.5"
+                                onClick={() => setFilterType('leader')}
+                            >
+                                Leaders ({leaders.filter(l => !l.type || l.type === 'leader').length})
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant={filterType === 'faculty' ? 'default' : 'ghost'}
+                                className="h-7 text-xs px-2.5"
+                                onClick={() => setFilterType('faculty')}
+                            >
+                                Faculty ({leaders.filter(l => l.type === 'faculty').length})
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant={filterType === 'team' ? 'default' : 'ghost'}
+                                className="h-7 text-xs px-2.5"
+                                onClick={() => setFilterType('team')}
+                            >
+                                Team ({leaders.filter(l => l.type === 'team').length})
+                            </Button>
+                        </div>
+                    </div>
+
                     {loading ? (
                         <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
                     ) : leaders.length === 0 ? (
@@ -390,7 +436,13 @@ export default function AdminLeadersPage() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {leaders.map((leader, index) => (
+                            {leaders
+                                .filter(l => {
+                                    if (filterType === 'all') return true
+                                    if (filterType === 'leader') return !l.type || l.type === 'leader'
+                                    return l.type === filterType
+                                })
+                                .map((leader) => (
                                 <Card key={leader.id} className="relative group overflow-hidden mb-4">
                                     <CardContent className="p-4 flex gap-4 items-center">
                                         {/* Image Preview */}
@@ -409,10 +461,16 @@ export default function AdminLeadersPage() {
                                             <p className="text-xs text-primary font-medium truncate">{leader.role}</p>
                                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                                                 <Badge
-                                                    variant={leader.type === 'faculty' ? 'default' : 'outline'}
-                                                    className={`text-[10px] h-5 px-1.5 shrink-0 ${leader.type === 'faculty' ? 'bg-amber-600 hover:bg-amber-700' : 'border-primary/50 text-foreground'}`}
+                                                    variant={leader.type === 'faculty' || leader.type === 'team' ? 'default' : 'outline'}
+                                                    className={`text-[10px] h-5 px-1.5 shrink-0 ${
+                                                        leader.type === 'faculty'
+                                                            ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                                                            : leader.type === 'team'
+                                                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                                            : 'border-primary/50 text-foreground'
+                                                    }`}
                                                 >
-                                                    {leader.type === 'faculty' ? 'FACULTY' : 'LEADER'}
+                                                    {leader.type === 'faculty' ? 'FACULTY' : leader.type === 'team' ? 'TEAM' : 'LEADER'}
                                                 </Badge>
                                                 <Badge variant="secondary" className="text-xs px-2 py-0.5 font-mono whitespace-nowrap shrink-0">
                                                     ID: {leader.displayId || leader.id}

@@ -23,6 +23,7 @@ import {
   Rocket,
   Box,
   FileText,
+  Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -86,6 +87,7 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
 
     { href: "/admin/trainees", label: "Manage Trainees", icon: Users },
     { href: "/admin/leaders", label: "Manage Leaders", icon: Shield },
+    { href: "/admin/achievements", label: "Manage Achievements", icon: Trophy },
     { href: "/admin/gallery", label: "Manage Gallery", icon: ImageIcon },
     ...(isInventoryAdmin ? [{ href: "/admin/inventory", label: "Manage Inventory", icon: Box }] : []),
     ...(isExaminationAdmin ? [{ href: "/admin/exams", label: "Manage Exams", icon: FileText }] : []),
@@ -100,6 +102,7 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
     { href: "/projects", label: "Projects", icon: Bot },
     { href: "/leaders", label: "Our Leaders", icon: Users },
     { href: "/gallery", label: "Gallery", icon: Eye },
+    { href: "/achievements", label: "Achievements", icon: Trophy },
     { href: "/contact", label: "Contact", icon: User },
   ];
 

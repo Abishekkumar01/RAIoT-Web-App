@@ -35,14 +35,15 @@ export const PublicNavbar = () => {
     { href: "/projects", label: "Projects" },
     { href: "/leaders", label: "Our Leaders" },
     { href: "/gallery", label: "Gallery" },
+    { href: "/achievements", label: "Achievements" },
     { href: "/contact", label: "Contact" },
   ];
 
   return (
     <>
       <nav className="bg-background relative z-50">
-        <div className="w-full max-w-[1920px] mx-auto px-6 md:px-12">
-          <div className="flex justify-between md:grid md:grid-cols-3 items-center h-24">
+        <div className="w-full max-w-[1920px] mx-auto px-4 lg:px-8 xl:px-12">
+          <div className="flex justify-between md:grid md:grid-cols-[auto_1fr_auto] items-center h-24 gap-4">
 
             {/* Logo Section (Left) */}
             {/* Logo Section (Left) */}
@@ -77,15 +78,15 @@ export const PublicNavbar = () => {
             </div>
 
             {/* Desktop Navigation (Center) - Hidden on Mobile */}
-            <div className="hidden md:flex items-center justify-center space-x-12">
+            <div className="hidden md:flex items-center justify-center space-x-4 lg:space-x-6 xl:space-x-8">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   prefetch={true}
-                  className="relative group px-3 py-2 whitespace-nowrap"
+                  className="relative group px-2 lg:px-3 py-2 whitespace-nowrap"
                 >
-                  <span className="relative z-10 text-foreground/90 group-hover:text-cyan-400 transition-colors duration-300 font-bold tracking-widest text-xl font-orbitron">
+                  <span className="relative z-10 text-foreground/90 group-hover:text-cyan-400 transition-colors duration-300 font-bold tracking-wider text-sm lg:text-base xl:text-lg font-orbitron">
                     {link.label}
                   </span>
                   <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-cyan-400 group-hover:w-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
