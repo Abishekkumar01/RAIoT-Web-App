@@ -625,6 +625,7 @@ export default function AdminUsersPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="guest">Guest</SelectItem>
                             <SelectItem value="junior_developer">Junior Developer</SelectItem>
                             <SelectItem value="senior_developer">Senior Developer</SelectItem>
                             <SelectItem value="student_coordinator">Student Coordinator</SelectItem>
@@ -634,6 +635,8 @@ export default function AdminUsersPage() {
                             <SelectItem value="public_relation_head">Public Relation & Content Creation Head</SelectItem>
                             <SelectItem value="management_head">Management Head</SelectItem>
                             <SelectItem value="technical_head">Technical Head</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="superadmin">Superadmin</SelectItem>
                           </SelectContent>
                         </Select>
 
@@ -854,6 +857,7 @@ export default function AdminUsersPage() {
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="guest">Guest</SelectItem>
                         <SelectItem value="junior_developer">Junior Developer</SelectItem>
                         <SelectItem value="senior_developer">Senior Developer</SelectItem>
                         <SelectItem value="student_coordinator">Student Coordinator</SelectItem>
@@ -863,6 +867,8 @@ export default function AdminUsersPage() {
                         <SelectItem value="public_relation_head">Public Relation & Content Creation Head</SelectItem>
                         <SelectItem value="management_head">Management Head</SelectItem>
                         <SelectItem value="technical_head">Technical Head</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="superadmin">Superadmin</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1028,6 +1034,7 @@ export default function AdminUsersPage() {
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="guest">Guest</SelectItem>
                     <SelectItem value="junior_developer">Junior Developer</SelectItem>
                     <SelectItem value="senior_developer">Senior Developer</SelectItem>
                     <SelectItem value="student_coordinator">Student Coordinator</SelectItem>
@@ -1037,11 +1044,13 @@ export default function AdminUsersPage() {
                     <SelectItem value="public_relation_head">Public Relation & Content Creation Head</SelectItem>
                     <SelectItem value="management_head">Management Head</SelectItem>
                     <SelectItem value="technical_head">Technical Head</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="superadmin">Superadmin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {(currentUser?.email === 'chouhanchetan066@gmail.com' || currentUser?.email === 'amanchoudhary.1502@gmail.com') && (
+              {(currentUser?.email === 'chouhanchetan066@gmail.com' || currentUser?.email === 'amanchoudhary.1502@gmail.com' || currentUser?.email === 'theraiot.tech@gmail.com') && (
                 <>
                   <div className="flex items-center space-x-2 mt-4 p-3 border border-zinc-700 rounded-md bg-zinc-800/30">
                     <input

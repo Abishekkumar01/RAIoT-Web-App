@@ -56,7 +56,7 @@ function LoginContent() {
             let rawRole = userData.role || 'member'
 
             // Override role for hardcoded superadmins to ensure portal access
-            if (loggedInUser.email === 'chouhanchetan066@gmail.com' || loggedInUser.email === 'amanchoudhary.1502@gmail.com') {
+            if (loggedInUser.email === 'chouhanchetan066@gmail.com' || loggedInUser.email === 'amanchoudhary.1502@gmail.com' || loggedInUser.email === 'theraiot.tech@gmail.com') {
               rawRole = 'superadmin'
             }
 

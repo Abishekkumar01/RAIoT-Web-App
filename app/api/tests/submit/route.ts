@@ -155,7 +155,7 @@ export async function POST(request: Request) {
         const adminDb = getAdminDb();
         if (!adminDb) throw new Error('Database not initialized');
 
-        const superAdminEmails = new Set(['chouhanchetan066@gmail.com', 'amanchoudhary.1502@gmail.com']);
+        const superAdminEmails = new Set(['chouhanchetan066@gmail.com', 'amanchoudhary.1502@gmail.com', 'theraiot.tech@gmail.com']);
         let isSuperAdmin = !!authUser.email && superAdminEmails.has(authUser.email.toLowerCase());
         let userRole = '';
         if (!isSuperAdmin) {

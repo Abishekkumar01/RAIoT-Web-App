@@ -256,6 +256,7 @@ service cloud.firestore {
       return request.auth != null && (
         request.auth.token.email == 'chouhanchetan066@gmail.com' ||
         request.auth.token.email == 'amanchoudhary.1502@gmail.com' ||
+        request.auth.token.email == 'theraiot.tech@gmail.com' ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin' ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'president' ||

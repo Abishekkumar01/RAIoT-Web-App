@@ -46,11 +46,13 @@ export const DashboardSidebar = ({ onClose }: { onClose?: () => void }) => {
   const isInventoryAdmin =
     user?.email === 'chouhanchetan066@gmail.com' ||
     user?.email === 'amanchoudhary.1502@gmail.com' ||
+    user?.email === 'theraiot.tech@gmail.com' ||
     user?.profileData?.isInventoryManager;
   
   const isExaminationAdmin =
     user?.email === 'chouhanchetan066@gmail.com' ||
     user?.email === 'amanchoudhary.1502@gmail.com' ||
+    user?.email === 'theraiot.tech@gmail.com' ||
     user?.profileData?.hasExaminationAccess;
   const isInventoryUser = user?.role && !['guest', 'public', 'trainee'].includes(user.role);
 

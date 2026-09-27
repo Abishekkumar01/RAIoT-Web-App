@@ -13,7 +13,7 @@ if (getApps().length === 0) {
 
         let privateKey: string | undefined = process.env.FIREBASE_PRIVATE_KEY;
         if (privateKey) {
-            // Try to parse as JSON first (in case user pasted the whole service-account.json)
+            // 1. Try to parse as JSON first (in case user pasted the whole service-account.json)
             try {
                 const jsonKey = JSON.parse(privateKey);
                 if (jsonKey.private_key) {
@@ -21,10 +21,10 @@ if (getApps().length === 0) {
                     console.log("Create Agent: Extracted private key from JSON.");
                 }
             } catch (e) {
-                // Not a JSON object, continue
+                // Not standard JSON
             }
 
-            // Handle possibility of Base64 encoded key
+            // 2. Handle possibility of Base64 encoded key
             if (privateKey && !privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
                 try {
                     const decoded = Buffer.from(privateKey, 'base64').toString('utf8');
@@ -33,15 +33,21 @@ if (getApps().length === 0) {
                         privateKey = decoded;
                     }
                 } catch (e) {
-                    // Not base64 or failed to decode
+                    // Not base64
                 }
             }
 
-            // Standard cleanup:
-            // 1. Remove wrapping quotes (common in JSON/Env vars when pasted incorrectly)
-            // 2. Unescape newlines (fixes "\n" literals from JSON)
+            // 3. Extract PEM block if string contains JSON or extra metadata around -----BEGIN PRIVATE KEY-----
+            if (privateKey && privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+                const pemMatch = privateKey.match(/-----BEGIN PRIVATE KEY-----[\s\S]*?-----END PRIVATE KEY-----/);
+                if (pemMatch) {
+                    privateKey = pemMatch[0];
+                }
+            }
+
+            // 4. Unescape newlines (fixes "\n" literals) and strip quotes
             if (privateKey) {
-                privateKey = privateKey.replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
+                privateKey = privateKey.replace(/^["']|["']$/g, '').replace(/\\n/g, '\n').trim();
             }
         }
 
@@ -113,17 +119,34 @@ export const verifySuperAdmin = async (request: Request): Promise<{ uid: string,
         const decodedToken = await adminAuth.verifyIdToken(token);
         const email = decodedToken.email;
 
-        // Verify it's one of the superadmins
-        const SUPERADMIN_EMAILS = ['chouhanchetan066@gmail.com', 'amanchoudhary.1502@gmail.com'];
-        if (!email || !SUPERADMIN_EMAILS.includes(email.toLowerCase())) {
-            console.log(`Unauthorized attempt by ${email}`);
-            return null;
+        // Verify if user is in superadmin email list
+        const SUPERADMIN_EMAILS = ['chouhanchetan066@gmail.com', 'amanchoudhary.1502@gmail.com', 'theraiot.tech@gmail.com'];
+        if (email && SUPERADMIN_EMAILS.includes(email.toLowerCase())) {
+            return {
+                uid: decodedToken.uid,
+                email: email
+            };
         }
 
-        return {
-            uid: decodedToken.uid,
-            email: email
-        };
+        // Check if user's role in Firestore has admin management permissions
+        const adminDb = getAdminDb();
+        if (adminDb) {
+            const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                const role = String(userData?.role || '').toLowerCase().trim();
+                const ALLOWED_ADMIN_ROLES = ['admin', 'superadmin', 'president', 'vice_president'];
+                if (ALLOWED_ADMIN_ROLES.includes(role)) {
+                    return {
+                        uid: decodedToken.uid,
+                        email: email || ''
+                    };
+                }
+            }
+        }
+
+        console.log(`Unauthorized attempt by ${email}`);
+        return null;
     } catch (error) {
         console.error('Token verification error:', error);
         return null;
@@ -148,7 +171,7 @@ export const verifyExaminationAdmin = async (request: Request): Promise<{ uid: s
         const email = decodedToken.email;
 
         // Verify it's one of the superadmins
-        const SUPERADMIN_EMAILS = ['chouhanchetan066@gmail.com', 'amanchoudhary.1502@gmail.com'];
+        const SUPERADMIN_EMAILS = ['chouhanchetan066@gmail.com', 'amanchoudhary.1502@gmail.com', 'theraiot.tech@gmail.com'];
         if (email && SUPERADMIN_EMAILS.includes(email.toLowerCase())) {
             return { uid: decodedToken.uid, email: email };
         }

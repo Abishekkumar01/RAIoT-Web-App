@@ -40,6 +40,7 @@ export default function AdminInventoryPage() {
             const isInventoryAdmin =
                 user.email === 'chouhanchetan066@gmail.com' ||
                 user.email === 'amanchoudhary.1502@gmail.com' ||
+                user.email === 'theraiot.tech@gmail.com' ||
                 user.profileData?.isInventoryManager;
             if (!isInventoryAdmin) {
                 toast({ title: "Access Denied", description: "You don't have permission to access this page.", variant: "destructive" })

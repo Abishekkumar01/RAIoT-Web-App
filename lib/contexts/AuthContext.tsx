@@ -30,6 +30,12 @@ export const useAuth = () => {
 
 // Local storage key for the logged-in user snapshot
 
+const isSuperAdminEmail = (email: string | null | undefined) => {
+  if (!email) return false;
+  const superadminEmails = ['chouhanchetan066@gmail.com', 'amanchoudhary.1502@gmail.com', 'theraiot.tech@gmail.com'];
+  return superadminEmails.includes(email.toLowerCase());
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -40,7 +46,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (firebaseUser) {
           const userDocRef = doc(db, 'users', firebaseUser.uid)
           const snap = await getDoc(userDocRef)
-          const permanentAdmins = ['theraiot.tech@gmail.com']
           const base: User = {
             uid: firebaseUser.uid,
             email: firebaseUser.email || '',
@@ -55,7 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Normalize role
             const rawRole = data.role as string || 'guest'
             let normalizedRole = rawRole.toLowerCase().trim() as UserRole
-            if (firebaseUser.email === 'chouhanchetan066@gmail.com' || firebaseUser.email === 'amanchoudhary.1502@gmail.com') {
+            if (isSuperAdminEmail(firebaseUser.email)) {
               normalizedRole = 'superadmin'
             }
             merged = { ...base, ...data, role: normalizedRole }
@@ -116,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Normalize role
       const rawRole = data.role as string || 'guest'
       let normalizedRole = rawRole.toLowerCase().trim() as UserRole
-      if (cred.user.email === 'chouhanchetan066@gmail.com' || cred.user.email === 'amanchoudhary.1502@gmail.com') {
+      if (isSuperAdminEmail(cred.user.email)) {
         normalizedRole = 'superadmin'
       }
       result = { ...base, ...data, role: normalizedRole }
@@ -214,7 +219,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Normalize role
         const rawRole = freshUserData.role as string || 'guest'
         let normalizedRole = rawRole.toLowerCase().trim() as UserRole
-        if (user.email === 'chouhanchetan066@gmail.com' || user.email === 'amanchoudhary.1502@gmail.com') {
+        if (isSuperAdminEmail(user.email)) {
           normalizedRole = 'superadmin'
         }
         const finalData = { ...freshUserData, role: normalizedRole }
@@ -249,7 +254,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Normalize role
         const rawRole = freshUserData.role as string || 'guest'
         let normalizedRole = rawRole.toLowerCase().trim() as UserRole
-        if (user.email === 'chouhanchetan066@gmail.com' || user.email === 'amanchoudhary.1502@gmail.com') {
+        if (isSuperAdminEmail(user.email)) {
           normalizedRole = 'superadmin'
         }
         const finalData = { ...freshUserData, role: normalizedRole }
